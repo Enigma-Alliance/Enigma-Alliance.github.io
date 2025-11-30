@@ -216,13 +216,17 @@
             top: 1rem;
             right: 1rem;
             cursor: pointer;
-            font-size: 2rem;
+            font-size: 3rem;
             color: #fff;
-            z-index: 2;
+            z-index: 3;
         }
 
         .image-modal-close:hover {
             color: #ff69b4;
+        }
+
+        .other-project {
+            margin-bottom: 2rem;
         }
     </style>
 </head>
@@ -325,7 +329,7 @@
 
     <div id="project-modal" class="modal-overlay">
         <div class="modal-content">
-            <span class="modal-close" onclick="document.getElementById('project-modal').style.display='none'">&times;</span>
+            <span class="modal-close">&times;</span>
             <div class="project-banner" id="modal-banner"></div>
             <div class="modal-scroll-content">
                 <h2 id="modal-title" style="color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.7);"></h2>
@@ -343,6 +347,21 @@
             <img id="image-modal-img" class="image-modal-img" src="" alt="Expanded project image">
         </div>
     </div>
+
+    <!-- other projects section -->
+    <section id="other-projects" class="container">
+        <h2>Other Projects</h2>
+        <div class="other-project">
+            <p><strong>Mayo Clinic</strong> <em>Lead Systems Designer</em></p>
+            <p><i>Health Innovation Collaboration 2024</i></p>
+            <p>Led the development of an interactive patient education tool integrating user centered design with simulation technology to improve patient outcomes.</p>
+        </div>
+        <div class="other-project">
+            <p><strong>Universal Creative</strong> <em>Technical and Systems Design Lead (Head Chef)</em></p>
+            <p><i>Advanced Technology Initiatives team in Florida SCADpro 2025</i></p>
+            <p>Led the technical integration system design and physical computing for a collaborative project with SCADpro and Universal Creative.</p>
+        </div>
+    </section>
 
     <script>
         document.querySelectorAll('.project-card').forEach(card => {
