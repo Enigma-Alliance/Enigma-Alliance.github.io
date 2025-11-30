@@ -1,11 +1,357 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf 8">
-    <title>My GitHub Page</title>
-  </head>
-  <body>
-    <h1>Hello world</h1>
-    <p>This is my first GitHub Pages site.</p>
-  </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Designer Portfolio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Gavoline';
+            src: url('/GavolineDemo.otf') format('opentype');
+            font-weight: 300;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Gavoline', sans-serif;
+            font-weight: 300;
+            letter-spacing: -0.03em;
+        }
+        #hero {
+            position: relative;
+            min-height: 40vh;
+            padding: 4rem 0 2rem;
+            text-align: center;
+            background-image: url('BlueskyBanner.png');
+            background-size: cover;
+            background-position: center;
+            color: white;
+        }
+         nav {
+            position: absolute;
+            top: 1rem;
+            left: 2rem;
+            right: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .nav-button {
+            padding: 0.8rem 1.5rem;
+            border: 2px solid #f2ffb4;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            color: #f2ffb4;
+            background: #rgba(0, 0, 0, 0.2);
+            text-decoration: none;
+        }
+        .nav-button:hover {
+            background: rgba(0, 0, 0, 0.529);
+            color: #FFFFFF;
+        }
+        .logo-button {
+            width: 50px;
+            height: 50px;
+            padding: 5px;
+            border-radius: 50%;
+            background: #00000000;
+        }
+         .project-card {
+            background: #1a1a1a;
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 10px;
+            border: 2px solid #e67f8e;
+            transition: transform 0.3s ease;
+        }
+        .project-card:hover {
+            transform: translateY(-15px);
+        }
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 4rem;
+        }
+        .projects-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 2rem;
+            border-radius: 10px;
+            position: relative;
+            max-width: 800px;
+            width: 90%;
+            border: 2px solid #ff69b4;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #ff69b4;
+            border-radius: 4px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            font-size: 2rem;
+            color: #fff;
+        }
+
+        .modal-close:hover {
+            color: #ff69b4;
+        }
+
+        .project-banner {
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            margin: -2rem -2rem 2rem -2rem;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+
+        .project-banner::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+        }
+
+        #modal-title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0,0,0,0.7);
+            z-index: 1;
+        }
+
+        .supplemental-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .supplemental-img {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .supplemental-img:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <section id="hero">
+        <nav>
+            <a href="#hero" class="logo-button">
+                <img src="logo.png" alt="Home" style="width: 100%; height: 100%; object-fit: contain;">
+            </a>
+            <div class="nav-buttons">
+                <a href="#projects" class="nav-button">Projects</a>
+                <a href="#about" class="nav-button">About</a>
+            </div>
+        </nav>
+        <div class="container">
+            <!-- Removed name and tagline as they're in background image -->
+        </div>
+    </section>
+
+    <section id="about" class="container" style="padding: 4rem 0;">
+        <h2>About Me</h2>
+        <p>Hi, I’m Aidan Dougan — a student at SCAD studying Interactive Design and Game Development, with a passion for game systems, mechanics design, and creative problem solving.</p>
+        <p>I’m especially interested in how gameplay systems can shape emotion, narrative, and player experience. Whether it's building procedural environments, designing core mechanics, or developing intuitive player interactions, I’m drawn to the intersection of logic and creativity.</p>
+        <p>Right now, I’m focused on growing as a systems designer by exploring new tools, iterating fast, and learning from both indie experiments and AAA principles. I love diving deep into how things work — and how they could work better.</p>
+    </section>
+
+    <section id="projects" class="container">
+        <h2>Projects</h2>
+        <div class="projects-container">
+            <div class="project-card" data-project="snapshot" 
+                 data-banner-src="SnapshotHeader.png"
+                 data-detailed-desc="<i>Role: Systems Designer</i><br><span style='font-style: normal; font-size: larger;'>I led the design of Snapshot’s core gameplay loop, focusing on how players use the in-game camera as a tactical tool rather than a traditional weapon. I created the prototype mechanics in Unreal Engine, balancing risk-reward around movement, line of sight, and player positioning. I also iterated on core systems like targeting logic, snapshot detection, and match pacing to emphasize strategic, expressive play. <a href='https://youtu.be/2aUiEHOOHAM' target='_blank'>Watch trailer</a></span>"
+                 data-supplemental-assets="Snapshot1.png,Snapshot2.png"
+                 data-detailed-tools="Unreal Engine 5 / Blueprint / Multiplayer">
+                <h3>Snapshot</h3>
+                <p>A competitive 1v1 game where the only weapon is your camera — freeze enemies in time, frame the perfect shot, and outplay your opponent with precision and style.</p>
+                <div class="tech-stack">
+                    <span class="badge">UE</span>
+                </div>
+            </div>
+            <div class="project-card" data-project="eternal-purge" 
+                 data-banner-src="EternalPurgeHEader.webp"
+                 data-detailed-desc="<i>Role: Project Lead </i><br><span style='font-style: normal; font-size: larger;'>I co-developed the board game’s core systems — including the corruption spread, tile discovery, sanity management, and relic recovery loops. My focus was on ensuring that cooperative play remained tense but fair, and that the mechanics supported escalating narrative stakes. I also handled component layout, tracked playtest feedback, and refined win/loss states to keep the experience tightly balanced. Link to gameplay trailer: <a href='https://youtu.be/X21pJnOkyzw' target='_blank'>Watch trailer</a></span>"
+
+                 data-supplemental-assets="EternalPurge1.webp,EternalPurge2.webp"
+                 data-detailed-tools="Tabletop Design / Physical Prototyping / Playtesting">
+                <h3>Eternal Purge</h3>
+                <p>A cooperative board game where time-traveling exorcists must survive a cursed keep, uncover a hidden relic, and hold back a creeping corruption — or be consumed by it.</p>
+                <div class="tech-stack">
+                    <span class="badge">Tabletop</span>
+                </div>
+            </div>
+            <div class="project-card" data-project="aether-912" 
+                 data-banner-src="20240529_170754.jpg"
+                 data-detailed-desc="<i>Role: HMI Designer </i><br><span style='font-style: normal; font-size: larger;'>I led the design and prototyping of the Aether 912’s digital interface systems. I created the layout and logic for the onboard UI/UX, designed screen states and transitions, and mapped key sensor inputs to human-readable feedback for the driver. My focus was to create an intuitive, driver-first experience that fused elegant aesthetics with clear interaction design.</span>"
+
+                 data-supplemental-assets="img_0339.jpg,20241013_085021.jpg"
+                 data-detailed-tools="Unity / Arduino / Embedded Systems / EV Prototyping">
+                <h3>Aether 912</h3>
+                <p>Designed onboard computing systems and human-machine interfaces for SCAD's electric vehicle prototype, bridging Unity visualization with Arduino-based physical controls and embedded systems.</p>
+                <div class="tech-stack">
+                    <span class="badge">Unity</span>
+                </div>
+            </div>
+            <div class="project-card" data-project="room-generation" 
+                 data-banner-src="RoomGen1.png"
+                 data-detailed-desc="<i>Role: System Designer</i><br><span style='font-style: normal; font-size: larger;'>I designed and implemented this system entirely in UE5 Blueprints. I built the spawning logic, door-based snapping system, overlap detection, and path extension logic. My focus was on modularity and reliability — ensuring that rooms could be reused across projects, that branching paths felt organic, and that designers could easily adjust generation parameters. I also built debugging tools to visualize snap points and placement flow. <a href='CaseStudy.pdf' download style='color:#E8F4AD;'>Download case study</a> • <a href='https://youtu.be/RATqNfp1jDo' target='_blank'>Watch trailer</a></span>"
+                 data-supplemental-assets="RoomGen2.png"
+                 data-detailed-tools="Unreal Engine 5 / Blueprint / Procedural Generation">
+                <h3>Room Generation</h3>
+                <p>A procedural dungeon generator creating unique levels with balanced challenges and emergent gameplay possibilities.</p>
+                <div class="tech-stack">
+                    <span class="badge">UE</span>
+                </div>
+            </div>
+            <div class="project-card" data-project="vfx" 
+                 data-banner-src="vfxHeader.png"
+                 data-detailed-desc="<i>Role: Technical Artist &amp; Designer</i><br><span style='font-style: normal; font-size: larger;'>I created this real-time energy shield using Unreal’s material graph and Niagara VFX system. I built procedural texture logic for surface animation, and implemented responsive hit effects. The shield reacts dynamically to input and environment, and was built to be easily modified or re-skinned across different sci-fi aesthetics. <a href='https://youtu.be/WiH7r_YQQIM' target='_blank'>Watch trailer</a></span>"
+                 data-supplemental-assets="vfx1.png,vfx2.png"
+                 data-detailed-tools="Unreal Engine 5 / Niagara / HLSL">
+                <h3>VFX</h3>
+                <p>Real-time visual effects showcasing particle systems, shader programming, and performance optimization in UE5.</p>
+                <div class="tech-stack">
+                    <span class="badge">UE</span>
+                </div>
+            </div>
+            <div class="project-card" data-project="between-lines" 
+                 data-banner-src="betweenlinesHeader.png"
+                 data-detailed-desc="<i>Role: Co-Developer (Mobile)</i><br><span style='font-style: normal; font-size: larger;'>I developed the game’s unique dialogue mechanic — where players interrogate a broken, sentient typewriter that can only reply in fragmented phrases. I designed the logic behind its constrained output system, wrote branching clue responses, and prototyped the UI to support ambiguity and discovery. My goal was to force players to read between the lines, building tension through suggestion, not exposition. <a href='https://youtu.be/dhydkVni1yU' target='_blank'>Watch trailer</a></span>"
+                 data-supplemental-assets="betweenlines1.png,betweenlines2.png"
+                 data-detailed-tools="Unity / C# / AI Systems / Mobile Optimization">
+                <h3>Between Lines</h3>
+                <p>A narrative murder mystery where you interrogate a sentient typewriter — an unreliable, single-purpose AI that answers in cryptic word clusters you'll have to decode to uncover the truth.</p>
+                <div class="tech-stack">
+                    <span class="badge">Unity</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="project-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <div class="project-banner" id="modal-banner"></div>
+            <div class="modal-scroll-content">
+                <h2 id="modal-title" style="color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.7);"></h2>
+                <p id="modal-description"></p>
+                <p id="modal-tech"></p>
+                <div class="supplemental-grid" id="modal-assets"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const modal = document.getElementById('project-modal');
+                const banner = document.getElementById('modal-banner');
+                modal.style.display = 'flex';
+                
+                // Set banner image
+                banner.style.backgroundImage = `url('${card.dataset.bannerSrc}')`;
+                
+                // Set content
+                document.getElementById('modal-title').textContent = card.querySelector('h3').textContent;
+                document.getElementById('modal-description').innerHTML = `
+                    <i style="font-size: 0.9em; display: block; margin-bottom: 1rem;">${card.dataset.detailedDesc.split('&#10;')[0]}</i>
+                    ${card.dataset.detailedDesc.split('&#10;').slice(1).join('<br>')}
+                `;
+                document.getElementById('modal-tech').textContent = card.dataset.detailedTools;
+
+                // Add supplemental images
+                const assetsContainer = document.getElementById('modal-assets');
+                assetsContainer.innerHTML = card.dataset.supplementalAssets.split(',').map(src => `
+                    <img src="${src}" class="supplemental-img" alt="Project asset">
+                `).join('');
+            });
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('project-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('project-modal')) {
+                document.getElementById('project-modal').style.display = 'none';
+            }
+        });
+    </script>
+
+    <footer>
+        <div class="container">
+            <div class="contact-info" style="margin-bottom: 2rem; font-size: 1.1em;">
+                <p style="color: #FFFFFF; margin-bottom: 0.5rem;">Contact Me:</p>
+                <p>
+                    <a href="tel:+13144528267" style="color: #e67f8e; text-decoration: none;">+1 (314) 452-8267</a> • 
+                    <a href="mailto:aidandougan24@gmail.com" style="color: #e67f8e; text-decoration: none;">aidandougan24@gmail.com</a>
+                </p>
+            </div>
+            <hr style="border-color: #FFFFFF; margin: 2rem auto; width: 60%;">
+            <p style="margin-top: 2rem;"> 2025 Aidan Dougan. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
 </html>
