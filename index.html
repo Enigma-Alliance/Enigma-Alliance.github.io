@@ -293,6 +293,13 @@
             color: #ff69b4;
         }
 
+        /* Hide navigation arrows on small screens to avoid overlay clutter */
+        @media (max-width: 600px) {
+            .modal-arrow {
+                display: none;
+            }
+        }
+
         .other-project {
             margin-bottom: 2rem;
         }
@@ -576,6 +583,50 @@
             const delta = e.deltaY < 0 ? 0.1 : -0.1;
             currentScale = Math.min(Math.max(currentScale + delta, 1), 4);
             imageModalImg.style.transform = `scale(${currentScale})`;
+        });
+
+        // Mobile swipe detection for project modal
+        // Allows swiping left/right to change projects and swiping down from the top to close
+        let touchStartX = null;
+        let touchStartY = null;
+
+        projectModal.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        });
+
+        projectModal.addEventListener('touchend', (e) => {
+            if (touchStartX === null || touchStartY === null) return;
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const dx = endX - touchStartX;
+            const dy = endY - touchStartY;
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+            const swipeThreshold = 50; // Minimum movement in px to consider a swipe
+            // Horizontal swipe: navigate between projects
+            if (absDx > absDy && absDx > swipeThreshold) {
+                if (dx < 0) {
+                    // Swipe left: next project
+                    showNextProject();
+                } else {
+                    // Swipe right: previous project
+                    showPrevProject();
+                }
+            } else if (dy > swipeThreshold && absDy > absDx) {
+                // Downward swipe: close modal if started near the top of the card
+                const modalContent = document.querySelector('.modal-content');
+                const bounding = modalContent.getBoundingClientRect();
+                // Start near top (within 80px of top edge)
+                if (touchStartY - bounding.top < 80) {
+                    projectModal.style.display = 'none';
+                }
+            }
+            // Reset start positions
+            touchStartX = null;
+            touchStartY = null;
         });
     </script>
 
