@@ -2,9 +2,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Designer Portfolio</title>
+    <title>Aidan Dougan's Portfolio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+	<link rel="icon" type="image/png" href="favicon.png">
+	<link rel="apple-touch-icon" href="favicon.png">
     <style>
         @font-face {
             font-family: 'Gavoline';
@@ -34,48 +36,51 @@
             color: white;
         }
          nav {
+            /* Place navigation bar within the hero; it will scroll away with the page */
             position: absolute;
             top: 1rem;
-            left: 2rem;
             right: 2rem;
+            left: auto;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
         }
-		.nav-buttons {
+        .nav-buttons {
             display: flex;
             gap: 1.5rem;
         }
         .nav-button {
+            position: relative;
             padding: 0.8rem 1.5rem;
             border: 2px solid #f2ffb4;
             border-radius: 30px;
             transition: all 0.3s ease;
             color: #f2ffb4;
-            background: #rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.2);
             text-decoration: none;
         }
         .nav-button:hover {
             background: rgba(0, 0, 0, 0.529);
             color: #FFFFFF;
         }
-        /* custom tooltip for nav buttons */
+        /* Tooltip styling for navigation buttons */
         .nav-button::after {
             content: attr(data-hover);
             position: absolute;
-            bottom: -2.2rem;
+            top: 100%;
             left: 50%;
             transform: translateX(-50%);
+            margin-top: 0.4rem;
             background: rgba(0, 0, 0, 0.85);
             color: #fff;
             padding: 0.3rem 0.6rem;
             border-radius: 4px;
+            font-size: 0.75rem;
             white-space: nowrap;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s ease;
-            font-size: 0.75rem;
-            z-index: 2000;
+            z-index: 1100;
         }
         .nav-button:hover::after {
             opacity: 1;
@@ -86,6 +91,11 @@
             padding: 5px;
             border-radius: 50%;
             background: #00000000;
+            /* Fix the logo in the top corner so it remains visible while scrolling */
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1000;
         }
          .project-card {
             background: #1a1a1a;
@@ -157,12 +167,14 @@
         }
 
         .modal-close {
+            /* Match the size and stacking context of the image modal close button */
             position: absolute;
             top: 1rem;
             right: 1rem;
             cursor: pointer;
-            font-size: 2rem;
+            font-size: 3rem;
             color: #fff;
+            z-index: 3;
         }
 
         .modal-close:hover {
@@ -290,9 +302,8 @@
                 </div>
             </div>
             <div class="project-card" data-project="eternal-purge" 
-                 data-banner-src="EternalPurgeHEader.webp"
+                 data-banner-src="EternalPurgeHeader.webp"
                  data-detailed-desc="<i>Role: Project Lead </i><br><span style='font-style: normal; font-size: larger;'>I co-developed the board game’s core systems — including the corruption spread, tile discovery, sanity management, and relic recovery loops. My focus was on ensuring that cooperative play remained tense but fair, and that the mechanics supported escalating narrative stakes. I also handled component layout, tracked playtest feedback, and refined win/loss states to keep the experience tightly balanced. Link to gameplay trailer: <a href='https://youtu.be/X21pJnOkyzw' target='_blank'>Watch trailer</a></span>"
-
                  data-supplemental-assets="EternalPurge1.webp,EternalPurge2.webp"
                  data-detailed-tools="Tabletop Design / Physical Prototyping / Playtesting">
                 <h3>Eternal Purge</h3>
@@ -302,10 +313,9 @@
                 </div>
             </div>
             <div class="project-card" data-project="aether-912" 
-                 data-banner-src="20240529_170754.jpg"
+                 data-banner-src="AetherHeader.jpg"
                  data-detailed-desc="<i>Role: HMI Designer </i><br><span style='font-style: normal; font-size: larger;'>I led the design and prototyping of the Aether 912’s digital interface systems. I created the layout and logic for the onboard UI/UX, designed screen states and transitions, and mapped key sensor inputs to human-readable feedback for the driver. My focus was to create an intuitive, driver-first experience that fused elegant aesthetics with clear interaction design.</span>"
-
-                 data-supplemental-assets="img_0339.jpg,20241013_085021.jpg"
+                 data-supplemental-assets="Aether1.jpg,Aether2.jpg"
                  data-detailed-tools="Unity / Arduino / Embedded Systems / EV Prototyping">
                 <h3>Aether 912</h3>
                 <p>Designed onboard computing systems and human-machine interfaces for SCAD's electric vehicle prototype, bridging Unity visualization with Arduino-based physical controls and embedded systems.</p>
@@ -314,7 +324,7 @@
                 </div>
             </div>
             <div class="project-card" data-project="room-generation" 
-                 data-banner-src="RoomGen1.png"
+                 data-banner-src="RoomGenHeader.png"
                  data-detailed-desc="<i>Role: System Designer</i><br><span style='font-style: normal; font-size: larger;'>I designed and implemented this system entirely in UE5 Blueprints. I built the spawning logic, door-based snapping system, overlap detection, and path extension logic. My focus was on modularity and reliability — ensuring that rooms could be reused across projects, that branching paths felt organic, and that designers could easily adjust generation parameters. I also built debugging tools to visualize snap points and placement flow. <a href='CaseStudy.pdf' download style='color:#E8F4AD;'>Download case study</a> • <a href='https://youtu.be/RATqNfp1jDo' target='_blank'>Watch trailer</a></span>"
                  data-supplemental-assets="RoomGen2.png"
                  data-detailed-tools="Unreal Engine 5 / Blueprint / Procedural Generation">
@@ -336,7 +346,7 @@
                 </div>
             </div>
             <div class="project-card" data-project="between-lines" 
-                 data-banner-src="betweenlinesHeader.png"
+                 data-banner-src="BetweenLinesHeader.png"
                  data-detailed-desc="<i>Role: Co-Developer (Mobile)</i><br><span style='font-style: normal; font-size: larger;'>I developed the game’s unique dialogue mechanic — where players interrogate a broken, sentient typewriter that can only reply in fragmented phrases. I designed the logic behind its constrained output system, wrote branching clue responses, and prototyped the UI to support ambiguity and discovery. My goal was to force players to read between the lines, building tension through suggestion, not exposition. <a href='https://youtu.be/dhydkVni1yU' target='_blank'>Watch trailer</a></span>"
                  data-supplemental-assets="betweenlines1.png,betweenlines2.png"
                  data-detailed-tools="Unity / C# / AI Systems / Mobile Optimization">
@@ -376,12 +386,12 @@
 		<div class="other-project">
             <strong>Universal Creative</strong> <em>Technical and Systems Design Lead, Food Stylist and Head Chef</em>
             <p style="line-height: 2.3;"><i>Advanced Technology Initiatives team in Florida, SCADPro 2025</i></p>
-            <p style="text-indent: 15px; line-height: .5;">SCADpro collaborated with Universal Creative on concepts for their theme parks. (Project Details under NDA)</p>
+            <p style="text-indent: 15px;">SCADpro collaborated with Universal Creative on concepts for their theme parks. (Project Details under NDA)</p>
         </div>
         <div class="other-project">
             <strong>Mayo Clinic</strong> <em>Project Manager</em>
             <p style="line-height: 2.3;"><i>Innovation Alliances team in Mayo Clinic in Florida, SCADPro 2025</i></p>
-           <p style="text-indent: 15px; line-height: .5;">SCADpro collaborated with Mayo Clinic on concepts for their health care system. (Project Details under NDA)</p>
+           <p style="text-indent: 15px;">SCADpro collaborated with Mayo Clinic on concepts for their health care system. (Project Details under NDA)</p>
         </div>
     </section>
 
@@ -439,14 +449,14 @@
             imageModal.style.display = 'flex';
         }
 
-        // Clicking on the modal banner opens the image modal
-        modalBanner.addEventListener('click', () => {
-            const bgImage = modalBanner.style.backgroundImage;
-            const match = bgImage.match(/url\(["']?(.*?)["']?\)/);
-            if (match && match[1]) {
-                openImageModal(match[1]);
-            }
-        });
+        // Disabled clicking on the modal banner to prevent opening the image modal
+        // modalBanner.addEventListener('click', () => {
+        //     const bgImage = modalBanner.style.backgroundImage;
+        //     const match = bgImage.match(/url\(["']?(.*?)["']?\)/);
+        //     if (match && match[1]) {
+        //         openImageModal(match[1]);
+        //     }
+        // });
 
         // Click on supplemental images to open the image modal
         document.addEventListener('click', (e) => {
