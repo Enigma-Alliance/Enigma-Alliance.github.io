@@ -42,22 +42,30 @@
             justify-content: space-between;
             align-items: center;
         }
-        .nav-buttons {
-            display: flex;
-            gap: 1.5rem;
-        }
-        .nav-button {
-            padding: 0.8rem 1.5rem;
-            border: 2px solid #f2ffb4;
-            border-radius: 30px;
-            transition: all 0.3s ease;
-            color: #f2ffb4;
-            background: #rgba(0, 0, 0, 0.2);
-            text-decoration: none;
-        }
         .nav-button:hover {
             background: rgba(0, 0, 0, 0.529);
             color: #FFFFFF;
+        }
+        /* custom tooltip for nav buttons */
+        .nav-button::after {
+            content: attr(data-hover);
+            position: absolute;
+            bottom: -2.2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            font-size: 0.75rem;
+            z-index: 2000;
+        }
+        .nav-button:hover::after {
+            opacity: 1;
         }
         .logo-button {
             width: 50px;
@@ -237,8 +245,9 @@
                 <img src="logo.png" alt="Home" style="width: 100%; height: 100%; object-fit: contain;">
             </a>
             <div class="nav-buttons">
-                <a href="#projects" class="nav-button">Projects</a>
-                <a href="#about" class="nav-button">About</a>
+                <a href="#projects" class="nav-button" data-hover="Jump to Projects">Projects</a>
+                <a href="#about" class="nav-button" data-hover="Jump to About">About</a>
+                <a href="resume.pdf" class="nav-button" data-hover="Download resume" download>Resume</a>
             </div>
         </nav>
         <div class="container">
