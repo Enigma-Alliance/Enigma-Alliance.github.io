@@ -194,6 +194,36 @@
         .supplemental-img:hover {
             transform: scale(1.05);
         }
+
+        /* full screen image viewer */
+        .image-modal-content {
+            position: relative;
+            max-width: 95vw;
+            max-height: 95vh;
+            padding: 0;
+        }
+
+        .image-modal-img {
+            max-width: 95vw;
+            max-height: 95vh;
+            display: block;
+            margin: 0 auto;
+            transform-origin: center center;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            font-size: 2rem;
+            color: #fff;
+            z-index: 2;
+        }
+
+        .image-modal-close:hover {
+            color: #ff69b4;
+        }
     </style>
 </head>
 <body>
@@ -295,7 +325,7 @@
 
     <div id="project-modal" class="modal-overlay">
         <div class="modal-content">
-            <span class="modal-close">&times;</span>
+            <span class="modal-close" onclick="document.getElementById('project-modal').style.display='none'">&times;</span>
             <div class="project-banner" id="modal-banner"></div>
             <div class="modal-scroll-content">
                 <h2 id="modal-title" style="color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.7);"></h2>
@@ -303,6 +333,14 @@
                 <p id="modal-tech"></p>
                 <div class="supplemental-grid" id="modal-assets"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- full screen image modal -->
+    <div id="image-modal" class="modal-overlay">
+        <div class="image-modal-content">
+            <span class="image-modal-close">&times;</span>
+            <img id="image-modal-img" class="image-modal-img" src="" alt="Expanded project image">
         </div>
     </div>
 
@@ -332,10 +370,78 @@
             });
         });
 
-        // Close modal when clicking outside
+        // Close project modal when clicking outside
         document.getElementById('project-modal').addEventListener('click', (e) => {
             if (e.target === document.getElementById('project-modal')) {
                 document.getElementById('project-modal').style.display = 'none';
+            }
+        });
+
+        // Close project modal when clicking the X button
+        document.querySelector('.modal-close').addEventListener('click', () => {
+            document.getElementById('project-modal').style.display = 'none';
+        });
+
+        // Variables for image modal functionality
+        const projectModal = document.getElementById('project-modal');
+        const modalBanner = document.getElementById('modal-banner');
+        const imageModal = document.getElementById('image-modal');
+        const imageModalImg = document.getElementById('image-modal-img');
+        const imageModalClose = document.querySelector('.image-modal-close');
+        let currentScale = 1;
+
+        // Helper to open image modal with given src
+        function openImageModal(src) {
+            imageModalImg.src = src;
+            currentScale = 1;
+            imageModalImg.style.transform = 'scale(1)';
+            imageModal.style.display = 'flex';
+        }
+
+        // Clicking on the modal banner opens the image modal
+        modalBanner.addEventListener('click', () => {
+            const bgImage = modalBanner.style.backgroundImage;
+            const match = bgImage.match(/url\(["']?(.*?)["']?\)/);
+            if (match && match[1]) {
+                openImageModal(match[1]);
+            }
+        });
+
+        // Click on supplemental images to open the image modal
+        document.addEventListener('click', (e) => {
+            if (e.target.classList && e.target.classList.contains('supplemental-img')) {
+                openImageModal(e.target.src);
+            }
+        });
+
+        // Close the image modal when clicking outside the image
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) {
+                imageModal.style.display = 'none';
+            }
+        });
+
+        // Close the image modal when clicking the X button
+        imageModalClose.addEventListener('click', () => {
+            imageModal.style.display = 'none';
+        });
+
+        // Zoom image with mouse wheel
+        imageModalImg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.1 : -0.1;
+            currentScale = Math.min(Math.max(currentScale + delta, 1), 4);
+            imageModalImg.style.transform = `scale(${currentScale})`;
+        });
+
+        // Esc closes whichever modal is open
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (imageModal.style.display === 'flex') {
+                    imageModal.style.display = 'none';
+                } else if (projectModal.style.display === 'flex') {
+                    projectModal.style.display = 'none';
+                }
             }
         });
     </script>
