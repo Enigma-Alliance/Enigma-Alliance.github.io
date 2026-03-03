@@ -25,6 +25,79 @@
             font-weight: 300;
             letter-spacing: -0.03em;
         }
+		.news-bar {
+  width: 100%;
+  background: rgba(0,0,0,0.55);
+  border-bottom: 2px solid #e67f8e;
+  backdrop-filter: blur(8px);
+			position: sticky;
+top: 0;
+z-index: 1200;
+}
+.news-bar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.65rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.news-pill {
+  flex: 0 0 auto;
+  font-family: 'Gavoline', sans-serif;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: #0a0a0a;
+  background: #E8F4AD;
+  border: 2px solid #E8F4AD;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  line-height: 1;
+}
+.news-track {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(232,244,173,0.35);
+  background: rgba(0,0,0,0.35);
+}
+.news-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  padding: 0.35rem 0;
+  animation: newsScroll 28s linear infinite;
+  will-change: transform;
+}
+.news-item {
+  display: inline-block;
+  padding: 0 1.25rem;
+  color: #fff;
+  font-size: 0.95rem;
+  opacity: 0.95;
+}
+.news-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e67f8e;
+  margin: 0 0.35rem;
+  vertical-align: middle;
+  opacity: 0.9;
+}
+@keyframes newsScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@media (max-width: 700px) {
+  .news-pill { display: none; }
+  .news-bar-inner { padding: 0.55rem 0.85rem; }
+  .news-item { font-size: 0.9rem; padding: 0 0.9rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .news-marquee { animation: none; }
+}
         #hero {
             position: relative;
             min-height: 40vh;
@@ -306,6 +379,23 @@
     </style>
 </head>
 <body>
+	<div class="news-bar">
+  <div class="news-bar-inner">
+    <span class="news-pill">Breaking News</span>
+    <div class="news-track">
+      <div class="news-marquee">
+        <span class="news-item">Find me @ GDC booth 527</span><span class="news-dot"></span>
+        <span class="news-item">play DOUGH OR DIE Wednesday 12-2pm, Thursday 4-6pm</span><span class="news-dot"></span>
+		          <span class="news-item">Find me @ GDC booth 527</span><span class="news-dot"></span>
+        <span class="news-item">Upcoming Intern with Universal Creative, Advanced Technologies Initative</span><span class="news-dot"></span>
+		          <span class="news-item">see SCAD @ GDC booth 527</span><span class="news-dot"></span>
+        <span class="news-item">Hack-IX: Low code hackathon | Winner</span><span class="news-dot"></span>
+		          <span class="news-item">Find me @ GDC booth 527</span><span class="news-dot"></span>
+        <span class="news-item">Global Game Jam @ SCAD | Best Mechanic</span><span class="news-dot"></span>
+      </div>
+    </div>
+  </div>
+</div>
     <section id="hero">
         <nav>
             <a href="#hero" class="logo-button">
