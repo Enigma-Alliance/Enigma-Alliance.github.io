@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aidan Dougan — Enigma Alliance</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<style>
+  :root {
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { background: #0a0a0a; color: #f0eaeb; }
+  #root { min-height: 100vh; }
+  .page-wrap { min-height: 100vh; }
+  /* Page transition */
+  .page-enter { animation: pageIn .35s cubic-bezier(.4,0,.2,1) forwards; }
+  @keyframes pageIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+
+<script src="portfolio-data.js"></script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+  integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+  integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+  integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+  crossorigin="anonymous"></script>
+
+<script type="text/babel" src="portfolio-shared.jsx"></script>
+<script type="text/babel" src="portfolio-home.jsx"></script>
+<script type="text/babel" src="portfolio-project.jsx"></script>
+
+<script type="text/babel">
+/* ── Router ── */
+function parseHash(hash) {
+  const h = hash.replace(/^#\/?/, '');
+  if (!h || h === '/') return { view: 'home' };
+  const parts = h.split('/');
+  if (parts[0] === 'project' && parts[1]) {
+    if (parts[2] === 'case-study') return { view: 'case-study', id: parts[1] };
+    return { view: 'project', id: parts[1] };
+  }
+  return { view: 'home' };
+}
+
+function useRoute() {
+  const [route, setRoute] = React.useState(() => parseHash(window.location.hash));
+  React.useEffect(() => {
+    const fn = () => setRoute(parseHash(window.location.hash));
+    window.addEventListener('hashchange', fn);
+    return () => window.removeEventListener('hashchange', fn);
+  }, []);
+  return route;
+}
+
+/* ── App ── */
+function App() {
+  const route    = useRoute();
+  const [key, setKey] = React.useState(0);
+  const prevRoute = React.useRef(route);
+
+  React.useEffect(() => {
+    if (prevRoute.current !== route) {
+      setKey(k => k + 1);
+      prevRoute.current = route;
+    }
+  }, [route]);
+
+  const onNav = () => setKey(k => k + 1);
+
+  const crumbs = React.useMemo(() => {
+    if (route.view === 'home') return null;
+    const { projects } = window.PORTFOLIO_DATA;
+    const p = projects.find(x => x.id === route.id);
+    if (!p) return null;
+    if (route.view === 'case-study') return `HOME / PROJECTS / ${p.title.toUpperCase()} / CASE STUDY`;
+    return `HOME / PROJECTS / ${p.title.toUpperCase()}`;
+  }, [route]);
+
+  return (
+    <div className="page-wrap">
+      <CustomCursor />
+      <Nav crumbs={crumbs} onNav={onNav} />
+
+      <div key={key} className="page-enter">
+        {route.view === 'home'       && <HomePage onNav={onNav} />}
+        {route.view === 'project'    && <ProjectPage projectId={route.id} onNav={onNav} />}
+        {route.view === 'case-study' && <CaseStudy   projectId={route.id} onNav={onNav} />}
+      </div>
+
+      <Footer onNav={onNav} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="80" fill="#0a0a0a"/>
+    <rect x="10" y="10" width="100" height="2" fill="#e67f8e" opacity=".6"/>
+    <rect x="10" y="20" width="60" height="8" rx="1" fill="#e67f8e" opacity=".4"/>
+    <rect x="10" y="34" width="30" height="24" rx="1" fill="#1a1a1a" stroke="#e67f8e" stroke-width=".5"/>
+    <rect x="45" y="34" width="30" height="24" rx="1" fill="#1a1a1a" stroke="#e67f8e" stroke-width=".5"/>
+    <rect x="80" y="34" width="30" height="24" rx="1" fill="#1a1a1a" stroke="#e67f8e" stroke-width=".5"/>
+    <rect x="10" y="64" width="100" height="1" fill="#2a1a20"/>
+  </svg>
+</template>
+
+<div id="root"></div>
+</body>
+</html>

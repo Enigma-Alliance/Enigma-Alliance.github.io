@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enigma Alliance — Layout Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a1a; font-family: 'IBM Plex Mono', monospace; }
+
+  /* Shared wireframe tokens */
+  .wf { font-family: 'IBM Plex Mono', monospace; color: #222; }
+  .sketch { font-family: 'Caveat', cursive; }
+
+  /* Hatched placeholder for images */
+  .hatch {
+    background: repeating-linear-gradient(
+      45deg, #ccc 0px, #ccc 1px, transparent 1px, transparent 8px
+    );
+    border: 1.5px solid #aaa;
+  }
+  .hatch-dark {
+    background: repeating-linear-gradient(
+      45deg, #333 0px, #333 1px, #1a1a1a 1px, #1a1a1a 8px
+    );
+    border: 1.5px solid #444;
+  }
+</style>
+</head>
+<body>
+<script type="text/babel">
+
+/* ── Shared annotation component ── */
+const Note = ({children, color="#e6a817", x, y, rotate="-2deg"}) => (
+  <div style={{
+    position:'absolute', left:x, top:y,
+    transform:`rotate(${rotate})`,
+    fontFamily:'Caveat,cursive', fontSize:13, color,
+    background:'rgba(255,255,255,0.92)', padding:'2px 7px',
+    border:`1px solid ${color}`, borderRadius:3, zIndex:10,
+    whiteSpace:'nowrap', lineHeight:1.4
+  }}>{children}</div>
+);
+
+const Arrow = ({x,y,rotate="0deg",color="#e6a817"}) => (
+  <div style={{position:'absolute',left:x,top:y,transform:`rotate(${rotate})`,
+    fontFamily:'Caveat,cursive',fontSize:18,color,zIndex:10,lineHeight:1}}>→</div>
+);
+
+/* ══════════════════════════════════════════════
+   DIRECTION 1: TERMINAL LOG
+   ══════════════════════════════════════════════ */
+const Dir1 = () => {
+  const teal = "#0fbbaa";
+  const bg = "#0d0f0e";
+  const dim = "#3a4a45";
+  const bright = "#e0fff9";
+  return (
+    <div style={{width:1200, fontFamily:"'IBM Plex Mono',monospace", background:bg, color:bright}}>
+
+      {/* NAV */}
+      <div style={{height:48, borderBottom:`1px solid ${dim}`, display:'flex', alignItems:'center', padding:'0 32px', justifyContent:'space-between', background:'rgba(0,0,0,0.5)'}}>
+        <div style={{display:'flex', alignItems:'center', gap:12}}>
+          <div style={{width:28,height:28, border:`1.5px solid ${teal}`, borderRadius:'50%', background:'rgba(15,187,170,0.1)'}} />
+          <span style={{color:teal, fontSize:13, letterSpacing:'0.15em'}}>ENIGMA_ALLIANCE</span>
+        </div>
+        <div style={{display:'flex', gap:24, fontSize:12, color:dim, letterSpacing:'0.1em'}}>
+          <span style={{borderBottom:`1px solid ${teal}`, paddingBottom:2, color:teal}}>/PROJECTS</span>
+          <span>/ABOUT</span>
+          <span>/RESUME</span>
+        </div>
+      </div>
+
+      {/* HERO — terminal */}
+      <div style={{height:340, padding:'40px 32px', position:'relative', background:'#0a0c0b', borderBottom:`1px solid ${dim}`}}>
+        {/* scanlines hint */}
+        <div style={{position:'absolute',inset:0,background:'repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.008) 3px,rgba(255,255,255,0.008) 4px)',pointerEvents:'none'}} />
+        {/* grid dots */}
+        <div style={{position:'absolute',inset:0,backgroundImage:`radial-gradient(circle, ${dim}33 1px, transparent 1px)`,backgroundSize:'28px 28px',pointerEvents:'none',opacity:0.5}} />
+        
+        <div style={{fontSize:11, color:dim, letterSpacing:'0.08em', marginBottom:16}}>AIDAN_DOUGAN.portfolio // v2025</div>
+        <div style={{fontSize:11, color:'#2a3a35', marginBottom:32}}>{'> SYSTEM ONLINE. LOADING MANIFEST...'}</div>
+        
+        <div style={{fontSize:52, fontWeight:700, letterSpacing:'-0.02em', lineHeight:1, color:bright, marginBottom:12}}>AIDAN<br/>DOUGAN</div>
+        <div style={{display:'flex', gap:8, marginTop:16}}>
+          <span style={{border:`1px solid ${teal}`, padding:'4px 12px', fontSize:11, color:teal, letterSpacing:'0.1em'}}>GAME DESIGNER</span>
+          <span style={{border:`1px solid ${dim}`, padding:'4px 12px', fontSize:11, color:dim, letterSpacing:'0.1em'}}>SYSTEMS THINKER</span>
+          <span style={{border:`1px solid ${dim}`, padding:'4px 12px', fontSize:11, color:dim, letterSpacing:'0.1em'}}>CREATIVE DEV</span>
+        </div>
+
+        <div style={{position:'absolute',bottom:24,right:32,fontSize:11,color:dim}}>
+          SCROLL TO BEGIN {'>'} {'>'} {'>'}
+        </div>
+        <Note x={820} y={40} color={teal}>hero: no image — pure text + grid texture</Note>
+        <Note x={820} y={72} color="#888">scanlines at ~1% opacity (industrial)</Note>
+      </div>
+
+      {/* TICKER */}
+      <div style={{height:34, background:'rgba(15,187,170,0.06)', borderBottom:`1px solid ${dim}`, display:'flex', alignItems:'center', padding:'0 32px', gap:24, overflow:'hidden'}}>
+        <span style={{fontSize:10, color:teal, letterSpacing:'0.12em', flexShrink:0}}>// LIVE</span>
+        {["GDC BOOTH 527","DOUGH OR DIE — STEAM RELEASE PENDING","UNIVERSAL CREATIVE INTERN","HACK-IX WINNER"].map((t,i)=>(
+          <span key={i} style={{fontSize:10, color:dim, letterSpacing:'0.08em', flexShrink:0}}>• {t}</span>
+        ))}
+      </div>
+
+      {/* PROJECTS — terminal log rows */}
+      <div style={{padding:'40px 32px'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:24}}>
+          <div style={{fontSize:11, color:teal, letterSpacing:'0.15em'}}>// PROJECTS</div>
+          <div style={{fontSize:10, color:dim}}>9 entries — sorted by date</div>
+        </div>
+
+        {[
+          ["001","DOUGH_OR_DIE","Product Owner","GAME_DESIGN","UE5"],
+          ["002","CLIPPED","Project Lead","GAME_DESIGN","UE5"],
+          ["003","CRESCENDO","Project Lead","TOOL_DEV","React"],
+          ["004","SNAPSHOT","Systems Designer","GAME_DESIGN","UE5"],
+          ["005","AETHER_912","HMI Designer","HARDWARE","Unity"],
+        ].map(([num, name, role, tag, tech]) => (
+          <div key={num} style={{
+            display:'flex', alignItems:'center', gap:0,
+            padding:'12px 0',
+            borderTop:`1px solid ${dim}22`,
+            cursor:'pointer',
+          }}>
+            <span style={{color:dim, fontSize:11, width:40, flexShrink:0}}>{num}</span>
+            <span style={{color:bright, fontSize:15, fontWeight:600, width:220, flexShrink:0, letterSpacing:'0.02em'}}>{name}</span>
+            <span style={{color:dim, fontSize:11, flex:1, letterSpacing:'0.06em'}}>{role}</span>
+            <span style={{border:`1px solid ${teal}44`, padding:'2px 8px', fontSize:10, color:teal, letterSpacing:'0.08em', marginRight:12}}>{tag}</span>
+            <span style={{border:`1px solid ${dim}44`, padding:'2px 8px', fontSize:10, color:dim, letterSpacing:'0.08em', marginRight:16}}>{tech}</span>
+            <span style={{fontSize:14, color:dim}}>→</span>
+          </div>
+        ))}
+        <div style={{marginTop:8, fontSize:10, color:dim, textAlign:'right'}}>+ 4 more entries</div>
+      </div>
+
+      {/* ABOUT */}
+      <div style={{padding:'32px 32px', borderTop:`1px solid ${dim}`, background:'rgba(0,0,0,0.3)'}}>
+        <div style={{fontSize:11, color:teal, letterSpacing:'0.15em', marginBottom:16}}>// ABOUT</div>
+        <div style={{maxWidth:560, fontSize:13, color:'rgba(224,255,249,0.6)', lineHeight:1.7}}>
+          Senior at SCAD — Interactive Design &amp; Game Development. Focused on game systems, mechanics, and the intersection of logic + creativity.
+        </div>
+        <div style={{marginTop:16, display:'flex', gap:16, fontSize:11, color:dim}}>
+          <span>aidandougan24@gmail.com</span>
+          <span>+1 (314) 452-8267</span>
+          <a style={{color:teal, textDecoration:'none'}}>Resume.pdf ↓</a>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div style={{height:48, borderTop:`1px solid ${dim}`, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', fontSize:10, color:dim}}>
+        <span>© 2025 ENIGMA_ALLIANCE</span>
+        <span>EOF</span>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
+   DIRECTION 2: CARGO MANIFEST
+   ══════════════════════════════════════════════ */
+const Dir2 = () => {
+  const amber = "#e6a817";
+  const bg = "#0e0d0b";
+  const dim = "#3d3825";
+  const steel = "#c8b99a";
+  return (
+    <div style={{width:1200, fontFamily:"'IBM Plex Mono',monospace", background:bg, color:steel}}>
+
+      {/* NAV */}
+      <div style={{height:52, borderBottom:`2px solid ${amber}22`, display:'flex', alignItems:'center', padding:'0 40px', justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div style={{width:32,height:32,background:`${amber}22`,border:`2px solid ${amber}`,borderRadius:'50%'}} />
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:amber,letterSpacing:'0.12em'}}>ENIGMA ALLIANCE</div>
+            <div style={{fontSize:9,color:dim,letterSpacing:'0.2em'}}>AIDAN DOUGAN — DESIGNER</div>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:0}}>
+          {["PROJECTS","ABOUT","RESUME"].map(l=>(
+            <span key={l} style={{padding:'8px 20px',fontSize:11,letterSpacing:'0.12em',color:dim,borderLeft:`1px solid ${dim}`,cursor:'pointer'}}>{l}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* HERO */}
+      <div style={{height:360, position:'relative', overflow:'hidden', display:'flex', alignItems:'flex-end', padding:'0 40px 40px'}}>
+        {/* Grid texture bg */}
+        <div style={{position:'absolute',inset:0,backgroundImage:`linear-gradient(${dim}33 1px,transparent 1px),linear-gradient(90deg,${dim}33 1px,transparent 1px)`,backgroundSize:'48px 48px'}} />
+        {/* Noise tint */}
+        <div style={{position:'absolute',inset:0,background:'rgba(14,13,11,0.7)'}} />
+
+        {/* Big stencil text */}
+        <div style={{position:'absolute',top:32,left:40,right:40,zIndex:1}}>
+          <div style={{fontSize:96,fontWeight:700,lineHeight:0.88,letterSpacing:'-0.04em',color:`${amber}18`,userSelect:'none',pointerEvents:'none'}}>
+            ENIGMA<br/>ALLIANCE
+          </div>
+        </div>
+
+        <div style={{position:'relative',zIndex:2}}>
+          <div style={{fontSize:11,color:amber,letterSpacing:'0.2em',marginBottom:8}}>MANIFEST // AIDAN DOUGAN</div>
+          <div style={{fontSize:40,fontWeight:700,color:steel,letterSpacing:'-0.02em',lineHeight:1.1}}>
+            Game Designer<br/>&amp; Creative Developer
+          </div>
+          <div style={{display:'flex',gap:8,marginTop:20}}>
+            <span style={{background:amber,color:bg,fontSize:11,padding:'5px 14px',fontWeight:700,letterSpacing:'0.1em'}}>OPEN FOR HIRE</span>
+            <span style={{border:`1px solid ${dim}`,color:dim,fontSize:11,padding:'5px 14px',letterSpacing:'0.1em'}}>SCAD 2025</span>
+          </div>
+        </div>
+
+        <Note x={740} y={32} color={amber} rotate="1deg">hero: grid texture bg + ghost text</Note>
+        <Note x={740} y={62} color="#888" rotate="-1deg">amber accent = primary action color</Note>
+      </div>
+
+      {/* TICKER */}
+      <div style={{height:32,background:`${amber}12`,borderTop:`1px solid ${amber}33`,borderBottom:`1px solid ${amber}33`,display:'flex',alignItems:'center',padding:'0 40px',gap:0,overflow:'hidden'}}>
+        <span style={{fontSize:10,color:amber,letterSpacing:'0.15em',marginRight:20,flexShrink:0}}>DISPATCH</span>
+        {["GDC BOOTH 527","DOUGH OR DIE COMING TO STEAM","HACK-IX: 1ST PLACE","UNIVERSAL CREATIVE — ATI INTERN"].map((t,i)=>(
+          <React.Fragment key={i}>
+            <span style={{width:6,height:6,borderRadius:'50%',background:amber,opacity:0.4,display:'inline-block',marginRight:12,flexShrink:0}} />
+            <span style={{fontSize:10,color:dim,letterSpacing:'0.1em',marginRight:20,flexShrink:0}}>{t}</span>
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* PROJECT CARDS — cargo manifest style */}
+      <div style={{padding:'48px 40px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:32}}>
+          <div style={{fontSize:11,color:amber,letterSpacing:'0.2em'}}>CARGO MANIFEST // PROJECTS</div>
+          <div style={{fontSize:10,color:dim}}>9 ENTRIES</div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}}>
+          {[
+            {n:"001",t:"DOUGH OR DIE",d:"Bakery + mech arena. UE5 capstone.",tags:["GAME DESIGN","UE5"],role:"Product Owner"},
+            {n:"002",t:"CLIPPED",d:"Stealth platformer, art-heist ferret.",tags:["GAME DESIGN","UE5"],role:"Project Lead"},
+            {n:"003",t:"CRESCENDO",d:"CV-powered PT platform. Hack-IX 1st.",tags:["TOOL DEV","CV"],role:"Project Lead"},
+            {n:"004",t:"SNAPSHOT",d:"1v1 shooter where the weapon = camera.",tags:["GAME DESIGN","UE5"],role:"Systems Designer"},
+            {n:"005",t:"AETHER 912",d:"EV dashboard — Unity + Arduino HMI.",tags:["HARDWARE","HCI"],role:"HMI Designer"},
+            {n:"006",t:"ETERNAL PURGE",d:"Cooperative tabletop survival game.",tags:["TABLETOP","SYSTEMS"],role:"Project Lead"},
+          ].map(({n,t,d,tags,role})=>(
+            <div key={n} style={{
+              background:'rgba(255,255,255,0.02)',
+              border:`1px solid ${dim}`,
+              borderLeft:`3px solid ${amber}`,
+              padding:'20px',
+              position:'relative',
+              cursor:'pointer',
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+                <span style={{fontSize:10,color:amber,letterSpacing:'0.15em'}}>{n}</span>
+                <span style={{fontSize:9,color:dim,letterSpacing:'0.1em'}}>{role}</span>
+              </div>
+              <div style={{fontSize:16,fontWeight:700,color:steel,marginBottom:8,letterSpacing:'0.02em'}}>{t}</div>
+              <div style={{fontSize:11,color:dim,lineHeight:1.6,marginBottom:12}}>{d}</div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {tags.map(tg=>(
+                  <span key={tg} style={{fontSize:9,padding:'2px 8px',border:`1px solid ${amber}44`,color:amber,letterSpacing:'0.1em'}}>{tg}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ABOUT */}
+      <div style={{padding:'32px 40px',borderTop:`1px solid ${dim}`,display:'grid',gridTemplateColumns:'1fr 2fr',gap:48}}>
+        <div>
+          <div style={{fontSize:11,color:amber,letterSpacing:'0.2em',marginBottom:12}}>ABOUT</div>
+          <div style={{fontSize:42,fontWeight:700,color:`${steel}33`,lineHeight:0.9,letterSpacing:'-0.03em'}}>AIDAN<br/>DOUGAN</div>
+        </div>
+        <div style={{fontSize:13,color:dim,lineHeight:1.8,paddingTop:8}}>
+          Senior at SCAD — Interactive Design &amp; Game Development. Systems-focused, logic-driven, creative at the core.
+          <div style={{marginTop:16,display:'flex',gap:20}}>
+            <a style={{color:amber,textDecoration:'none',fontSize:11}}>Resume ↓</a>
+            <span style={{fontSize:11}}>aidandougan24@gmail.com</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
+   DIRECTION 3: FACILITY SCHEMATIC
+   ══════════════════════════════════════════════ */
+const Dir3 = () => {
+  const teal = "#00c4b4";
+  const bg = "#090c0e";
+  const grid = "#0d2028";
+  const line = "#1a3a48";
+  const bright = "#d0edf5";
+  return (
+    <div style={{width:1200, fontFamily:"'IBM Plex Mono',monospace", background:bg, color:bright}}>
+
+      {/* NAV — horizontal rule with labels */}
+      <div style={{height:44,borderBottom:`1px solid ${line}`,display:'flex',alignItems:'stretch',padding:'0'}}>
+        <div style={{padding:'0 24px',display:'flex',alignItems:'center',borderRight:`1px solid ${line}`,gap:10}}>
+          <div style={{width:8,height:8,background:teal,borderRadius:'50%'}} />
+          <span style={{fontSize:11,color:teal,letterSpacing:'0.15em'}}>EA</span>
+        </div>
+        <div style={{flex:1,display:'flex',alignItems:'center',padding:'0 24px',gap:4}}>
+          {/* Blueprint coord labels */}
+          {Array.from({length:10},(_,i)=>(
+            <span key={i} style={{flex:1,textAlign:'center',fontSize:9,color:line,borderRight:`1px solid ${line}22`,paddingRight:2}}>{String.fromCharCode(65+i)}</span>
+          ))}
+        </div>
+        <div style={{display:'flex',borderLeft:`1px solid ${line}`}}>
+          {["PROJECTS","ABOUT","RESUME"].map(l=>(
+            <span key={l} style={{padding:'0 18px',display:'flex',alignItems:'center',fontSize:10,color:line,borderRight:`1px solid ${line}`,letterSpacing:'0.12em',cursor:'pointer'}}>{l}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* HERO — schematic */}
+      <div style={{height:360,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}>
+        {/* Blueprint grid */}
+        <div style={{position:'absolute',inset:0,
+          backgroundImage:`linear-gradient(${line} 1px,transparent 1px),linear-gradient(90deg,${line} 1px,transparent 1px)`,
+          backgroundSize:'40px 40px'}} />
+        {/* Major grid */}
+        <div style={{position:'absolute',inset:0,
+          backgroundImage:`linear-gradient(${line}88 1px,transparent 1px),linear-gradient(90deg,${line}88 1px,transparent 1px)`,
+          backgroundSize:'200px 200px'}} />
+
+        {/* Corner coordinates */}
+        <div style={{position:'absolute',top:12,left:16,fontSize:9,color:`${teal}88`,letterSpacing:'0.12em'}}>0°N 00'00"W</div>
+        <div style={{position:'absolute',top:12,right:16,fontSize:9,color:`${teal}88`,letterSpacing:'0.12em'}}>SECTION: HERO // ZONE 01</div>
+        <div style={{position:'absolute',bottom:12,left:16,fontSize:9,color:`${teal}88`,letterSpacing:'0.12em'}}>SCAD, SAVANNAH — 2025</div>
+        <div style={{position:'absolute',bottom:12,right:16,fontSize:9,color:`${teal}88`}}>CLEARANCE: PUBLIC</div>
+
+        {/* Crosshair */}
+        <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',width:400,height:200,border:`1px solid ${teal}33`,pointerEvents:'none'}}>
+          <div style={{position:'absolute',top:'50%',left:-20,right:-20,height:1,background:`${teal}55`}} />
+          <div style={{position:'absolute',left:'50%',top:-20,bottom:-20,width:1,background:`${teal}55`}} />
+          <div style={{position:'absolute',top:-1,left:-1,width:8,height:8,border:`1px solid ${teal}`,borderRight:'none',borderBottom:'none'}} />
+          <div style={{position:'absolute',top:-1,right:-1,width:8,height:8,border:`1px solid ${teal}`,borderLeft:'none',borderBottom:'none'}} />
+          <div style={{position:'absolute',bottom:-1,left:-1,width:8,height:8,border:`1px solid ${teal}`,borderRight:'none',borderTop:'none'}} />
+          <div style={{position:'absolute',bottom:-1,right:-1,width:8,height:8,border:`1px solid ${teal}`,borderLeft:'none',borderTop:'none'}} />
+        </div>
+
+        <div style={{position:'relative',zIndex:2,textAlign:'center'}}>
+          <div style={{fontSize:11,color:`${teal}88`,letterSpacing:'0.25em',marginBottom:10}}>SUBJECT PROFILE</div>
+          <div style={{fontSize:56,fontWeight:700,letterSpacing:'-0.03em',color:bright,lineHeight:0.9}}>AIDAN<br/>DOUGAN</div>
+          <div style={{marginTop:12,fontSize:11,color:`${teal}`,letterSpacing:'0.18em'}}>GAME DESIGN / SYSTEMS / CREATIVE DEV</div>
+        </div>
+      </div>
+
+      {/* TICKER */}
+      <div style={{height:28,background:`${teal}0a`,borderTop:`1px solid ${line}`,borderBottom:`1px solid ${line}`,display:'flex',alignItems:'center',padding:'0 24px',gap:0,overflow:'hidden'}}>
+        <span style={{fontSize:9,color:teal,letterSpacing:'0.2em',marginRight:16,flexShrink:0}}>STATUS</span>
+        {["GDC BOOTH 527","DOUGH OR DIE — STEAM","UNIVERSAL CREATIVE INTERN","HACK-IX: 1ST PLACE"].map((t,i)=>(
+          <span key={i} style={{fontSize:9,color:line,letterSpacing:'0.1em',marginRight:16,flexShrink:0}}>// {t}</span>
+        ))}
+      </div>
+
+      {/* PROJECTS — schematic room layout */}
+      <div style={{padding:'40px 32px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:24}}>
+          <div style={{fontSize:10,color:teal,letterSpacing:'0.2em'}}>ZONE 02 — PROJECTS</div>
+          <div style={{fontSize:9,color:line}}>ITEMS: 9</div>
+        </div>
+
+        {/* Irregular grid — "rooms" */}
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gridTemplateRows:'auto auto',gap:2}}>
+          {/* Featured large */}
+          <div style={{gridRow:'1/3',border:`1px solid ${line}`,padding:'24px',position:'relative',background:'rgba(0,196,180,0.03)'}}>
+            <div style={{position:'absolute',top:8,left:8,fontSize:9,color:teal,letterSpacing:'0.15em'}}>001 // FEATURED</div>
+            <div className="hatch-dark" style={{width:'100%',height:120,marginTop:20,marginBottom:16,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontFamily:'Caveat,cursive',color:'#444',fontSize:14}}>header image</span>
+            </div>
+            <div style={{fontSize:20,fontWeight:700,color:bright,marginBottom:6}}>DOUGH OR DIE</div>
+            <div style={{fontSize:11,color:line,lineHeight:1.6}}>Bakery + underground mech arena. UE5 capstone → GDC → Steam.</div>
+            <div style={{display:'flex',gap:6,marginTop:12}}>
+              <span style={{fontSize:9,padding:'2px 8px',border:`1px solid ${teal}44`,color:teal}}>GAME DESIGN</span>
+              <span style={{fontSize:9,padding:'2px 8px',border:`1px solid ${line}`,color:line}}>UE5</span>
+            </div>
+            <div style={{position:'absolute',bottom:8,right:8,fontSize:9,color:line}}>Product Owner</div>
+          </div>
+          {[
+            {n:"002",t:"CLIPPED",d:"Stealth platformer game jam. Best Mechanic."},
+            {n:"003",t:"CRESCENDO",d:"CV recovery platform. Hack-IX 1st."},
+            {n:"004",t:"SNAPSHOT",d:"Camera-as-weapon 1v1 shooter."},
+            {n:"005",t:"AETHER 912",d:"EV HMI — Unity + Arduino."},
+          ].map(({n,t,d})=>(
+            <div key={n} style={{border:`1px solid ${line}`,padding:'16px',position:'relative',background:'rgba(0,196,180,0.015)'}}>
+              <div style={{fontSize:9,color:teal,letterSpacing:'0.12em',marginBottom:6}}>{n}</div>
+              <div style={{fontSize:14,fontWeight:700,color:bright,marginBottom:4}}>{t}</div>
+              <div style={{fontSize:10,color:line,lineHeight:1.5}}>{d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ABOUT */}
+      <div style={{margin:'0 32px 32px',border:`1px solid ${line}`,padding:'24px',position:'relative'}}>
+        <div style={{position:'absolute',top:8,left:12,fontSize:9,color:teal,letterSpacing:'0.2em'}}>ZONE 03 — ABOUT</div>
+        <div style={{marginTop:16,display:'grid',gridTemplateColumns:'120px 1fr 1fr',gap:32}}>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+            <div style={{width:80,height:80,border:`1px solid ${line}`,borderRadius:'50%',background:'rgba(0,196,180,0.05)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontFamily:'Caveat,cursive',fontSize:12,color:line}}>photo</span>
+            </div>
+            <div style={{fontSize:9,color:line,textAlign:'center',letterSpacing:'0.1em'}}>AIDAN DOUGAN<br/>SCAD 2025</div>
+          </div>
+          <div style={{fontSize:12,color:line,lineHeight:1.8}}>
+            Senior — Interactive Design &amp; Game Development. Systems-first designer. UE5, Unity, tabletop, Discord tooling.
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,fontSize:10,color:line}}>
+            <span>aidandougan24@gmail.com</span>
+            <span>+1 (314) 452-8267</span>
+            <a style={{color:teal,textDecoration:'none'}}>→ Resume.pdf</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════
+   DIRECTION 4: REDACTED DOSSIER
+   ══════════════════════════════════════════════ */
+const Dir4 = () => {
+  const amber = "#d4a843";
+  const teal = "#2ec4b6";
+  const bg = "#0b0b0b";
+  const dim = "#2e2e2e";
+  const paper = "#e8e2d6";
+  const ink = "#1a1a1a";
+  return (
+    <div style={{width:1200, fontFamily:"'IBM Plex Mono',monospace", background:bg, color:paper}}>
+
+      {/* CLASSIFICATION HEADER */}
+      <div style={{height:36,background:'rgba(212,168,67,0.08)',borderBottom:`2px solid ${amber}`,display:'flex',alignItems:'center',justifyContent:'center',gap:40}}>
+        <span style={{fontSize:10,color:amber,letterSpacing:'0.25em',fontWeight:700}}>// ENIGMA ALLIANCE — CLEARANCE: PUBLIC //</span>
+      </div>
+
+      {/* NAV */}
+      <div style={{height:52,borderBottom:`1px solid ${dim}`,display:'flex',alignItems:'center',padding:'0 40px',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={{width:30,height:30,border:`2px solid ${amber}`,transform:'rotate(45deg)',background:'rgba(212,168,67,0.08)'}} />
+          <span style={{fontSize:14,fontWeight:700,color:paper,letterSpacing:'0.1em'}}>ENIGMA ALLIANCE</span>
+        </div>
+        <div style={{display:'flex',gap:24,fontSize:11,color:dim,letterSpacing:'0.1em'}}>
+          <span style={{color:amber}}>FILES</span>
+          <span>ABOUT</span>
+          <span>CONTACT</span>
+        </div>
+      </div>
+
+      {/* HERO — dossier cover */}
+      <div style={{height:360,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',padding:'0 40px',gap:48}}>
+        {/* Paper texture bg */}
+        <div style={{position:'absolute',inset:0,backgroundImage:`repeating-linear-gradient(0deg,transparent,transparent 23px,${dim}44 24px)`,opacity:0.3}} />
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg, rgba(11,11,11,0) 0%, rgba(11,11,11,0.8) 100%)'}} />
+
+        {/* Dossier "file folder" */}
+        <div style={{position:'relative',width:280,flexShrink:0,zIndex:2}}>
+          <div style={{background:dim,padding:'8px 16px',fontSize:9,color:amber,letterSpacing:'0.2em',display:'flex',justifyContent:'space-between'}}>
+            <span>FILE 0001</span>
+            <span>PUBLIC</span>
+          </div>
+          <div style={{background:'rgba(232,226,214,0.04)',border:`1px solid ${dim}`,borderTop:'none',padding:'24px 20px'}}>
+            <div className="hatch-dark" style={{height:140,width:'100%',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontFamily:'Caveat,cursive',color:'#444',fontSize:13}}>photo placeholder</span>
+            </div>
+            <div style={{fontSize:11,color:paper,letterSpacing:'0.08em'}}>DOUGAN, AIDAN</div>
+            <div style={{fontSize:9,color:dim,letterSpacing:'0.12em',marginTop:4}}>GAME DESIGNER // SCAD 2025</div>
+          </div>
+        </div>
+
+        <div style={{position:'relative',zIndex:2,flex:1}}>
+          <div style={{fontSize:10,color:amber,letterSpacing:'0.2em',marginBottom:12}}>SUBJECT BRIEF</div>
+          <div style={{fontSize:52,fontWeight:700,lineHeight:0.9,letterSpacing:'-0.02em',color:paper,marginBottom:20}}>
+            AIDAN<br/>DOUGAN
+          </div>
+          <div style={{maxWidth:380,fontSize:12,color:dim,lineHeight:1.7,marginBottom:20}}>
+            Senior designer at SCAD. Specializing in game systems, mechanics design, and interactive experience.
+          </div>
+          <div style={{display:'flex',gap:12}}>
+            <span style={{background:amber,color:bg,fontSize:10,padding:'5px 16px',fontWeight:700,letterSpacing:'0.1em'}}>▶ VIEW FILES</span>
+            <span style={{border:`1px solid ${dim}`,color:dim,fontSize:10,padding:'5px 16px',letterSpacing:'0.1em'}}>RESUME ↓</span>
+          </div>
+        </div>
+
+        <Note x={780} y={40} color={amber} rotate="1deg">hero: dossier folder visual device</Note>
+        <Note x={780} y={70} color="#888" rotate="-0.5deg">amber = primary / teal = secondary accent</Note>
+      </div>
+
+      {/* TICKER */}
+      <div style={{height:30,background:`${amber}0a`,borderTop:`1px solid ${dim}`,borderBottom:`1px solid ${dim}`,display:'flex',alignItems:'center',padding:'0 40px',overflow:'hidden',gap:0}}>
+        <span style={{fontSize:9,color:amber,letterSpacing:'0.2em',marginRight:20,flexShrink:0}}>INTEL</span>
+        {["GDC BOOTH 527","DOUGH OR DIE — STEAM RELEASE PENDING","UNIVERSAL CREATIVE INTERN — ATI","HACK-IX 1ST PLACE"].map((t,i)=>(
+          <span key={i} style={{fontSize:9,color:dim,letterSpacing:'0.1em',marginRight:20,flexShrink:0}}>◆ {t}</span>
+        ))}
+      </div>
+
+      {/* PROJECT CARDS — case file briefs */}
+      <div style={{padding:'40px 40px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:28}}>
+          <div style={{fontSize:10,color:amber,letterSpacing:'0.2em'}}>CASE FILES — ACTIVE PROJECTS</div>
+          <div style={{fontSize:9,color:dim}}>9 RECORDS — SORTED BY DATE</div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16}}>
+          {[
+            {id:"CASE-001",t:"DOUGH OR DIE",d:"Bakery + mech arena. UE5. GDC → Steam.",role:"PO",status:"SHIPPED",tg:"GAME",col:amber},
+            {id:"CASE-002",t:"CLIPPED",d:"Stealth platformer game jam. Best Mechanic.",role:"LEAD",status:"AWARDED",tg:"GAME",col:amber},
+            {id:"CASE-003",t:"CRESCENDO",d:"CV-powered PT platform. Hack-IX 1st place.",role:"LEAD",status:"AWARDED",tg:"TOOL",col:teal},
+            {id:"CASE-004",t:"SNAPSHOT",d:"Camera-as-weapon competitive 1v1 shooter.",role:"SYS",status:"PROTOTYPE",tg:"GAME",col:amber},
+            {id:"CASE-005",t:"AETHER 912",d:"EV HMI — Unity + Arduino embedded systems.",role:"HMI",status:"COMPLETE",tg:"HW",col:teal},
+            {id:"CASE-006",t:"ETERNAL PURGE",d:"Cooperative tabletop horror survival game.",role:"LEAD",status:"COMPLETE",tg:"TABLE",col:dim},
+          ].map(({id,t,d,role,status,tg,col})=>(
+            <div key={id} style={{background:'rgba(255,255,255,0.015)',border:`1px solid ${dim}`,borderTop:`2px solid ${col}`,padding:'16px 18px',position:'relative',cursor:'pointer'}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                <span style={{fontSize:9,color:col,letterSpacing:'0.15em'}}>{id}</span>
+                <span style={{fontSize:9,padding:'1px 6px',border:`1px solid ${col}44`,color:col,letterSpacing:'0.1em'}}>{status}</span>
+              </div>
+              <div style={{fontSize:15,fontWeight:700,color:paper,marginBottom:6,letterSpacing:'0.02em'}}>{t}</div>
+              <div style={{fontSize:10,color:dim,lineHeight:1.6,marginBottom:12}}>{d}</div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:9,padding:'2px 8px',background:`${col}15`,border:`1px solid ${col}33`,color:col,letterSpacing:'0.1em'}}>{tg}</span>
+                <span style={{fontSize:9,color:dim}}>ROLE: {role}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ABOUT */}
+      <div style={{margin:'0 40px 32px',padding:'24px 28px',border:`1px solid ${dim}`,borderTop:`2px solid ${amber}`}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:16}}>
+          <div style={{fontSize:10,color:amber,letterSpacing:'0.2em'}}>SUBJECT BACKGROUND</div>
+          <div style={{fontSize:9,color:dim}}>CLASSIFICATION: PUBLIC</div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:32}}>
+          <div style={{fontSize:12,color:dim,lineHeight:1.8}}>
+            Senior at SCAD — Interactive Design &amp; Game Development. Systems-focused, logic-driven designer. Specializes in game mechanics, procedural systems, and HCI.
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,fontSize:10}}>
+            <div style={{display:'flex',gap:12}}>
+              <span style={{color:dim,width:80}}>EMAIL</span>
+              <span style={{color:paper}}>aidandougan24@gmail.com</span>
+            </div>
+            <div style={{display:'flex',gap:12}}>
+              <span style={{color:dim,width:80}}>PHONE</span>
+              <span style={{color:paper}}>+1 (314) 452-8267</span>
+            </div>
+            <div style={{display:'flex',gap:12}}>
+              <span style={{color:dim,width:80}}>RESUME</span>
+              <a style={{color:amber,textDecoration:'none'}}>→ Download PDF</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div style={{height:40,borderTop:`2px solid ${amber}`,display:'flex',alignItems:'center',justifyContent:'center',background:`${amber}08`}}>
+        <span style={{fontSize:9,color:dim,letterSpacing:'0.25em'}}>// ENIGMA ALLIANCE // © 2025 AIDAN DOUGAN // ALL RIGHTS RESERVED //</span>
+      </div>
+    </div>
+  );
+};
+
+/* ── App ── */
+function App() {
+  return (
+    <DesignCanvas title="Enigma Alliance — Layout Directions">
+      <DCSection id="directions" title="4 Layout Directions">
+        <DCArtboard id="dir1" label="① Terminal Log" width={1200} height={920}>
+          <Dir1 />
+        </DCArtboard>
+        <DCArtboard id="dir2" label="② Cargo Manifest" width={1200} height={920}>
+          <Dir2 />
+        </DCArtboard>
+        <DCArtboard id="dir3" label="③ Facility Schematic" width={1200} height={900}>
+          <Dir3 />
+        </DCArtboard>
+        <DCArtboard id="dir4" label="④ Redacted Dossier" width={1200} height={900}>
+          <Dir4 />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+<div id="root"></div>
+</body>
+</html>

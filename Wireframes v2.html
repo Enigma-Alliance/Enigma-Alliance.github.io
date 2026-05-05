@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enigma Alliance — 3-Depth Wireframes</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #161412; font-family: 'IBM Plex Mono', monospace; }
+  .hatch-dark {
+    background: repeating-linear-gradient(45deg, #2a2520 0px, #2a2520 1px, #1a1612 1px, #1a1612 9px);
+    border: 1px solid #3a3020;
+  }
+</style>
+</head>
+<body>
+<script type="text/babel">
+
+/* ── Shared tokens ── */
+const A = "#e6a817";       // amber primary
+const A2 = "#c4850c";      // amber dark
+const BG = "#0e0d0b";      // page bg
+const BG2 = "#13120f";     // card bg
+const LINE = "#2e2a1e";    // borders
+const DIM = "#5a5240";     // muted text
+const STEEL = "#c8b99a";   // body text
+const MONO = "'IBM Plex Mono', monospace";
+
+/* ── Shared Nav ── */
+const Nav = ({crumbs=null}) => (
+  <div style={{height:52,borderBottom:`1px solid ${LINE}`,display:'flex',alignItems:'center',padding:'0 48px',justifyContent:'space-between',background:'rgba(0,0,0,0.4)'}}>
+    <div style={{display:'flex',alignItems:'center',gap:14}}>
+      <div style={{width:30,height:30,border:`2px solid ${A}`,transform:'rotate(45deg)',background:`${A}15`}} />
+      <div>
+        <div style={{fontSize:12,fontWeight:700,color:A,letterSpacing:'0.14em'}}>ENIGMA ALLIANCE</div>
+        {crumbs && <div style={{fontSize:9,color:DIM,letterSpacing:'0.1em',marginTop:1}}>{crumbs}</div>}
+      </div>
+    </div>
+    <div style={{display:'flex',gap:0}}>
+      {["PROJECTS","ABOUT","RESUME"].map(l=>(
+        <span key={l} style={{padding:'8px 20px',fontSize:10,letterSpacing:'0.12em',color:DIM,borderLeft:`1px solid ${LINE}`,cursor:'pointer'}}>{l}</span>
+      ))}
+    </div>
+  </div>
+);
+
+/* ── Annotation helpers ── */
+const Note = ({children,x,y,rotate="-1.5deg",color=A}) => (
+  <div style={{position:'absolute',left:x,top:y,transform:`rotate(${rotate})`,fontFamily:'Caveat,cursive',fontSize:13,color,background:'rgba(14,13,11,0.95)',padding:'3px 8px',border:`1px solid ${color}`,borderRadius:3,zIndex:20,whiteSpace:'nowrap',lineHeight:1.4,pointerEvents:'none'}}>{children}</div>
+);
+const Bracket = ({x,y,w,h,label,color=A,side='top'}) => (
+  <div style={{position:'absolute',left:x,top:y,width:w,height:h,border:`1.5px dashed ${color}44`,zIndex:10,pointerEvents:'none'}}>
+    {label && <span style={{position:'absolute',top:side==='top'?-18:h+4,left:0,fontFamily:'Caveat,cursive',fontSize:12,color,whiteSpace:'nowrap'}}>{label}</span>}
+  </div>
+);
+
+/* ══════════════════════════════════════════
+   DEPTH 1 — HOME PAGE
+   ══════════════════════════════════════════ */
+const HomePage = () => {
+  const projects = [
+    {n:"001",t:"DOUGH OR DIE",d:"Run a bakery. Fight mechs. Coming to Steam.",tags:["GAME","UE5"],role:"Product Owner"},
+    {n:"002",t:"CLIPPED",d:"Stealth platformer. Art-heist ferret. Best Mechanic.",tags:["GAME","UE5"],role:"Project Lead"},
+    {n:"003",t:"CRESCENDO",d:"CV-powered physical therapy platform.",tags:["TOOL","CV"],role:"Project Lead"},
+    {n:"004",t:"SNAPSHOT",d:"1v1 shooter. The only weapon is your camera.",tags:["GAME","UE5"],role:"Systems Designer"},
+    {n:"005",t:"AETHER 912",d:"EV dashboard — Unity HMI + Arduino.",tags:["HMI","HW"],role:"HMI Designer"},
+    {n:"006",t:"ETERNAL PURGE",d:"Cooperative tabletop horror survival.",tags:["TABLE","SYS"],role:"Project Lead"},
+    {n:"007",t:"BETWEEN LINES",d:"Interrogate a sentient typewriter.",tags:["GAME","MOBILE"],role:"Co-Developer"},
+    {n:"008",t:"ROOM GENERATION",d:"Procedural dungeon generator in UE5.",tags:["SYS","UE5"],role:"System Designer"},
+    {n:"009",t:"VFX",d:"Real-time energy shield — Niagara + HLSL.",tags:["VFX","UE5"],role:"Technical Artist"},
+  ];
+  return (
+    <div style={{width:1440,background:BG,fontFamily:MONO,color:STEEL}}>
+      <Nav />
+
+      {/* HERO */}
+      <div style={{height:420,position:'relative',overflow:'hidden',display:'flex',alignItems:'flex-end',padding:'0 48px 52px'}}>
+        {/* Ghost grid texture */}
+        <div style={{position:'absolute',inset:0,backgroundImage:`linear-gradient(${LINE} 1px,transparent 1px),linear-gradient(90deg,${LINE} 1px,transparent 1px)`,backgroundSize:'52px 52px',opacity:0.7}} />
+        {/* Ghost stencil */}
+        <div style={{position:'absolute',top:24,left:48,fontSize:148,fontWeight:700,lineHeight:0.85,letterSpacing:'-0.04em',color:`${A}0f`,userSelect:'none',pointerEvents:'none',zIndex:1}}>
+          ENIGMA<br/>ALLIANCE
+        </div>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(to top, rgba(14,13,11,0.95) 0%, rgba(14,13,11,0.2) 60%)'}} />
+
+        <div style={{position:'relative',zIndex:2,maxWidth:680}}>
+          <div style={{fontSize:10,color:A,letterSpacing:'0.22em',marginBottom:14}}>MANIFEST // AIDAN DOUGAN // SCAD 2025</div>
+          <div style={{fontSize:56,fontWeight:700,lineHeight:0.9,letterSpacing:'-0.03em',color:STEEL,marginBottom:20}}>
+            Game Designer<br/>&amp; Creative Developer
+          </div>
+          <div style={{fontSize:13,color:DIM,lineHeight:1.7,marginBottom:28,maxWidth:480}}>
+            Systems-first. Logic-driven. Comfortable in Unreal, Unity, tabletop, and the space between.
+          </div>
+          <div style={{display:'flex',gap:12}}>
+            <span style={{background:A,color:BG,fontSize:11,padding:'8px 22px',fontWeight:700,letterSpacing:'0.1em',cursor:'pointer'}}>VIEW PROJECTS ↓</span>
+            <span style={{border:`1px solid ${LINE}`,color:DIM,fontSize:11,padding:'8px 22px',letterSpacing:'0.1em',cursor:'pointer'}}>RESUME ↓</span>
+          </div>
+        </div>
+
+        {/* Right-side: featured visual teaser */}
+        <div style={{position:'absolute',right:48,bottom:52,width:320,zIndex:2}}>
+          <div className="hatch-dark" style={{width:'100%',height:200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6}}>
+            <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:14}}>featured project visual</span>
+            <span style={{fontFamily:'Caveat,cursive',color:'#3a3020',fontSize:11}}>e.g. DoughOrDieHeader.png</span>
+          </div>
+          <div style={{marginTop:8,display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+            <span style={{fontSize:10,color:A,letterSpacing:'0.12em'}}>001 — DOUGH OR DIE</span>
+            <span style={{fontSize:10,color:DIM}}>→</span>
+          </div>
+        </div>
+
+        <Note x={740} y={32} color={A} rotate="1deg">hero: grid bg + ghost stencil type</Note>
+        <Note x={740} y={58} color="#666" rotate="-0.5deg">featured card teases top project</Note>
+      </div>
+
+      {/* PROJECTS LABEL */}
+      <div style={{padding:'40px 48px 20px',display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+        <div>
+          <div style={{fontSize:10,color:A,letterSpacing:'0.22em',marginBottom:4}}>CARGO MANIFEST</div>
+          <div style={{fontSize:22,fontWeight:700,color:STEEL,letterSpacing:'-0.01em'}}>Projects</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          {["ALL","GAME","TOOL","TABLE","VFX","HW"].map(f=>(
+            <span key={f} style={{padding:'4px 14px',fontSize:9,letterSpacing:'0.12em',border:`1px solid ${f==='ALL'?A:LINE}`,color:f==='ALL'?A:DIM,cursor:'pointer'}}>{f}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* PROJECTS GRID — 3 col, visual-forward */}
+      <div style={{padding:'0 48px 56px',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:18}}>
+        {projects.map(({n,t,d,tags,role})=>(
+          <div key={n} style={{background:BG2,border:`1px solid ${LINE}`,borderTop:`2px solid ${A}`,cursor:'pointer',overflow:'hidden'}}>
+            {/* VISUAL — prominent */}
+            <div className="hatch-dark" style={{height:160,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,borderBottom:`1px solid ${LINE}`}}>
+              <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:13}}>{t.toLowerCase()} header img</span>
+            </div>
+            <div style={{padding:'16px 18px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                <span style={{fontSize:9,color:A,letterSpacing:'0.15em'}}>{n}</span>
+                <span style={{fontSize:9,color:DIM}}>{role}</span>
+              </div>
+              <div style={{fontSize:16,fontWeight:700,color:STEEL,marginBottom:6,letterSpacing:'0.01em'}}>{t}</div>
+              <div style={{fontSize:11,color:DIM,lineHeight:1.6,marginBottom:12}}>{d}</div>
+              <div style={{display:'flex',gap:6,justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{display:'flex',gap:6}}>
+                  {tags.map(tg=>(
+                    <span key={tg} style={{fontSize:9,padding:'2px 8px',border:`1px solid ${A}44`,color:A,letterSpacing:'0.1em'}}>{tg}</span>
+                  ))}
+                </div>
+                <span style={{fontSize:11,color:A}}>→</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* OTHER PROJECTS — compact strip */}
+      <div style={{margin:'0 48px',padding:'24px 28px',border:`1px solid ${LINE}`,borderLeft:`3px solid ${A}33`,marginBottom:32}}>
+        <div style={{fontSize:10,color:A,letterSpacing:'0.2em',marginBottom:12}}>NDA / PROFESSIONAL</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+          {[
+            {t:"Universal Creative",r:"Technical & Systems Design",s:"Advanced Technology Initiatives — SCADPro 2025"},
+            {t:"Mayo Clinic",r:"Project Manager",s:"Innovation Alliances — SCADPro 2025"},
+          ].map(({t,r,s})=>(
+            <div key={t} style={{display:'flex',gap:16,alignItems:'flex-start'}}>
+              <div style={{width:3,height:36,background:A,marginTop:2,flexShrink:0}} />
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:STEEL}}>{t}</div>
+                <div style={{fontSize:10,color:DIM,marginTop:2}}>{r} — {s}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ABOUT STRIP */}
+      <div style={{padding:'32px 48px',borderTop:`1px solid ${LINE}`,display:'grid',gridTemplateColumns:'200px 1fr auto',gap:48,alignItems:'center'}}>
+        <div>
+          <div style={{fontSize:10,color:A,letterSpacing:'0.2em',marginBottom:8}}>ABOUT</div>
+          <div style={{fontSize:32,fontWeight:700,color:`${STEEL}44`,lineHeight:0.9,letterSpacing:'-0.03em'}}>AIDAN<br/>DOUGAN</div>
+        </div>
+        <div style={{fontSize:12,color:DIM,lineHeight:1.8}}>
+          Senior at SCAD studying Interactive Design and Game Development. Systems-first, logic-driven, creative at the core. Unreal Engine, Unity, tabletop, Discord tooling.
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:8,fontSize:10,color:DIM}}>
+          <span>aidandougan24@gmail.com</span>
+          <a style={{color:A,textDecoration:'none'}}>Resume ↓</a>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div style={{height:40,borderTop:`1px solid ${LINE}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 48px',fontSize:9,color:DIM,letterSpacing:'0.15em'}}>
+        <span>© 2025 ENIGMA ALLIANCE — AIDAN DOUGAN</span>
+        <span>EOF //</span>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════
+   DEPTH 2 — PROJECT PAGE
+   ══════════════════════════════════════════ */
+const ProjectPage = () => (
+  <div style={{width:1440,background:BG,fontFamily:MONO,color:STEEL}}>
+    <Nav crumbs="HOME / PROJECTS / DOUGH OR DIE" />
+
+    {/* BACK + META BAR */}
+    <div style={{height:40,background:'rgba(0,0,0,0.3)',borderBottom:`1px solid ${LINE}`,display:'flex',alignItems:'center',padding:'0 48px',gap:24}}>
+      <span style={{fontSize:10,color:A,cursor:'pointer',letterSpacing:'0.1em'}}>← ALL PROJECTS</span>
+      <div style={{width:1,height:16,background:LINE}} />
+      <span style={{fontSize:10,color:DIM,letterSpacing:'0.1em'}}>001 of 009</span>
+      <div style={{flex:1}} />
+      <span style={{fontSize:10,color:DIM,letterSpacing:'0.1em'}}>NEXT: CLIPPED →</span>
+    </div>
+
+    {/* HERO BANNER — full bleed */}
+    <div style={{position:'relative',height:380}}>
+      <div className="hatch-dark" style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:8}}>
+        <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:16}}>DoughOrDieHeader.png</span>
+        <span style={{fontFamily:'Caveat,cursive',color:'#2e2820',fontSize:12}}>full-bleed, object-fit: cover</span>
+      </div>
+      {/* Gradient overlay */}
+      <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(14,13,11,1) 0%,rgba(14,13,11,0.0) 50%)'}} />
+      {/* Title overlay */}
+      <div style={{position:'absolute',bottom:32,left:48,right:48,display:'flex',justifyContent:'space-between',alignItems:'flex-end',zIndex:2}}>
+        <div>
+          <div style={{fontSize:9,color:A,letterSpacing:'0.22em',marginBottom:8}}>CASE FILE 001 — GAME DESIGN</div>
+          <div style={{fontSize:52,fontWeight:700,letterSpacing:'-0.02em',lineHeight:0.9,color:STEEL}}>DOUGH<br/>OR DIE</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <span style={{background:A,color:BG,fontSize:10,padding:'6px 18px',fontWeight:700,letterSpacing:'0.1em'}}>GAME SITE ↗</span>
+          <span style={{border:`1px solid ${LINE}`,color:DIM,fontSize:10,padding:'6px 18px',letterSpacing:'0.1em'}}>WATCH DEMO ▶</span>
+        </div>
+      </div>
+    </div>
+
+    {/* METADATA ROW */}
+    <div style={{display:'flex',borderBottom:`1px solid ${LINE}`,borderTop:`1px solid ${LINE}`}}>
+      {[
+        {label:"ROLE",val:"Product Owner"},
+        {label:"ENGINE",val:"Unreal Engine 5"},
+        {label:"STATUS",val:"GDC → Steam"},
+        {label:"YEAR",val:"2024–2025"},
+        {label:"TEAM",val:"Open Peaks Studios"},
+      ].map(({label,val})=>(
+        <div key={label} style={{flex:1,padding:'16px 24px',borderRight:`1px solid ${LINE}`}}>
+          <div style={{fontSize:9,color:A,letterSpacing:'0.18em',marginBottom:4}}>{label}</div>
+          <div style={{fontSize:12,color:STEEL,fontWeight:600}}>{val}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* MAIN CONTENT */}
+    <div style={{padding:'48px 48px 0',display:'grid',gridTemplateColumns:'1fr 1fr',gap:48}}>
+      {/* LEFT — description */}
+      <div>
+        <div style={{fontSize:10,color:A,letterSpacing:'0.2em',marginBottom:12}}>OVERVIEW</div>
+        <div style={{fontSize:14,color:STEEL,lineHeight:1.85,marginBottom:24}}>
+          You run a bakery by day, and an illegal underground mech arena by night. Baking living bread machines that fight to promote your brand. Balance first-person mech combat with tactile, recipe-driven baking and business management.
+        </div>
+        <div style={{fontSize:10,color:A,letterSpacing:'0.2em',marginBottom:12}}>MY CONTRIBUTION</div>
+        <div style={{fontSize:13,color:DIM,lineHeight:1.85}}>
+          Served as Product Owner — led production from initial concept through GDC showcase and upcoming Steam release. Spearheaded technical development and game design across a multi-discipline capstone team.
+        </div>
+
+        <div style={{marginTop:28}}>
+          <div style={{fontSize:10,color:A,letterSpacing:'0.2em',marginBottom:12}}>TOOLS &amp; TECH</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {["Unreal Engine 5","Blueprint","Systems Design","Production","GDC"].map(tg=>(
+              <span key={tg} style={{fontSize:10,padding:'4px 12px',border:`1px solid ${LINE}`,color:DIM,letterSpacing:'0.08em'}}>{tg}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT — key visual */}
+      <div style={{display:'flex',flexDirection:'column',gap:16}}>
+        <div className="hatch-dark" style={{width:'100%',height:220,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:4}}>
+          <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:14}}>DoughOrDie1.png</span>
+          <span style={{fontFamily:'Caveat,cursive',color:'#2e2820',fontSize:11}}>primary screenshot</span>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          {[2,3].map(n=>(
+            <div key={n} className="hatch-dark" style={{height:110,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:12}}>DoughOrDie{n}.png</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* SECONDARY IMAGE ROW */}
+    <div style={{padding:'32px 48px 0',display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14}}>
+      {[4,5,'trailer still'].map(n=>(
+        <div key={n} className="hatch-dark" style={{height:160,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:12}}>
+            {typeof n==='number'?`DoughOrDie${n}.png`:n}
+          </span>
+        </div>
+      ))}
+    </div>
+
+    {/* APPENDIX CTA */}
+    <div style={{margin:'36px 48px',padding:'24px 28px',border:`1px solid ${A}33`,borderLeft:`3px solid ${A}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div>
+        <div style={{fontSize:10,color:A,letterSpacing:'0.18em',marginBottom:4}}>WANT THE FULL BREAKDOWN?</div>
+        <div style={{fontSize:13,color:DIM}}>Design process, system diagrams, iteration history, and technical case study.</div>
+      </div>
+      <span style={{background:A,color:BG,fontSize:11,padding:'10px 28px',fontWeight:700,letterSpacing:'0.12em',cursor:'pointer',flexShrink:0}}>VIEW APPENDIX →</span>
+    </div>
+
+    {/* FOOTER */}
+    <div style={{height:40,borderTop:`1px solid ${LINE}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 48px',marginTop:16,fontSize:9,color:DIM,letterSpacing:'0.15em'}}>
+      <span>© 2025 ENIGMA ALLIANCE</span>
+      <span>NEXT: CLIPPED →</span>
+    </div>
+  </div>
+);
+
+/* ══════════════════════════════════════════
+   DEPTH 3 — APPENDIX PAGE
+   ══════════════════════════════════════════ */
+const AppendixPage = () => {
+  const Section = ({label,n,children}) => (
+    <div style={{marginBottom:48}}>
+      <div style={{display:'flex',alignItems:'baseline',gap:16,marginBottom:20,paddingBottom:12,borderBottom:`1px solid ${LINE}`}}>
+        <span style={{fontSize:22,fontWeight:700,color:`${A}55`,letterSpacing:'-0.02em',width:36,flexShrink:0}}>{n}</span>
+        <span style={{fontSize:11,color:A,letterSpacing:'0.2em'}}>{label}</span>
+      </div>
+      {children}
+    </div>
+  );
+  return (
+    <div style={{width:1440,background:BG,fontFamily:MONO,color:STEEL}}>
+      <Nav crumbs="HOME / PROJECTS / DOUGH OR DIE / APPENDIX" />
+
+      {/* APPENDIX HEADER */}
+      <div style={{padding:'36px 48px 28px',borderBottom:`1px solid ${LINE}`,display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+        <div>
+          <div style={{fontSize:9,color:A,letterSpacing:'0.22em',marginBottom:10}}>APPENDIX — CASE FILE 001</div>
+          <div style={{fontSize:40,fontWeight:700,letterSpacing:'-0.02em',lineHeight:0.95,color:STEEL}}>
+            DOUGH OR DIE<br/>
+            <span style={{fontSize:16,color:DIM,fontWeight:400,letterSpacing:'0.02em'}}>Design Process &amp; Technical Case Study</span>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          <span style={{border:`1px solid ${LINE}`,color:DIM,fontSize:10,padding:'7px 18px',letterSpacing:'0.1em',cursor:'pointer'}}>← BACK TO PROJECT</span>
+          <span style={{background:A,color:BG,fontSize:10,padding:'7px 18px',fontWeight:700,letterSpacing:'0.1em',cursor:'pointer'}}>DOWNLOAD PDF ↓</span>
+        </div>
+      </div>
+
+      {/* INDEX / TOC */}
+      <div style={{padding:'20px 48px',background:'rgba(0,0,0,0.25)',borderBottom:`1px solid ${LINE}`,display:'flex',gap:32}}>
+        <span style={{fontSize:9,color:A,letterSpacing:'0.15em',marginRight:8}}>INDEX</span>
+        {["01 BRIEF","02 PROCESS","03 KEY SYSTEMS","04 ITERATIONS","05 TECHNICAL","06 GALLERY","07 OUTCOMES"].map(s=>(
+          <span key={s} style={{fontSize:9,color:DIM,letterSpacing:'0.1em',cursor:'pointer',borderBottom:`1px solid ${DIM}44`,paddingBottom:2}}>{s}</span>
+        ))}
+      </div>
+
+      <div style={{padding:'48px 48px',display:'grid',gridTemplateColumns:'2fr 1fr',gap:56,alignItems:'start'}}>
+        {/* MAIN COLUMN */}
+        <div>
+          <Section label="DESIGN BRIEF" n="01">
+            <div style={{fontSize:13,color:DIM,lineHeight:1.85,marginBottom:16}}>
+              Capstone project — design and ship a commercially-viable game in one academic year. Constraint: team of 6, no prior shipped titles. Goal: GDC presentation + Steam release.
+            </div>
+            <div style={{display:'flex',gap:24,padding:'16px 20px',background:'rgba(230,168,23,0.04)',border:`1px solid ${A}22`}}>
+              {[["TIMELINE","10 months"],["TEAM SIZE","6 people"],["PLATFORM","PC → Steam"],["SHOWN AT","GDC 2025"]].map(([k,v])=>(
+                <div key={k}>
+                  <div style={{fontSize:9,color:A,letterSpacing:'0.15em',marginBottom:4}}>{k}</div>
+                  <div style={{fontSize:12,color:STEEL,fontWeight:700}}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section label="PROCESS TIMELINE" n="02">
+            <div style={{display:'flex',flexDirection:'column',gap:0}}>
+              {[
+                {phase:"CONCEPT",date:"Sep 2024",d:"Core loop ideation — bakery sim meets combat. Competitive analysis + paper prototyping."},
+                {phase:"VERTICAL SLICE",date:"Nov 2024",d:"First playable build. Baking mechanic + 1 arena. Internal playtest + iteration."},
+                {phase:"ALPHA",date:"Jan 2025",d:"All core systems functional. External playtest. Scope cuts based on feedback."},
+                {phase:"BETA + GDC",date:"Mar 2025",d:"Polish pass. GDC build locked. Demoed to 200+ industry professionals at booth 527."},
+                {phase:"STEAM PREP",date:"Ongoing",d:"Post-GDC polish, Steam store page, Greenlight community build."},
+              ].map(({phase,date,d},i)=>(
+                <div key={phase} style={{display:'flex',gap:0}}>
+                  <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginRight:20}}>
+                    <div style={{width:10,height:10,border:`2px solid ${A}`,borderRadius:'50%',marginTop:2,flexShrink:0}} />
+                    {i<4&&<div style={{width:1,flex:1,background:LINE,minHeight:32}} />}
+                  </div>
+                  <div style={{paddingBottom:i<4?24:0}}>
+                    <div style={{display:'flex',gap:12,alignItems:'baseline',marginBottom:4}}>
+                      <span style={{fontSize:11,fontWeight:700,color:STEEL,letterSpacing:'0.1em'}}>{phase}</span>
+                      <span style={{fontSize:9,color:A,letterSpacing:'0.12em'}}>{date}</span>
+                    </div>
+                    <div style={{fontSize:11,color:DIM,lineHeight:1.65}}>{d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section label="KEY SYSTEMS" n="03">
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+              {[
+                {t:"Baking Loop",d:"Tactile, recipe-driven mechanic. Ingredient selection + timing = bread unit stats."},
+                {t:"Mech Combat",d:"First-person arena combat. Bread units fight autonomously based on baked-in stats."},
+                {t:"Business Layer",d:"Economy system — revenue, upgrades, customer satisfaction, brand reputation."},
+                {t:"Progression",d:"Meta-loop tying all three systems together. Unlock recipes, arena slots, upgrades."},
+              ].map(({t,d})=>(
+                <div key={t} style={{padding:'16px',border:`1px solid ${LINE}`,borderLeft:`2px solid ${A}44`}}>
+                  <div style={{fontSize:11,fontWeight:700,color:STEEL,marginBottom:6,letterSpacing:'0.04em'}}>{t}</div>
+                  <div style={{fontSize:10,color:DIM,lineHeight:1.6}}>{d}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section label="ITERATIONS" n="04">
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              {[
+                {v:"v0.1",note:"Paper prototype — baking was turn-based card game. Felt disconnected from combat."},
+                {v:"v0.4",note:"Switched baking to real-time first-person. Engagement increased significantly."},
+                {v:"v0.7",note:"Removed PvP multiplayer — too expensive. Replaced with wave-based AI arena."},
+                {v:"v1.0",note:"GDC build. Core loop validated. 90% player retention across demo sessions."},
+              ].map(({v,note})=>(
+                <div key={v} style={{display:'flex',gap:16,alignItems:'flex-start'}}>
+                  <span style={{fontSize:10,color:A,letterSpacing:'0.12em',width:36,flexShrink:0,paddingTop:2}}>{v}</span>
+                  <div style={{fontSize:11,color:DIM,lineHeight:1.6,borderLeft:`1px solid ${LINE}`,paddingLeft:16,flex:1}}>{note}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        </div>
+
+        {/* SIDEBAR */}
+        <div style={{display:'flex',flexDirection:'column',gap:24,position:'sticky',top:20}}>
+          {/* Quick stats */}
+          <div style={{border:`1px solid ${LINE}`,padding:'20px'}}>
+            <div style={{fontSize:9,color:A,letterSpacing:'0.2em',marginBottom:16}}>PROJECT STATS</div>
+            {[["Playtests","12 sessions"],["Players tested","80+"],["Builds shipped","4 major"],["GDC demos","~200"],["Awards","GGJ Best Mechanic"]].map(([k,v])=>(
+              <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid ${LINE}22`}}>
+                <span style={{fontSize:10,color:DIM}}>{k}</span>
+                <span style={{fontSize:10,color:STEEL,fontWeight:600}}>{v}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Gallery thumbs */}
+          <div style={{border:`1px solid ${LINE}`,padding:'20px'}}>
+            <div style={{fontSize:9,color:A,letterSpacing:'0.2em',marginBottom:12}}>GALLERY</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {[1,2,3,4].map(n=>(
+                <div key={n} className="hatch-dark" style={{height:80,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:10}}>img {n}</span>
+                </div>
+              ))}
+            </div>
+            <div className="hatch-dark" style={{width:'100%',height:100,marginTop:8,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontFamily:'Caveat,cursive',color:DIM,fontSize:11}}>betweenlines4.gif — anim preview</span>
+            </div>
+          </div>
+
+          {/* Links */}
+          <div style={{border:`1px solid ${LINE}`,padding:'20px',display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{fontSize:9,color:A,letterSpacing:'0.2em',marginBottom:4}}>LINKS</div>
+            <a style={{fontSize:11,color:A,textDecoration:'none',display:'flex',gap:8,alignItems:'center'}}><span>↓</span> Download Case Study PDF</a>
+            <a style={{fontSize:11,color:DIM,textDecoration:'none',display:'flex',gap:8,alignItems:'center'}}><span>↗</span> openpeaksstudios.github.io</a>
+            <a style={{fontSize:11,color:DIM,textDecoration:'none',display:'flex',gap:8,alignItems:'center'}}><span>▶</span> Watch Demo — YouTube</a>
+          </div>
+        </div>
+      </div>
+
+      {/* TECHNICAL NOTES */}
+      <div style={{margin:'0 48px 48px',padding:'32px',border:`1px solid ${LINE}`}}>
+        <div style={{fontSize:10,color:A,letterSpacing:'0.2em',marginBottom:20}}>05 — TECHNICAL NOTES</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}}>
+          {[
+            {t:"Blueprint Architecture",d:"All gameplay logic in Blueprint. Modular actor-component system. Clean separation of baking, combat, economy layers."},
+            {t:"Procedural Mech Behavior",d:"Behavior tree AI per bread unit. Stats from baking loop influence node weights. Emergent combat patterns."},
+            {t:"Performance",d:"60fps target on mid-tier hardware. LOD system, occlusion culling, async level streaming for arena transitions."},
+          ].map(({t,d})=>(
+            <div key={t} style={{padding:'16px',background:'rgba(0,0,0,0.3)',border:`1px solid ${LINE}22`}}>
+              <div style={{fontSize:11,fontWeight:700,color:STEEL,marginBottom:8}}>{t}</div>
+              <div style={{fontSize:10,color:DIM,lineHeight:1.65}}>{d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div style={{height:40,borderTop:`1px solid ${LINE}`,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 48px',fontSize:9,color:DIM,letterSpacing:'0.15em'}}>
+        <span>© 2025 ENIGMA ALLIANCE — AIDAN DOUGAN</span>
+        <span>CASE FILE 001 — EOF //</span>
+      </div>
+    </div>
+  );
+};
+
+/* ── App ── */
+function App() {
+  return (
+    <DesignCanvas title="Enigma Alliance — 3-Depth Structure">
+      <DCSection id="home" title="Depth 1 — Home">
+        <DCArtboard id="home" label="Home Page" width={1440} height={1740}>
+          <HomePage />
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="project" title="Depth 2 — Project Page">
+        <DCArtboard id="proj" label="Project: Dough Or Die" width={1440} height={1320}>
+          <ProjectPage />
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="appendix" title="Depth 3 — Appendix">
+        <DCArtboard id="app" label="Appendix: Dough Or Die" width={1440} height={1680}>
+          <AppendixPage />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+<div id="root"></div>
+</body>
+</html>
