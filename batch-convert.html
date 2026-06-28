@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BATCH//CONVERT — PNG NORMALIZER</title>
+<style>
+/* ════════════════════════════════════════════════════════════════
+   STUDIO TOOLS — SHARED DESIGN SYSTEM  v1.0
+   One chassis for every tool. Per-tool identity lives in three
+   tokens only: --accent, --accent-rgb, --accent2.
+   ════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0b0d12;
+  --panel: #11141b;
+  --ink: #e8ebf0;
+  --dim: #747c8a;
+  --line: #1d222c;
+  --line2: #2a3140;
+  --ok: #5fd98a;
+  --warn: #ff5b49;
+  --info: #62b6ff;
+  /* injected per tool:
+     --accent, --accent-rgb, --accent2 */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+body {
+  background-image:
+    radial-gradient(ellipse at top right, rgba(var(--accent-rgb), 0.05), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(var(--accent-rgb), 0.025), transparent 60%);
+  padding: 28px 20px 60px;
+}
+
+::selection { background: rgba(var(--accent-rgb), 0.3); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 22px 26px;
+  background: var(--panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+}
+header::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 50%; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: -0.025em; line-height: 1; }
+.title span { color: var(--accent); }
+.sub { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 10px; }
+.meta { text-align: right; font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.16em; }
+.meta b { color: var(--accent); font-weight: 500; }
+
+/* ── Panels ─────────────────────────────────────── */
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.panel h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel h3::before { content: ""; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+.panel h3 .num { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); margin-right: 4px; }
+.panel h3 .right { margin-left: auto; color: var(--ink); font-size: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
+
+/* ── Drop zones ─────────────────────────────────── */
+.drop {
+  border: 1px dashed var(--line2);
+  border-radius: 2px;
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  display: block;
+}
+.drop:hover, .drop.hover { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.03); }
+.drop .big { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.drop.small { padding: 24px 16px; }
+.drop.small .big { font-size: 14px; }
+.drop .hint { color: var(--dim); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.drop .count { margin-top: 8px; font-size: 11px; color: var(--accent); }
+.drop input { display: none; }
+
+/* ── Form options ───────────────────────────────── */
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opts.three { grid-template-columns: 1fr 1fr 1fr; }
+.opt label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); display: block; margin-bottom: 6px; }
+.opt select, .opt input[type="text"], .opt input[type="color"], .opt input[type="number"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  border-radius: 2px;
+}
+.opt input[type="color"] { padding: 2px 4px; height: 36px; cursor: pointer; }
+.opt select:focus, .opt input:focus { border-color: var(--accent); }
+.opt select option { background: var(--bg); color: var(--ink); }
+.opt .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.opt .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+
+/* Sliders (shared between .opt and .field variants) */
+input[type="range"] {
+  width: 100%; padding: 0; border: none; height: 4px;
+  background: var(--line2); -webkit-appearance: none; appearance: none; border-radius: 2px;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+input[type="range"]:disabled::-webkit-slider-thumb { background: var(--dim); cursor: not-allowed; }
+input[type="range"]:disabled::-moz-range-thumb { background: var(--dim); cursor: not-allowed; }
+
+/* Compact field rows (slider + label + value) */
+.field { margin-bottom: 14px; }
+.field.compact { margin-bottom: 10px; }
+.field .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); }
+.field .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+.field select, .field input[type="number"], .field input[type="color"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 7px 9px;
+  outline: none;
+  border-radius: 2px;
+}
+.field select:focus, .field input:focus { border-color: var(--accent); }
+.field input[type="color"] { padding: 2px 4px; height: 34px; cursor: pointer; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.range-edit { display: flex; align-items: center; gap: 8px; }
+.range-edit input[type="number"] {
+  width: 64px; flex: 0 0 auto;
+  background: var(--bg); border: 1px solid var(--line2); color: var(--ink);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 4px 6px; border-radius: 2px; outline: none; text-align: center;
+}
+.range-edit input[type="number"]:focus { border-color: var(--accent); }
+
+/* ── Checkboxes ─────────────────────────────────── */
+.check, label.check, .opt label.check { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; padding: 6px 0; font-size: 12px; margin-bottom: 0; text-transform: none; letter-spacing: normal; color: var(--ink); }
+.check input { display: none; }
+.check .box { width: 14px; height: 14px; border: 1px solid var(--line2); flex-shrink: 0; position: relative; border-radius: 2px; }
+.check input:checked + .box { background: var(--accent); border-color: var(--accent); }
+.check input:checked + .box::after {
+  content: ""; position: absolute; top: 1px; left: 4px;
+  width: 4px; height: 8px; border: solid var(--bg);
+  border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.check .desc { display: block; color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
+
+/* ── Pills / tabs ───────────────────────────────── */
+.pills { display: flex; gap: 4px; flex-wrap: nowrap; }
+.pills.wrap-row { flex-wrap: wrap; }
+.pill {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 6px 10px; cursor: pointer; border-radius: 2px;
+  white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.pill:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.pill.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tab {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+  padding: 6px 12px; cursor: pointer; border-radius: 2px;
+}
+.tab:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.tab.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+.tab-pane.hidden { display: none; }
+
+/* ── Buttons ────────────────────────────────────── */
+.btn {
+  background: var(--accent); color: var(--bg); border: none;
+  padding: 13px 26px; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.16em; cursor: pointer; border-radius: 2px;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.25); }
+.btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line2); }
+.btn.ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+.btn.small { padding: 9px 16px; font-size: 10px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ── Status / progress ──────────────────────────── */
+.status-bar {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.status { flex: 1; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.14em; min-width: 0; }
+.status b { color: var(--ink); font-weight: 500; }
+.status .ok { color: var(--ok); }
+.status .warn { color: var(--warn); }
+.status .info { color: var(--info); }
+.status .accent { color: var(--accent); }
+
+.prog-wrap { margin-top: 10px; height: 6px; background: var(--line); border-radius: 2px; overflow: hidden; display: none; }
+.prog-wrap.on { display: block; }
+.prog-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 0.2s; }
+
+.notice { margin-top: 10px; padding: 10px 14px; border-left: 2px solid var(--accent); background: rgba(var(--accent-rgb), 0.04); font-size: 11px; color: var(--dim); line-height: 1.6; }
+.notice b { color: var(--accent); }
+.notice.warn { border-color: var(--warn); background: rgba(255,91,73,0.05); }
+.notice.warn b { color: var(--warn); }
+
+/* ── Preview surfaces ───────────────────────────── */
+.preview-wrap {
+  background: #000;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+.preview-wrap canvas { width: 100%; height: 100%; display: block; }
+.preview-wrap.checker {
+  background-image:
+    linear-gradient(45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1d24 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1d24 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+.preview-label {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.16em;
+  background: rgba(0,0,0,0.6);
+  padding: 3px 8px; border-radius: 2px;
+  pointer-events: none;
+}
+.preview-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px;
+  letter-spacing: 0.3em; color: var(--line2);
+  pointer-events: none;
+}
+.preview-empty.hidden { display: none; }
+
+/* ── Footer signature ───────────────────────────── */
+.sig {
+  margin-top: 28px; font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.2em;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+
+/* ── Scrollbars ─────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 3px; }
+
+/* ── Responsive / a11y baseline ─────────────────── */
+@media (max-width: 700px) {
+  .opts, .opts.three, .two-col { grid-template-columns: 1fr; }
+  .title { font-size: 22px; }
+  header { flex-direction: column; align-items: flex-start; }
+  .meta { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ── Tool identity ────────────────────────────── */
+:root {
+  --accent: #d9ff3f;
+  --accent-rgb: 217, 255, 63;
+  --accent2: #aee61f;
+}
+
+/* ── BATCH//CONVERT ─ tool layout & components ──── */
+.wrap { max-width: 1080px; margin: 0 auto; }
+header { margin-bottom: 14px; }
+
+.file-rows { max-height: 280px; overflow-y: auto; border: 1px solid var(--line); }
+.file-rows .row {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr 70px;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+  font-size: 11px;
+}
+.file-rows .row:last-child { border-bottom: none; }
+.file-rows .row.head {
+  background: rgba(255,255,255,0.02);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 9px;
+}
+.file-rows .row > div { padding: 8px 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-rows .row .idx { color: var(--accent); font-weight: 500; }
+.file-rows .row .arrow { color: var(--dim); padding: 0; text-align: center; }
+.file-rows .row .heic-tag {
+  display: inline-block; background: var(--accent); color: var(--bg);
+  padding: 1px 5px; font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; margin-left: 6px; border-radius: 2px;
+}
+
+.heic-notice {
+  margin-top: 14px; padding: 10px 14px;
+  border-left: 2px solid var(--info); background: rgba(98,182,255,0.04);
+  font-size: 11px; color: var(--dim); line-height: 1.6; display: none;
+}
+.heic-notice.on { display: block; }
+.heic-notice b { color: var(--ink); }
+.heic-notice.loading b { color: var(--accent); }
+
+/* Diagnostics (collapsible) */
+.diag-details { border: 1px solid var(--line); background: var(--bg); border-radius: 2px; }
+.diag-details summary {
+  padding: 10px 14px; cursor: pointer; user-select: none;
+  font-size: 12px; color: var(--ink); list-style: none;
+  display: flex; align-items: baseline; gap: 8px;
+}
+.diag-details summary::-webkit-details-marker { display: none; }
+.diag-details summary::before { content: "\25B8"; color: var(--info); font-size: 10px; transition: transform 0.15s; display: inline-block; }
+.diag-details[open] summary::before { transform: rotate(90deg); }
+.diag-details summary .fx-hint { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
+.diag-details .diag-body { padding: 14px; border-top: 1px solid var(--line); }
+
+.drop.info-style { border-color: var(--info); }
+.drop.info-style:hover, .drop.info-style.hover { border-color: var(--info); background: rgba(98,182,255,0.04); }
+
+.console {
+  background: #07090d; border: 1px solid var(--line);
+  padding: 12px; font-size: 10px; line-height: 1.5;
+  max-height: 320px; overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+}
+.console .line { margin-bottom: 2px; word-break: break-all; }
+.console .ts { color: var(--dim); margin-right: 6px; }
+.console .ok { color: var(--ok); }
+.console .warn { color: var(--warn); }
+.console .info { color: var(--info); }
+.console .dim { color: var(--dim); }
+
+.diag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+@media (max-width: 700px) { .diag-grid { grid-template-columns: 1fr; } }
+.diag-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--info); margin-bottom: 8px; }
+
+.preview-img-wrap {
+  border: 1px solid var(--line); background: #07090d;
+  min-height: 180px; display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.preview-img-wrap img { max-width: 100%; max-height: 280px; display: block; }
+.preview-img-wrap .empty { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; }
+.preview-img-wrap .badge {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--ok); color: var(--bg);
+  font-size: 9px; font-weight: 700; padding: 2px 7px;
+  letter-spacing: 0.14em; border-radius: 2px;
+}
+
+.test-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.test-actions .filename { flex: 1; font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.test-actions .filename b { color: var(--ink); }
+.btn.info { background: var(--info); }
+.btn.info:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(98,182,255,0.25); }
+
+/* Watermark + resize additions */
+.wm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
+@media (max-width: 700px) { .wm-grid { grid-template-columns: 1fr; } }
+.wm-sample {
+  border: 1px solid var(--line); border-radius: 2px;
+  position: relative; min-height: 120px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.wm-sample canvas { max-width: 100%; max-height: 200px; display: block; }
+.wm-sample .empty { position: absolute; color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; }
+.wm-sample.has-sample .empty { display: none; }
+.pos-grid { display: grid; grid-template-columns: repeat(3, 26px); grid-auto-rows: 26px; gap: 4px; }
+.pos-grid button {
+  border: 1px solid var(--line2); background: var(--bg); border-radius: 2px;
+  cursor: pointer; position: relative; padding: 0;
+}
+.pos-grid button::after {
+  content: ""; position: absolute; inset: 7px;
+  border-radius: 1px; background: var(--line2);
+}
+.pos-grid button:hover { border-color: var(--accent); }
+.pos-grid button.on { border-color: var(--accent); }
+.pos-grid button.on::after { background: var(--accent); }
+.gps-tag {
+  display: inline-block; background: var(--warn); color: var(--bg);
+  padding: 1px 5px; font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; margin-left: 6px; border-radius: 2px;
+}
+.checker {
+  background-image:
+    linear-gradient(45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1d24 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1d24 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="title">BATCH<span>//</span>CONVERT</div>
+      <div class="sub">Multi-format &rarr; PNG &middot; resize &middot; watermark &middot; metadata wipe &middot; runs in your browser</div>
+    </div>
+    <div class="meta">
+      VERSION 06.00<br>
+      RUNTIME &middot; <b>BROWSER</b><br>
+      OUTPUT &middot; <b>.PNG</b>
+    </div>
+  </header>
+
+  <div class="panel">
+    <h3><span class="num">01</span> Source files</h3>
+    <label class="drop" id="drop">
+      <input type="file" id="file" multiple accept="image/*,.heic,.heif">
+      <div class="big">Drop files here</div>
+      <div class="hint">or click to select &middot; HEIC / JPG / WEBP / GIF / BMP / SVG / PNG</div>
+    </label>
+    <div class="heic-notice" id="heicNotice">
+      <b id="heicLabel">HEIC detected</b> &middot; <span id="heicMsg">loading decoder library&hellip;</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3><span class="num">02</span> Naming scheme</h3>
+    <div class="opts">
+      <div class="opt">
+        <label>Prefix</label>
+        <input type="text" id="prefix" value="img" placeholder="e.g. img, asset, frame">
+      </div>
+      <div class="opt">
+        <label>Starting index</label>
+        <input type="number" id="start" value="1" min="0">
+      </div>
+      <div class="opt">
+        <label>Zero-padding (digits)</label>
+        <select id="pad">
+          <option value="0">none</option>
+          <option value="2">2 — 01</option>
+          <option value="3" selected>3 — 001</option>
+          <option value="4">4 — 0001</option>
+          <option value="5">5 — 00001</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label>Separator</label>
+        <select id="sep">
+          <option value="_" selected>_ underscore</option>
+          <option value="-">- hyphen</option>
+          <option value=".">. period</option>
+          <option value="">(none)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3><span class="num">03</span> Resize</h3>
+    <div class="opts three">
+      <div class="opt">
+        <label for="resizeMode">Mode</label>
+        <select id="resizeMode">
+          <option value="none" selected>Original size</option>
+          <option value="fit">Fit within</option>
+          <option value="fill">Fill &amp; crop</option>
+          <option value="exact">Exact (stretch)</option>
+          <option value="width">Width only</option>
+          <option value="height">Height only</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label for="resizeW">Width px</label>
+        <input type="number" id="resizeW" value="1920" min="8" max="8192" disabled>
+      </div>
+      <div class="opt">
+        <label for="resizeH">Height px</label>
+        <input type="number" id="resizeH" value="1080" min="8" max="8192" disabled>
+      </div>
+    </div>
+    <label class="check" style="margin-top:10px;">
+      <input type="checkbox" id="noUpscale" checked disabled>
+      <span class="box"></span>
+      <span class="txt">Never upscale
+        <span class="desc">images smaller than the target keep their original size</span>
+      </span>
+    </label>
+  </div>
+
+  <div class="panel">
+    <h3><span class="num">04</span> Watermark <span class="right" id="wmState" style="color:var(--dim);">off</span></h3>
+    <div class="wm-grid">
+      <label class="drop small" id="wmDrop">
+        <input type="file" id="wmFile" accept="image/*">
+        <div class="big" id="wmName">Drop watermark image</div>
+        <div class="hint">PNG with transparency works best</div>
+      </label>
+      <div class="wm-sample checker" id="wmSampleWrap">
+        <canvas id="wmSample"></canvas>
+        <span class="empty" id="wmSampleEmpty">sample preview</span>
+      </div>
+    </div>
+    <div class="opts three" style="margin-top:14px;">
+      <div class="opt">
+        <label>Position</label>
+        <div class="pos-grid" id="wmPos">
+          <button type="button" data-pos="tl" title="Top left"></button>
+          <button type="button" data-pos="tc" title="Top center"></button>
+          <button type="button" data-pos="tr" title="Top right"></button>
+          <button type="button" data-pos="ml" title="Middle left"></button>
+          <button type="button" data-pos="c" title="Center"></button>
+          <button type="button" data-pos="mr" title="Middle right"></button>
+          <button type="button" data-pos="bl" title="Bottom left"></button>
+          <button type="button" data-pos="bc" title="Bottom center"></button>
+          <button type="button" data-pos="br" class="on" title="Bottom right"></button>
+        </div>
+        <label class="check" style="margin-top:10px;">
+          <input type="checkbox" id="wmTile">
+          <span class="box"></span>
+          <span class="txt">Tile across image</span>
+        </label>
+      </div>
+      <div class="opt">
+        <div class="row"><label>Size</label><span class="val"><span id="wmSizeVal">18</span>% of width</span></div>
+        <input type="range" id="wmSize" min="3" max="60" value="18">
+        <div class="row" style="margin-top:12px;"><label>Opacity</label><span class="val"><span id="wmOpVal">70</span>%</span></div>
+        <input type="range" id="wmOp" min="5" max="100" value="70">
+      </div>
+      <div class="opt">
+        <div class="row"><label>Margin</label><span class="val"><span id="wmMarginVal">4</span>%</span></div>
+        <input type="range" id="wmMargin" min="0" max="20" value="4">
+        <button type="button" class="btn ghost small" id="wmClear" style="margin-top:14px;" disabled>Remove watermark</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3><span class="num">05</span> Options</h3>
+    <div class="opts">
+      <div class="opt">
+        <label class="check">
+          <input type="checkbox" id="shuffle">
+          <span class="box"></span>
+          <span class="txt">Randomize order
+            <span class="desc">shuffle before renaming</span>
+          </span>
+        </label>
+      </div>
+      <div class="opt">
+        <label class="check">
+          <input type="checkbox" id="preserveBg" checked>
+          <span class="box"></span>
+          <span class="txt">Preserve transparency
+            <span class="desc">keeps alpha channel</span>
+          </span>
+        </label>
+      </div>
+    </div>
+    <div class="notice" style="margin-top:12px;">
+      <b>Metadata wiped on every convert:</b> files are re-encoded through a clean canvas, so EXIF, GPS location, ICC profiles and all other embedded metadata never reach the output PNGs. Files carrying GPS coordinates are flagged <span class="gps-tag">GPS</span> in the preview so you can see exactly what's being removed.
+    </div>
+  </div>
+
+  <div class="panel" id="previewPanel" style="display:none;">
+    <h3><span class="num">06</span> Preview <span class="right" id="countLbl"></span></h3>
+    <div class="file-rows" id="preview"></div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status" id="status">Waiting &middot; <b>0</b> files queued</div>
+    <div class="btns">
+      <button class="btn ghost" id="clear" disabled>Clear</button>
+      <button class="btn" id="go" disabled>Convert &amp; Download</button>
+    </div>
+  </div>
+  <div class="prog-wrap" id="progWrap"><div class="prog-bar" id="prog"></div></div>
+
+  <div class="panel" style="margin-top:14px;">
+    <h3><span class="num">07</span> Decoder diagnostics
+      <span class="right" id="libStatus" style="color:var(--dim);">decoder &middot; idle</span>
+    </h3>
+    <details class="diag-details">
+      <summary>Single-file HEIC decode test <span class="fx-hint">isolates the decode pipeline</span></summary>
+      <div class="diag-body">
+        <label class="drop small info-style" id="testDrop">
+          <input type="file" id="testFile" accept="image/heic,image/heif,.heic,.heif">
+          <div class="big">Drop a single HEIC file to test</div>
+          <div class="hint">decodes one file step by step and logs exactly what happens</div>
+        </label>
+        <div class="test-actions" id="testActions" style="display:none;">
+          <div class="filename"><b id="testName">&mdash;</b> &middot; <span id="testSize">&mdash;</span></div>
+          <button class="btn info small" id="testRun">Run test</button>
+          <button class="btn ghost small" id="testClear">Clear</button>
+        </div>
+        <div class="diag-grid" id="diagGrid" style="display:none;">
+          <div>
+            <div class="diag-label">Decode log</div>
+            <div class="console" id="console"></div>
+          </div>
+          <div>
+            <div class="diag-label">Output preview</div>
+            <div class="preview-img-wrap" id="testPreview">
+              <span class="empty">no output yet</span>
+            </div>
+            <div class="test-actions" id="testDownloadWrap" style="display:none;">
+              <button class="btn ghost small" id="testDownload">Download PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div class="sig">
+    <span>// CLIENT-SIDE &middot; NO UPLOAD &middot; LIBHEIF + LIBDE265 (WASM)</span>
+    <span>SYS.READY</span>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+
+  // Don't let a missed drop navigate the page away from queued work.
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => e.preventDefault());
+
+  const consoleEl = $('console');
+  function log(msg, cls = '') {
+    const t = new Date().toTimeString().slice(0, 8);
+    const line = document.createElement('div');
+    line.className = 'line';
+    line.innerHTML = `<span class="ts">${t}</span><span class="${cls}">${msg}</span>`;
+    consoleEl.appendChild(line);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  // --- HEIC decoder loading ---
+  // KEY FIX: use the WASM bundle URL, not the pure-JS one.
+  // Pure-JS libheif (libheif/libheif.js) cannot decode HEVC streams from iPhone HEICs
+  //   and silently returns empty arrays.
+  // The WASM bundle (libheif-wasm/libheif-bundle.js) includes libde265 and handles real HEICs.
+  const LIBHEIF_URL = 'https://cdn.jsdelivr.net/npm/libheif-js@1.19.8/libheif-wasm/libheif-bundle.js';
+
+  let heicLib = null;
+  let heicLoading = null;
+  const libStatus = $('libStatus');
+
+  function isHeic(f) {
+    return /\.(heic|heif)$/i.test(f.name) || f.type === 'image/heic' || f.type === 'image/heif';
+  }
+
+  async function loadHeicDecoder(verbose = false) {
+    if (heicLib) return heicLib;
+    if (heicLoading) return heicLoading;
+
+    if (verbose) log(`loading libheif WASM bundle from CDN…`, 'info');
+    if (verbose) log(`<span class="dim">${LIBHEIF_URL}</span>`);
+    libStatus.textContent = 'decoder · loading WASM…';
+    libStatus.style.color = 'var(--info)';
+
+    heicLoading = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = LIBHEIF_URL;
+      script.onload = async () => {
+        try {
+          if (verbose) {
+            log('script loaded · inspecting globals…', 'info');
+            log(`  window.libheif: <span class="dim">${typeof window.libheif}</span>`);
+          }
+
+          let lib = window.libheif;
+          if (!lib) throw new Error('window.libheif is undefined');
+
+          // WASM bundle: libheif is an Emscripten module factory.
+          // CRITICAL: must call it and await the returned promise so WASM is fully initialized.
+          if (typeof lib === 'function') {
+            if (verbose) log('  libheif is factory · initializing WASM module…', 'info');
+            lib = await lib();
+            if (verbose) log('  WASM module initialized ✓', 'ok');
+          }
+
+          // Some Emscripten outputs expose a `ready` promise. Await it if present.
+          if (lib.ready && typeof lib.ready.then === 'function') {
+            if (verbose) log('  awaiting module.ready promise…', 'info');
+            await lib.ready;
+            if (verbose) log('  module.ready resolved ✓', 'ok');
+          }
+
+          if (!lib.HeifDecoder) {
+            throw new Error('HeifDecoder constructor not found on loaded module');
+          }
+
+          if (verbose) {
+            // Quick sanity check
+            const testDecoder = new lib.HeifDecoder();
+            log(`  HeifDecoder instance created · type: <span class="dim">${typeof testDecoder.decode}</span>`, 'ok');
+          }
+
+          heicLib = lib;
+          libStatus.textContent = 'decoder · ready (WASM)';
+          libStatus.style.color = 'var(--ok)';
+          if (verbose) log('decoder ready · HEVC support active', 'ok');
+          resolve(lib);
+        } catch (err) {
+          libStatus.textContent = 'decoder · failed';
+          libStatus.style.color = 'var(--warn)';
+          if (verbose) log(`init failed: ${err.message}`, 'warn');
+          console.error(err);
+          reject(err);
+        }
+      };
+      script.onerror = () => {
+        libStatus.textContent = 'decoder · network error';
+        libStatus.style.color = 'var(--warn)';
+        if (verbose) log('script failed to load · network/CORS issue?', 'warn');
+        reject(new Error('script load failed'));
+      };
+      document.head.appendChild(script);
+    });
+    return heicLoading;
+  }
+
+  // --- HEIC decode ---
+  async function decodeHeic(file, verbose = false) {
+    if (!heicLib) throw new Error('decoder not loaded');
+    const buffer = await file.arrayBuffer();
+    const uint8 = new Uint8Array(buffer);
+
+    if (verbose) {
+      log(`file: <b>${escapeHtml(file.name)}</b> · ${(file.size/1024).toFixed(1)} KB`, 'info');
+      const sig = Array.from(uint8.slice(0, 12)).map(b => b.toString(16).padStart(2,'0')).join(' ');
+      log(`  bytes[0..12]: <span class="dim">${sig}</span>`);
+      const ftyp = new TextDecoder().decode(uint8.slice(4, 12));
+      log(`  ftyp brand: <span class="dim">${ftyp}</span>`);
+      log('  calling decoder.decode(uint8)…', 'info');
+    }
+
+    const decoder = new heicLib.HeifDecoder();
+    const result = decoder.decode(uint8);
+
+    if (verbose) {
+      log(`  returned: <span class="dim">${Array.isArray(result) ? `array(${result.length})` : typeof result}</span>`);
+    }
+
+    let images = result;
+    if (!Array.isArray(images)) {
+      if (images && (typeof images.get_width === 'function')) {
+        images = [images];
+      } else if (images && images.length !== undefined) {
+        images = Array.from(images);
+      } else {
+        throw new Error('decode returned non-array, non-image result');
+      }
+    }
+
+    if (!images.length) {
+      throw new Error('decoder returned empty array · check console for libheif errors');
+    }
+
+    if (verbose) {
+      const first = images[0];
+      log(`  image count: <b>${images.length}</b>`, 'ok');
+      log(`  dimensions: <b>${first.get_width()}×${first.get_height()}</b>`, 'ok');
+    }
+
+    return images;
+  }
+
+  async function heicImageToCanvas(image, verbose = false) {
+    const width = image.get_width();
+    const height = image.get_height();
+
+    if (verbose) log(`  rendering to canvas ${width}×${height}…`, 'info');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(width, height);
+
+    await new Promise((resolve, reject) => {
+      try {
+        image.display(imageData, (displayData) => {
+          if (!displayData) reject(new Error('display callback returned null'));
+          else resolve(displayData);
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    // Note: alpha flattening happens downstream in processToPng — the old
+    // version filled white *before* putImageData, which replaced those
+    // pixels and silently made the fill a no-op.
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
+  // --- Diagnostic panel ---
+  const testDrop = $('testDrop'), testFile = $('testFile');
+  const testActions = $('testActions'), testName = $('testName'), testSize = $('testSize');
+  const testRun = $('testRun'), testClear = $('testClear');
+  const diagGrid = $('diagGrid'), testPreview = $('testPreview');
+  const testDownload = $('testDownload'), testDownloadWrap = $('testDownloadWrap');
+
+  let testHeicFile = null;
+  let testBlob = null;
+
+  testFile.addEventListener('change', e => loadTestFile(e.target.files[0]));
+  testDrop.addEventListener('dragover', e => { e.preventDefault(); testDrop.classList.add('hover'); });
+  testDrop.addEventListener('dragleave', () => testDrop.classList.remove('hover'));
+  testDrop.addEventListener('drop', e => {
+    e.preventDefault();
+    testDrop.classList.remove('hover');
+    if (e.dataTransfer.files[0]) loadTestFile(e.dataTransfer.files[0]);
+  });
+
+  function loadTestFile(f) {
+    if (!f) return;
+    testHeicFile = f;
+    testName.textContent = f.name;
+    testSize.textContent = `${(f.size/1024).toFixed(1)} KB`;
+    testActions.style.display = 'flex';
+    diagGrid.style.display = 'grid';
+    testPreview.innerHTML = '<span class="empty">click "run test" to decode</span>';
+    testDownloadWrap.style.display = 'none';
+    consoleEl.innerHTML = '';
+    log(`loaded <b>${escapeHtml(f.name)}</b> · ready to test`, 'info');
+  }
+
+  testClear.addEventListener('click', () => {
+    testHeicFile = null;
+    testBlob = null;
+    testFile.value = '';
+    testActions.style.display = 'none';
+    diagGrid.style.display = 'none';
+    consoleEl.innerHTML = '';
+  });
+
+  testRun.addEventListener('click', async () => {
+    if (!testHeicFile) return;
+    testRun.disabled = true; testClear.disabled = true;
+    consoleEl.innerHTML = '';
+    testPreview.innerHTML = '<span class="empty">decoding…</span>';
+    testDownloadWrap.style.display = 'none';
+
+    try {
+      log('═══ test run started ═══', 'info');
+      await loadHeicDecoder(true);
+      log('─── decode phase ───', 'info');
+      const images = await decodeHeic(testHeicFile, true);
+      log('─── render phase ───', 'info');
+      // Diagnostics intentionally bypass resize/watermark: this isolates the
+      // decode pipeline, which is what's being tested.
+      const c = await heicImageToCanvas(images[0], true);
+      const blob = await encodeCanvasToPng(c);
+      log(`✓ PNG generated · ${(blob.size/1024).toFixed(1)} KB`, 'ok');
+      testBlob = blob;
+
+      const url = URL.createObjectURL(blob);
+      testPreview.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = url;
+      img.onload = () => {
+        log(`✓ preview rendered · ${img.naturalWidth}×${img.naturalHeight}`, 'ok');
+        log('═══ test complete · ALL SYSTEMS GO ═══', 'ok');
+      };
+      testPreview.appendChild(img);
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      badge.textContent = 'OK';
+      testPreview.appendChild(badge);
+      testDownloadWrap.style.display = 'flex';
+    } catch (err) {
+      log(`✗ test FAILED: ${err.message}`, 'warn');
+      log('═══ check browser DevTools console (F12) for libheif/libde265 errors ═══', 'warn');
+      console.error('Test failure:', err);
+      testPreview.innerHTML = `<span class="empty" style="color:var(--warn)">decode failed · see log</span>`;
+    } finally {
+      testRun.disabled = false; testClear.disabled = false;
+    }
+  });
+
+  testDownload.addEventListener('click', () => {
+    if (!testBlob || !testHeicFile) return;
+    const url = URL.createObjectURL(testBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = testHeicFile.name.replace(/\.(heic|heif)$/i, '.png');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  });
+
+  // --- Main batch UI ---
+  const drop = $('drop'), file = $('file');
+  const prefixI = $('prefix'), startI = $('start'), padI = $('pad'), sepI = $('sep');
+  const shuffleI = $('shuffle'), preserveBgI = $('preserveBg');
+  const previewPanel = $('previewPanel'), previewEl = $('preview'), countLbl = $('countLbl');
+  const statusEl = $('status'), goBtn = $('go'), clearBtn = $('clear');
+  const progWrap = $('progWrap'), prog = $('prog');
+  const heicNotice = $('heicNotice'), heicLabel = $('heicLabel'), heicMsg = $('heicMsg');
+
+  // Resize controls
+  const resizeModeI = $('resizeMode'), resizeWI = $('resizeW'), resizeHI = $('resizeH'), noUpscaleI = $('noUpscale');
+
+  // Watermark controls
+  const wmDrop = $('wmDrop'), wmFile = $('wmFile'), wmName = $('wmName'), wmClear = $('wmClear');
+  const wmSizeI = $('wmSize'), wmOpI = $('wmOp'), wmMarginI = $('wmMargin'), wmTileI = $('wmTile');
+  const wmStateLbl = $('wmState');
+  const wmSampleWrap = $('wmSampleWrap'), wmSampleCanvas = $('wmSample');
+  let wmImage = null;
+  let wmUrl = null;
+  let wmPosition = 'br';
+
+  let files = [];
+  let previewOrder = null;
+  const fileMeta = new Map(); // file → {exif, gps} from the pre-convert scan
+  const PREVIEW_LIMIT = 500;
+  const UI_YIELD_EVERY = 2;
+
+  // --- Resize mode → which inputs are live ---
+  function syncResizeInputs() {
+    const m = resizeModeI.value;
+    resizeWI.disabled = !(m === 'fit' || m === 'fill' || m === 'exact' || m === 'width');
+    resizeHI.disabled = !(m === 'fit' || m === 'fill' || m === 'exact' || m === 'height');
+    // "Never upscale" only applies where output dims aren't promised exact
+    noUpscaleI.disabled = !(m === 'fit' || m === 'width' || m === 'height');
+  }
+  resizeModeI.addEventListener('change', () => { syncResizeInputs(); scheduleSample(); });
+  [resizeWI, resizeHI, noUpscaleI].forEach(el => el.addEventListener('input', scheduleSample));
+  syncResizeInputs();
+
+  // --- Watermark intake ---
+  wmFile.addEventListener('change', e => loadWatermark(e.target.files[0]));
+  wmDrop.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); wmDrop.classList.add('hover'); });
+  wmDrop.addEventListener('dragleave', () => wmDrop.classList.remove('hover'));
+  wmDrop.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    wmDrop.classList.remove('hover');
+    if (e.dataTransfer.files[0]) loadWatermark(e.dataTransfer.files[0]);
+  });
+  function loadWatermark(f) {
+    if (!f || !f.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      if (wmUrl) URL.revokeObjectURL(wmUrl);
+      wmImage = img; wmUrl = url;
+      wmName.textContent = f.name;
+      wmClear.disabled = false;
+      wmStateLbl.textContent = 'on';
+      wmStateLbl.style.color = 'var(--accent)';
+      scheduleSample();
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      wmName.textContent = 'failed to decode — try another file';
+    };
+    img.src = url;
+  }
+  wmClear.addEventListener('click', () => {
+    if (wmUrl) URL.revokeObjectURL(wmUrl);
+    wmImage = null; wmUrl = null;
+    wmFile.value = '';
+    wmName.textContent = 'Drop watermark image';
+    wmClear.disabled = true;
+    wmStateLbl.textContent = 'off';
+    wmStateLbl.style.color = 'var(--dim)';
+    scheduleSample();
+  });
+
+  // Position grid
+  document.querySelectorAll('#wmPos button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#wmPos button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      wmPosition = btn.dataset.pos;
+      scheduleSample();
+    });
+  });
+  [wmSizeI, wmOpI, wmMarginI].forEach((el) => {
+    const valEl = $(el.id + 'Val');
+    el.addEventListener('input', () => { valEl.textContent = el.value; scheduleSample(); });
+  });
+  wmTileI.addEventListener('change', scheduleSample);
+
+  // --- Live sample: first queued file run through the real pipeline ---
+  let sampleQueued = false;
+  let sampleBitmap = null;   // small decoded copy of the current sample file
+  let sampleFileRef = null;
+  function scheduleSample() {
+    if (sampleQueued) return;
+    sampleQueued = true;
+    requestAnimationFrame(() => { sampleQueued = false; renderSample(); });
+  }
+  async function renderSample() {
+    const f = files.find(f => !isHeic(f));
+    if (!f) {
+      wmSampleWrap.classList.remove('has-sample');
+      sampleBitmap?.close?.(); sampleBitmap = null; sampleFileRef = null;
+      return;
+    }
+    try {
+      if (sampleFileRef !== f) {
+        sampleBitmap?.close?.();
+        sampleBitmap = await createImageBitmap(f, { imageOrientation: 'from-image' });
+        sampleFileRef = f;
+      }
+      // Resize math runs on the file's true dimensions, then the result is
+      // scaled to the sample box — what you see is what the batch produces.
+      const { w, h, crop } = computeResize(sampleBitmap.width, sampleBitmap.height);
+      const s = Math.min(1, 320 / Math.max(w, h));
+      const pw = Math.max(1, Math.round(w * s)), ph = Math.max(1, Math.round(h * s));
+      wmSampleCanvas.width = pw; wmSampleCanvas.height = ph;
+      const sctx = wmSampleCanvas.getContext('2d');
+      sctx.imageSmoothingQuality = 'high';
+      if (!preserveBgI.checked) { sctx.fillStyle = '#fff'; sctx.fillRect(0, 0, pw, ph); }
+      if (crop) sctx.drawImage(sampleBitmap, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, pw, ph);
+      else sctx.drawImage(sampleBitmap, 0, 0, pw, ph);
+      applyWatermark(sctx, pw, ph);
+      wmSampleWrap.classList.add('has-sample');
+    } catch (err) {
+      console.warn('sample preview failed', err);
+      wmSampleWrap.classList.remove('has-sample');
+    }
+  }
+  preserveBgI.addEventListener('change', scheduleSample);
+
+  // --- EXIF / GPS scan (JPEG APP1) ---
+  // Minimal TIFF walk over the first 256KB: enough to spot the GPS IFD
+  // pointer (tag 0x8825) and badge privacy-sensitive files in the preview.
+  async function scanJpegMeta(f) {
+    try {
+      const buf = new Uint8Array(await f.slice(0, 256 * 1024).arrayBuffer());
+      if (buf[0] !== 0xFF || buf[1] !== 0xD8) return { exif: false, gps: false };
+      let o = 2;
+      while (o + 4 < buf.length) {
+        if (buf[o] !== 0xFF) break;
+        const marker = buf[o + 1];
+        if (marker === 0xDA) break; // start of scan — no more metadata segments
+        const len = (buf[o + 2] << 8) | buf[o + 3];
+        if (marker === 0xE1 && len > 8 &&
+            buf[o+4] === 0x45 && buf[o+5] === 0x78 && buf[o+6] === 0x69 && buf[o+7] === 0x66) { // "Exif"
+          const tiff = o + 10;
+          const little = buf[tiff] === 0x49;
+          const u16 = p => little ? (buf[p] | (buf[p+1] << 8)) : ((buf[p] << 8) | buf[p+1]);
+          const u32 = p => little
+            ? ((buf[p] | (buf[p+1] << 8) | (buf[p+2] << 16) | (buf[p+3] << 24)) >>> 0)
+            : (((buf[p] << 24) | (buf[p+1] << 16) | (buf[p+2] << 8) | buf[p+3]) >>> 0);
+          const ifd0 = tiff + u32(tiff + 4);
+          if (ifd0 + 2 > buf.length) return { exif: true, gps: false };
+          const n = u16(ifd0);
+          for (let i = 0; i < n; i++) {
+            const e = ifd0 + 2 + i * 12;
+            if (e + 12 > buf.length) break;
+            if (u16(e) === 0x8825) return { exif: true, gps: true };
+          }
+          return { exif: true, gps: false };
+        }
+        o += 2 + len;
+      }
+      return { exif: false, gps: false };
+    } catch (_) {
+      return { exif: false, gps: false };
+    }
+  }
+  function scanNewFiles(newFiles) {
+    const jpegs = newFiles.filter(f => /\.jpe?g$/i.test(f.name) || f.type === 'image/jpeg');
+    if (!jpegs.length) return;
+    Promise.all(jpegs.map(async f => fileMeta.set(f, await scanJpegMeta(f))))
+      .then(renderPreview);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+  }
+
+  function nextFrame() {
+    return new Promise(resolve => requestAnimationFrame(resolve));
+  }
+
+  function encodeCanvasToPng(canvas) {
+    if (canvas.convertToBlob) {
+      return canvas.convertToBlob({ type: 'image/png' });
+    }
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('encode failed')), 'image/png');
+    });
+  }
+
+  file.addEventListener('change', e => addFiles(e.target.files));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('hover'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('hover');
+    addFiles(e.dataTransfer.files);
+  });
+
+  function addFiles(list) {
+    const valid = [...list].filter(f =>
+      f.type.startsWith('image/') ||
+      /\.(svg|bmp|gif|webp|jpe?g|png|tiff?|avif|heic|heif)$/i.test(f.name)
+    );
+    files = files.concat(valid);
+    previewOrder = null;
+    scanNewFiles(valid);
+    scheduleSample();
+
+    if (files.some(isHeic)) {
+      heicNotice.classList.add('on', 'loading');
+      heicLabel.textContent = 'HEIC detected';
+      heicMsg.textContent = 'loading WASM decoder (~3MB, one-time)…';
+      loadHeicDecoder(false).then(() => {
+        heicNotice.classList.remove('loading');
+        heicMsg.innerHTML = 'decoder ready · HEIC files will be converted';
+      }).catch(() => {
+        heicNotice.classList.remove('loading');
+        heicMsg.innerHTML = '<span style="color:var(--warn)">decoder failed · run the diagnostics test below</span>';
+      });
+    }
+    renderPreview();
+  }
+
+  [prefixI, startI, padI, sepI].forEach(el => el.addEventListener('input', renderPreview));
+
+  function buildNames(arr) {
+    const prefix = prefixI.value.trim() || 'img';
+    const start = parseInt(startI.value) || 0;
+    const pad = parseInt(padI.value) || 0;
+    const sep = sepI.value;
+    return arr.map((_, i) => {
+      const n = String(start + i).padStart(pad, '0');
+      return `${prefix}${sep}${n}.png`;
+    });
+  }
+
+  function getOrderedFiles() {
+    if (shuffleI.checked) {
+      if (!previewOrder || previewOrder.length !== files.length) {
+        const idxs = files.map((_, i) => i);
+        for (let i = idxs.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+        }
+        previewOrder = idxs;
+      }
+      return previewOrder.map(i => files[i]);
+    }
+    return files.slice();
+  }
+
+  function renderPreview() {
+    if (!files.length) {
+      previewPanel.style.display = 'none';
+      goBtn.disabled = true; clearBtn.disabled = true;
+      statusEl.innerHTML = 'Waiting · <b>0</b> files queued';
+      heicNotice.classList.remove('on');
+      return;
+    }
+    const arr = getOrderedFiles();
+    const names = buildNames(arr);
+    previewPanel.style.display = 'block';
+    const heicCount = files.filter(isHeic).length;
+    countLbl.textContent = `${files.length} file${files.length === 1 ? '' : 's'}${heicCount ? ` · ${heicCount} HEIC` : ''}`;
+
+    const shown = arr.slice(0, PREVIEW_LIMIT);
+    let html = '<div class="row head"><div>#</div><div>Original</div><div>New name</div><div class="arrow">→</div></div>';
+    shown.forEach((f, i) => {
+      const meta = fileMeta.get(f);
+      const tag = (isHeic(f) ? '<span class="heic-tag">HEIC</span>' : '')
+                + (meta && meta.gps ? '<span class="gps-tag" title="Contains GPS coordinates — wiped on convert">GPS</span>' : '');
+      const originalName = escapeHtml(f.name);
+      const newName = escapeHtml(names[i]);
+      html += `<div class="row"><div class="idx">${String(i+1).padStart(3,'0')}</div><div title="${originalName}">${originalName}${tag}</div><div title="${newName}">${newName}</div><div class="arrow">→</div></div>`;
+    });
+    if (arr.length > PREVIEW_LIMIT) {
+      html += `<div class="row"><div class="idx">…</div><div>${arr.length - PREVIEW_LIMIT} more files</div><div>hidden from preview for speed</div><div class="arrow">→</div></div>`;
+    }
+    previewEl.innerHTML = html;
+    goBtn.disabled = false; clearBtn.disabled = false;
+    statusEl.innerHTML = `Ready · <b>${files.length}</b> file${files.length===1?'':'s'} queued`;
+  }
+
+  shuffleI.addEventListener('change', () => { previewOrder = null; renderPreview(); });
+
+  clearBtn.addEventListener('click', () => {
+    files = []; file.value = ''; previewOrder = null;
+    fileMeta.clear();
+    heicNotice.classList.remove('on');
+    renderPreview();
+    scheduleSample();
+  });
+
+  goBtn.addEventListener('click', async () => {
+    if (!files.length) return;
+    goBtn.disabled = true; clearBtn.disabled = true;
+    progWrap.classList.add('on');
+    prog.style.width = '0%';
+
+    if (files.some(isHeic)) {
+      try {
+        statusEl.innerHTML = 'Loading HEIC decoder…';
+        await loadHeicDecoder(false);
+      } catch (err) {
+        console.warn('HEIC decoder unavailable; will skip HEIC files', err);
+      }
+    }
+
+    const order = getOrderedFiles();
+    const names = buildNames(order);
+
+    const zip = new JSZip();
+    let done = 0, failed = 0;
+    const failures = [];
+
+    for (let i = 0; i < order.length; i++) {
+      const f = order[i];
+      try {
+        statusEl.innerHTML = `Converting · <b>${i+1}/${order.length}</b> · ${escapeHtml(f.name)}`;
+        let blob;
+        if (isHeic(f)) {
+          const images = await decodeHeic(f, false);
+          const c = await heicImageToCanvas(images[0], false);
+          blob = await processToPng(c, c.width, c.height, preserveBgI.checked);
+        } else {
+          const decoded = await decodeRasterSource(f);
+          try {
+            blob = await processToPng(decoded.src, decoded.w, decoded.h, preserveBgI.checked);
+          } finally {
+            decoded.done();
+          }
+        }
+        zip.file(names[i], blob, { compression: 'STORE' });
+        done++;
+      } catch (err) {
+        console.error('Failed:', f.name, err);
+        failures.push(`${f.name}: ${err.message || err}`);
+        failed++;
+      }
+      prog.style.width = `${((i+1)/order.length)*100}%`;
+      if (i % UI_YIELD_EVERY === 0) await nextFrame();
+    }
+
+    if (failures.length) {
+      zip.file('_failed.txt', failures.join('\n'));
+    }
+
+    statusEl.innerHTML = `Packaging zip…`;
+    await nextFrame();
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'STORE',
+      streamFiles: true
+    }, meta => {
+      prog.style.width = `${meta.percent}%`;
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `converted_${Date.now()}.zip`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+    statusEl.innerHTML = `<span class="ok">Done</span> · <b>${done}</b> converted${failed?` · <span class="warn">${failed} failed</span>`:''}`;
+    goBtn.disabled = false; clearBtn.disabled = false;
+    setTimeout(() => progWrap.classList.remove('on'), 1200);
+  });
+
+  // --- Decode: file → drawable source (ImageBitmap or HTMLImageElement) ---
+  // Orientation note: imageOrientation:'from-image' bakes EXIF rotation into
+  // the pixels before the metadata itself is discarded by the re-encode.
+  async function decodeRasterSource(file) {
+    if (window.createImageBitmap) {
+      try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        return { src: bitmap, w: bitmap.width, h: bitmap.height, done: () => bitmap.close?.() };
+      } catch (err) {
+        console.warn('createImageBitmap failed; falling back to object URL decode', file.name, err);
+      }
+    }
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => resolve({
+        src: img,
+        w: img.naturalWidth || img.width,
+        h: img.naturalHeight || img.height,
+        done: () => URL.revokeObjectURL(url),
+      });
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('decode failed (unsupported format?)'));
+      };
+      img.src = url;
+    });
+  }
+
+  // --- Resize math ---
+  // Returns target canvas dims plus an optional source crop (fill mode).
+  function computeResize(srcW, srcH) {
+    const mode = resizeModeI.value;
+    if (mode === 'none') return { w: srcW, h: srcH, crop: null };
+    const tw = Math.max(8, Math.min(8192, parseInt(resizeWI.value) || srcW));
+    const th = Math.max(8, Math.min(8192, parseInt(resizeHI.value) || srcH));
+    const noUp = noUpscaleI.checked;
+
+    if (mode === 'exact') return { w: tw, h: th, crop: null };
+
+    if (mode === 'fill') {
+      // Exact output dims; source center-cropped to cover.
+      const scale = Math.max(tw / srcW, th / srcH);
+      const sw = tw / scale, sh = th / scale;
+      return { w: tw, h: th, crop: { sx: (srcW - sw) / 2, sy: (srcH - sh) / 2, sw, sh } };
+    }
+
+    let scale;
+    if (mode === 'fit') scale = Math.min(tw / srcW, th / srcH);
+    else if (mode === 'width') scale = tw / srcW;
+    else scale = th / srcH; // height
+    if (noUp) scale = Math.min(scale, 1);
+    return {
+      w: Math.max(1, Math.round(srcW * scale)),
+      h: Math.max(1, Math.round(srcH * scale)),
+      crop: null,
+    };
+  }
+
+  // --- Watermark overlay ---
+  function applyWatermark(ctx, w, h) {
+    if (!wmImage) return;
+    const sizePct = parseFloat(wmSizeI.value) / 100;
+    const opacity = parseFloat(wmOpI.value) / 100;
+    const marginPct = parseFloat(wmMarginI.value) / 100;
+    const ar = wmImage.naturalWidth / wmImage.naturalHeight;
+    const ww = Math.max(1, w * sizePct);
+    const wh = ww / ar;
+    const margin = Math.min(w, h) * marginPct;
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+
+    if (wmTileI.checked) {
+      const stepX = ww * 1.6, stepY = wh * 1.6;
+      // Offset alternate rows for a less mechanical tile
+      for (let row = 0, y = -wh; y < h + wh; y += stepY, row++) {
+        const off = (row % 2) ? stepX / 2 : 0;
+        for (let x = -ww + off; x < w + ww; x += stepX) {
+          ctx.drawImage(wmImage, x, y, ww, wh);
+        }
+      }
+    } else {
+      const pos = wmPosition;
+      const xs = { l: margin, c: (w - ww) / 2, r: w - ww - margin };
+      const ys = { t: margin, m: (h - wh) / 2, b: h - wh - margin };
+      const x = pos === 'c' ? xs.c : xs[{ tl:'l', tc:'c', tr:'r', ml:'l', mr:'r', bl:'l', bc:'c', br:'r' }[pos]];
+      const y = pos === 'c' ? ys.m : ys[{ tl:'t', tc:'t', tr:'t', ml:'m', mr:'m', bl:'b', bc:'b', br:'b' }[pos]];
+      ctx.drawImage(wmImage, x, y, ww, wh);
+    }
+    ctx.restore();
+  }
+
+  // --- Full pipeline: drawable source → resized, watermarked PNG blob ---
+  async function processToPng(source, srcW, srcH, preserveAlpha) {
+    const { w, h, crop } = computeResize(srcW, srcH);
+    const canvas = window.OffscreenCanvas
+      ? new OffscreenCanvas(w, h)
+      : document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if (!preserveAlpha) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+    }
+    if (crop) ctx.drawImage(source, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, w, h);
+    else ctx.drawImage(source, 0, 0, w, h);
+    applyWatermark(ctx, w, h);
+    return encodeCanvasToPng(canvas);
+  }
+</script>
+</body>
+</html>

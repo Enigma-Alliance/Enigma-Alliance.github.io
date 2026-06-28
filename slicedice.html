@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLICE//DICE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/utif2@4.1.0/UTIF.js"></script>
+<style>
+:root{
+  --accent:#3b82f6;
+  --accent-rgb:59,130,246;
+  --accent2:#93c5fd;
+  --bg:#0a0b0d;
+  --panel:#111318;
+  --panel2:#161922;
+  --line:#242833;
+  --line2:#323848;
+  --text:#e7eaf0;
+  --dim:#868ea0;
+  --dim2:#565d6e;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --display:'Space Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden;
+}
+::selection{background:rgba(var(--accent-rgb),.32)}
+
+header{
+  border-bottom:1px solid var(--line);padding:18px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:linear-gradient(180deg,rgba(var(--accent-rgb),.05),transparent);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.tick{width:6px;height:34px;border-radius:2px;background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 0 16px rgba(var(--accent-rgb),.5)}
+.brand h1{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.5px}
+.brand h1 .sl{color:var(--accent)}
+.tagline{color:var(--dim);font-size:11px;letter-spacing:.5px}
+.spacer{flex:1}
+.hdr-stat{font-size:11px;color:var(--dim);border:1px solid var(--line);padding:5px 10px;border-radius:6px;background:var(--panel)}
+.hdr-stat b{color:var(--accent2);font-weight:500}
+
+main{flex:1;display:grid;grid-template-columns:340px 1fr;grid-template-rows:minmax(0,1fr);min-height:0;overflow:hidden}
+.rail{border-right:1px solid var(--line);overflow-y:auto;min-height:0;padding:16px;display:flex;flex-direction:column;gap:14px;background:var(--panel)}
+.rail>*{flex-shrink:0}
+.stage{
+  overflow:auto;min-height:0;min-width:0;padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px;
+  background:radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 0) 0 0/22px 22px,var(--bg);
+}
+
+.panel{border:1px solid var(--line);border-radius:10px;background:var(--panel2);overflow:hidden}
+.panel-head{display:flex;align-items:center;gap:9px;padding:11px 13px;border-bottom:1px solid var(--line);background:var(--panel)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(var(--accent-rgb),.7)}
+.pnum{font-size:10px;color:var(--dim2);font-weight:700;letter-spacing:1px}
+.ptitle{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.4px}
+.panel-body{padding:13px;display:flex;flex-direction:column;gap:12px}
+
+.drop{border:1.5px dashed var(--line2);border-radius:9px;padding:22px 14px;text-align:center;cursor:pointer;transition:.15s;color:var(--dim);background:rgba(255,255,255,.012)}
+.drop:hover,.drop.over{border-color:var(--accent);color:var(--accent2);background:rgba(var(--accent-rgb),.06)}
+.drop b{display:block;color:var(--text);font-weight:500;margin-bottom:3px;font-family:var(--display)}
+.drop span{font-size:11px}
+.srcinfo{font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:7px;padding:9px 11px;background:var(--bg);display:none;line-height:1.7}
+.srcinfo.show{display:block}
+.srcinfo b{color:var(--text);font-weight:500}
+.srcinfo .nm{color:var(--accent2);word-break:break-all}
+
+.ctrl{display:flex;flex-direction:column;gap:6px}
+.ctrl-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ctrl label{font-size:11px;color:var(--dim);letter-spacing:.3px}
+.val{font-size:11px;color:var(--accent2);font-variant-numeric:tabular-nums;min-width:42px;text-align:right}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:3px;background:var(--line2);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);box-shadow:0 0 8px rgba(var(--accent-rgb),.6)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
+
+.axis{border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.axis-h{font-size:10px;color:var(--dim2);letter-spacing:1px;font-weight:700}
+.modepick{display:flex;gap:5px}
+.seg{flex:1;border:1px solid var(--line2);background:var(--panel);color:var(--dim);font-family:var(--mono);font-size:11px;padding:6px 4px;border-radius:6px;cursor:pointer;transition:.12s;text-align:center}
+.seg:hover{color:var(--text)}
+.seg.on{background:rgba(var(--accent-rgb),.16);border-color:var(--accent);color:var(--accent2)}
+.numwrap{display:flex;align-items:center;gap:8px}
+.numwrap input{flex:1;background:var(--panel);border:1px solid var(--line2);color:var(--text);font-family:var(--mono);font-size:13px;padding:7px 9px;border-radius:6px;outline:none}
+.numwrap input:focus{border-color:var(--accent)}
+.numwrap .unit{font-size:11px;color:var(--dim2);min-width:34px}
+
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:10px;color:var(--dim2);letter-spacing:.5px}
+.field input{width:100%;background:var(--bg);border:1px solid var(--line2);color:var(--text);font-family:var(--mono);font-size:12px;padding:6px 8px;border-radius:6px;outline:none}
+.field input:focus{border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.tog{display:flex;align-items:center;gap:8px;cursor:pointer}
+.tog .sw{width:34px;height:19px;border-radius:11px;background:var(--line2);position:relative;transition:.15s;flex:none}
+.tog .sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:var(--dim);transition:.15s}
+.tog.on .sw{background:rgba(var(--accent-rgb),.4)}
+.tog.on .sw::after{left:17px;background:var(--accent)}
+.tog span{font-size:11px;color:var(--dim)}
+.tog.on span{color:var(--text)}
+
+.pills{display:flex;gap:5px;flex-wrap:wrap}
+.pill{flex:1;min-width:0;border:1px solid var(--line2);background:var(--bg);color:var(--dim);font-family:var(--mono);font-size:11px;padding:6px 4px;border-radius:6px;cursor:pointer;transition:.12s;text-align:center;white-space:nowrap}
+.pill:hover{color:var(--text)}
+.pill.on{background:rgba(var(--accent-rgb),.14);border-color:var(--accent);color:var(--accent2)}
+
+.btn{border:1px solid var(--line2);background:var(--panel);color:var(--text);font-family:var(--mono);font-size:12px;font-weight:500;padding:10px 12px;border-radius:7px;cursor:pointer;transition:.12s;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:7px;width:100%}
+.btn:hover{border-color:var(--accent);color:var(--accent2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(180deg,rgba(var(--accent-rgb),.22),rgba(var(--accent-rgb),.1));border-color:var(--accent);color:var(--accent2);font-weight:700}
+.btn.primary:hover{background:linear-gradient(180deg,rgba(var(--accent-rgb),.32),rgba(var(--accent-rgb),.16))}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.prog{height:5px;border-radius:3px;background:var(--line2);overflow:hidden;display:none}
+.prog.show{display:block}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .1s}
+.hint{font-size:10px;color:var(--dim2);line-height:1.6}
+.warn{color:#fbbf24}
+
+.preview-wrap{border:1px solid var(--line2);border-radius:10px;overflow:hidden;box-shadow:0 14px 50px rgba(0,0,0,.55);max-width:100%;
+  background:conic-gradient(#16181f 90deg,#0f1117 90deg 180deg,#16181f 180deg 270deg,#0f1117 270deg) 0 0/20px 20px}
+#pv{display:block;max-width:100%;max-height:74vh;width:auto;height:auto}
+
+.statusbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--dim);border-top:1px solid var(--line);padding:9px 22px;background:var(--panel)}
+.statusbar .s{display:flex;align-items:center;gap:6px}
+.statusbar b{color:var(--accent2);font-weight:500}
+.led{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent)}
+.sig{margin-left:auto;color:var(--dim2);letter-spacing:1.5px;font-size:10px}
+
+@media(max-width:820px){
+  main{grid-template-columns:1fr;grid-template-rows:auto auto;overflow-y:auto}
+  .rail{border-right:none;border-bottom:1px solid var(--line);overflow-y:visible}
+  .stage{overflow-y:visible}
+  #pv{max-height:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="tick"></div>
+    <div>
+      <h1>SLICE<span class="sl">//</span>DICE</h1>
+      <div class="tagline">GRID IMAGE CUTTER · FULL-RES EXPORT</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="hdr-stat">SRC <b id="hSrc">—</b></div>
+  <div class="hdr-stat">GRID <b id="hGrid">—</b></div>
+  <div class="hdr-stat">TILES <b id="hTiles">0</b></div>
+</header>
+
+<main>
+  <aside class="rail">
+
+    <!-- 01 SOURCE -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">01</span><span class="ptitle">SOURCE</span></div>
+      <div class="panel-body">
+        <div class="drop" id="drop"><b>Drop an image</b><span>or click · PNG / JPG / WEBP / TIFF / GIF / BMP</span></div>
+        <input type="file" id="file" accept="image/*,.tif,.tiff" hidden>
+        <div class="srcinfo" id="srcinfo"></div>
+      </div>
+    </div>
+
+    <!-- 02 GRID -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">02</span><span class="ptitle">GRID</span></div>
+      <div class="panel-body">
+        <div class="axis">
+          <div class="axis-h">COLUMNS · X</div>
+          <div class="modepick" id="xModePick">
+            <button class="seg on" data-m="count">BY COUNT</button>
+            <button class="seg" data-m="size">BY SIZE</button>
+          </div>
+          <div class="numwrap">
+            <input type="number" id="xVal" value="4" min="1" step="1">
+            <span class="unit" id="xUnit">cols</span>
+          </div>
+        </div>
+        <div class="axis">
+          <div class="axis-h">ROWS · Y</div>
+          <div class="modepick" id="yModePick">
+            <button class="seg on" data-m="count">BY COUNT</button>
+            <button class="seg" data-m="size">BY SIZE</button>
+          </div>
+          <div class="numwrap">
+            <input type="number" id="yVal" value="4" min="1" step="1">
+            <span class="unit" id="yUnit">rows</span>
+          </div>
+        </div>
+        <div class="pills" id="quick">
+          <button class="pill" data-x="2" data-y="2">2×2</button>
+          <button class="pill" data-x="3" data-y="3">3×3</button>
+          <button class="pill" data-x="4" data-y="4">4×4</button>
+          <button class="pill" data-x="3" data-y="1">3×1</button>
+          <button class="pill" data-x="1" data-y="3">1×3</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 SPACING -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">03</span><span class="ptitle">SPACING</span></div>
+      <div class="panel-body">
+        <div class="ctrl">
+          <div class="ctrl-row"><label>GUTTER (between cells)</label><span class="val" id="gutV">0px</span></div>
+          <input type="range" id="gut" min="0" max="200" step="1" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-row"><label>MARGIN (outer edge)</label><span class="val" id="marV">0px</span></div>
+          <input type="range" id="mar" min="0" max="400" step="1" value="0">
+        </div>
+        <label class="tog on" id="partial"><span class="sw"></span><span>KEEP PARTIAL EDGE CELLS</span></label>
+        <div class="hint">Partial cells apply in BY&nbsp;SIZE mode when the image doesn't divide evenly.</div>
+      </div>
+    </div>
+
+    <!-- 04 LABELS -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">04</span><span class="ptitle">LABELS</span></div>
+      <div class="panel-body">
+        <label class="tog on" id="nums"><span class="sw"></span><span>SHOW CELL NUMBERS</span></label>
+        <div class="ctrl">
+          <label style="font-size:10px;color:var(--dim2);letter-spacing:.5px">FILENAME PATTERN</label>
+          <div class="pills" id="pat">
+            <button class="pill on" data-p="tile_{n}">tile_{n}</button>
+            <button class="pill" data-p="{r}-{c}">{r}-{c}</button>
+            <button class="pill" data-p="r{r}_c{c}">r{r}_c{c}</button>
+          </div>
+        </div>
+        <div class="hint">{n}=index · {r}=row · {c}=col</div>
+      </div>
+    </div>
+
+    <!-- 05 EXPORT -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">05</span><span class="ptitle">EXPORT</span></div>
+      <div class="panel-body">
+        <div class="ctrl">
+          <label style="font-size:10px;color:var(--dim2);letter-spacing:.5px">FORMAT</label>
+          <div class="pills" id="fmt">
+            <button class="pill on" data-f="png">PNG</button>
+            <button class="pill" data-f="jpeg">JPG</button>
+            <button class="pill" data-f="webp">WEBP</button>
+          </div>
+        </div>
+        <div class="ctrl" id="qWrap" style="display:none">
+          <div class="ctrl-row"><label>QUALITY</label><span class="val" id="qV">92</span></div>
+          <input type="range" id="q" min="50" max="100" step="1" value="92">
+        </div>
+        <button class="btn primary" id="exportBtn" disabled>⤓ EXPORT ZIP</button>
+        <div class="prog" id="prog"><i></i></div>
+        <div class="hint" id="exHint"></div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <div class="preview-wrap"><canvas id="pv" width="900" height="560"></canvas></div>
+  </section>
+</main>
+
+<div class="statusbar">
+  <div class="s"><span class="led"></span><b id="stState">NO IMAGE</b></div>
+  <div class="s">SRC <b id="stRes">—</b></div>
+  <div class="s">TILE <b id="stTile">—</b></div>
+  <div class="s">COUNT <b id="stCount">0</b></div>
+  <div class="sig">SYS.READY · SLICE//DICE</div>
+</div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const pv=$("pv"), pctx=pv.getContext("2d");
+const scratch=document.createElement("canvas");          // module-level pool (no per-tile alloc)
+const sctx=scratch.getContext("2d");
+
+const S={
+  bitmap:null, W:0, H:0, name:"", bytes:0,
+  xMode:"count", xVal:4, yMode:"count", yVal:4,
+  gutter:0, margin:0, partial:true,
+  showNums:true, pattern:"tile_{n}",
+  fmt:"png", quality:0.92,
+};
+
+/* ---------- grid math (edge-rounded; validated headless) ---------- */
+function axis(total, mode, val, gutter, margin, includePartial){
+  const avail=total-2*margin;
+  if(avail<=0) return [];
+  const out=[];
+  if(mode==="count"){
+    const n=Math.max(1, Math.floor(val));
+    const size=(avail-(n-1)*gutter)/n;
+    if(size<=0) return [];
+    for(let i=0;i<n;i++) out.push({start: margin+i*(size+gutter), size});
+  }else{
+    const size=Math.max(1, val);
+    let start=margin;
+    while(start+size <= margin+avail+1e-6){ out.push({start,size}); start+=size+gutter; }
+    const rem=(margin+avail)-start;
+    if(includePartial && rem>0.5) out.push({start, size:rem});
+  }
+  return out;
+}
+function computeCells(){
+  const W=S.W, H=S.H;
+  const cols=axis(W,S.xMode,S.xVal,S.gutter,S.margin,S.partial);
+  const rows=axis(H,S.yMode,S.yVal,S.gutter,S.margin,S.partial);
+  const cells=[];
+  for(let r=0;r<rows.length;r++)for(let c=0;c<cols.length;c++){
+    const x=Math.round(cols[c].start), y=Math.round(rows[r].start);
+    const xw=Math.round(cols[c].start+cols[c].size), yh=Math.round(rows[r].start+rows[r].size);
+    let w=Math.min(xw,W)-x, h=Math.min(yh,H)-y;
+    if(w>0&&h>0) cells.push({x,y,w,h,row:r,col:c,index:r*cols.length+c});
+  }
+  return {cols,rows,cells};
+}
+
+/* ---------- source loading ---------- */
+function fmtBytes(b){ if(b<1024)return b+" B"; if(b<1048576)return (b/1024).toFixed(1)+" KB"; return (b/1048576).toFixed(1)+" MB"; }
+
+async function loadFile(f){
+  if(!f) return;
+  setState("DECODING…");
+  S.name=f.name; S.bytes=f.size;
+  const isTiff=/\.tiff?$/i.test(f.name) || f.type==="image/tiff";
+  try{
+    if(isTiff){
+      if(typeof UTIF==="undefined") throw new Error("TIFF decoder not loaded");
+      const buf=await f.arrayBuffer();
+      const ifds=UTIF.decode(buf);
+      UTIF.decodeImage(buf, ifds[0], ifds);
+      const rgba=UTIF.toRGBA8(ifds[0]);
+      const w=ifds[0].width, h=ifds[0].height;
+      const idata=new ImageData(new Uint8ClampedArray(rgba.buffer.slice(0)), w, h);
+      S.bitmap=await createImageBitmap(idata);
+      S.W=w; S.H=h;
+    }else{
+      S.bitmap=await createImageBitmap(f);   // full-resolution, no downscale
+      S.W=S.bitmap.width; S.H=S.bitmap.height;
+    }
+  }catch(err){
+    setState("DECODE FAILED");
+    $("srcinfo").className="srcinfo show";
+    $("srcinfo").textContent="Couldn't decode "+f.name+". "+(err.message||"Unsupported or corrupt file.");
+    return;
+  }
+  const info=$("srcinfo"); info.className="srcinfo show"; info.textContent="";
+  const nm=document.createElement("div"); nm.className="nm"; nm.textContent=S.name; info.appendChild(nm);
+  const meta=document.createElement("div");
+  meta.appendChild(document.createTextNode("dimensions "));
+  const b1=document.createElement("b"); b1.textContent=S.W+" × "+S.H+" px"; meta.appendChild(b1);
+  info.appendChild(meta);
+  const meta2=document.createElement("div");
+  meta2.appendChild(document.createTextNode("file "));
+  const b2=document.createElement("b"); b2.textContent=fmtBytes(S.bytes)+(isTiff?" · TIFF":""); meta2.appendChild(b2);
+  info.appendChild(meta2);
+
+  $("hSrc").textContent=S.W+"×"+S.H;
+  $("stRes").textContent=S.W+"×"+S.H+" px";
+  $("exportBtn").disabled=false;
+  render();
+}
+
+/* ---------- preview ---------- */
+function render(){
+  if(!S.bitmap){ return; }
+  const {cols,rows,cells}=computeCells();
+  const W=S.W, H=S.H;
+
+  // preview canvas at capped resolution
+  const CAP=1500;
+  const scale=Math.min(CAP/Math.max(W,H), 1);
+  const pw=Math.max(1,Math.round(W*scale)), ph=Math.max(1,Math.round(H*scale));
+  pv.width=pw; pv.height=ph;
+
+  pctx.clearRect(0,0,pw,ph);
+  const manyTiles=cells.length>600;
+
+  if(S.gutter>0 || S.margin>0){
+    // dark base so discarded gutter/margin reads as removed
+    pctx.fillStyle="rgba(0,0,0,.55)";
+    pctx.fillRect(0,0,pw,ph);
+    if(!manyTiles){
+      for(const cl of cells)
+        pctx.drawImage(S.bitmap, cl.x,cl.y,cl.w,cl.h, cl.x*scale,cl.y*scale,cl.w*scale,cl.h*scale);
+    }else{
+      pctx.globalAlpha=1; pctx.drawImage(S.bitmap,0,0,pw,ph);
+    }
+  }else{
+    pctx.drawImage(S.bitmap,0,0,pw,ph);
+  }
+
+  // grid outlines
+  pctx.lineWidth=Math.max(1, scale<0.5?1:1.5);
+  pctx.strokeStyle="rgba(59,130,246,.95)";
+  for(const cl of cells){
+    pctx.strokeRect(cl.x*scale+.5, cl.y*scale+.5, cl.w*scale-1, cl.h*scale-1);
+  }
+
+  // numbers
+  if(S.showNums && cells.length<=300){
+    pctx.fillStyle="rgba(255,255,255,.96)";
+    pctx.strokeStyle="rgba(0,0,0,.6)";
+    pctx.textAlign="center"; pctx.textBaseline="middle";
+    const fs=Math.max(10, Math.min(34, Math.min(cells.length?cols[0].size:40, rows.length?rows[0].size:40)*scale*0.32));
+    pctx.font="700 "+fs+"px 'JetBrains Mono',monospace";
+    pctx.lineWidth=3;
+    for(const cl of cells){
+      const cx=(cl.x+cl.w/2)*scale, cy=(cl.y+cl.h/2)*scale;
+      const lbl=(cl.index+1);
+      pctx.strokeText(lbl,cx,cy); pctx.fillText(lbl,cx,cy);
+    }
+  }
+
+  // stats
+  const tw=cells.length?cells[0].w:0, th=cells.length?cells[0].h:0;
+  $("hGrid").textContent=cols.length+"×"+rows.length;
+  $("hTiles").textContent=cells.length;
+  $("stTile").textContent=tw+"×"+th+" px";
+  $("stCount").textContent=cells.length;
+  setState(cells.length?"READY":"EMPTY GRID");
+
+  // export warning for huge counts
+  const hint=$("exHint");
+  if(cells.length>1500){ hint.className="hint warn"; hint.textContent="⚠ "+cells.length+" tiles — export may be slow and memory-heavy."; }
+  else if(S.fmt==="png"){ hint.className="hint"; hint.textContent="PNG is lossless. 16-bit TIFFs export as 8-bit (canvas limit); pixel resolution is preserved."; }
+  else { hint.className="hint"; hint.textContent="Lossy format — pixel resolution preserved, color is 8-bit."; }
+}
+
+/* ---------- export ---------- */
+function safeName(s){ return s.replace(/[\/\\:*?"<>|]+/g,"_"); }
+function buildName(cl, total){
+  const pad=String(total).length;
+  let s=S.pattern
+    .replace(/\{n\}/g, String(cl.index+1).padStart(pad,"0"))
+    .replace(/\{r\}/g, String(cl.row+1))
+    .replace(/\{c\}/g, String(cl.col+1));
+  const ext=S.fmt==="jpeg"?"jpg":S.fmt;
+  return safeName(s)+"."+ext;
+}
+function blobFromCell(cl){
+  scratch.width=cl.w; scratch.height=cl.h;
+  sctx.clearRect(0,0,cl.w,cl.h);
+  sctx.drawImage(S.bitmap, cl.x,cl.y,cl.w,cl.h, 0,0,cl.w,cl.h);   // slice from FULL-RES source
+  const mime="image/"+S.fmt;
+  const q=(S.fmt==="png")?undefined:S.quality;
+  return new Promise(res=>scratch.toBlob(res, mime, q));
+}
+async function exportZip(){
+  if(!S.bitmap) return;
+  const {cells}=computeCells();
+  if(!cells.length) return;
+  const btn=$("exportBtn"), prog=$("prog"), bar=prog.querySelector("i");
+  btn.disabled=true; prog.className="prog show"; bar.style.width="0%";
+  setState("SLICING…");
+  const zip=new JSZip();
+  const total=cells.length;
+  for(let i=0;i<total;i++){
+    const blob=await blobFromCell(cells[i]);
+    zip.file(buildName(cells[i],total), blob);
+    bar.style.width=Math.round((i+1)/total*70)+"%";
+    if(i%8===0) await new Promise(r=>setTimeout(r,0));   // yield to keep UI alive
+  }
+  setState("ZIPPING…");
+  const base=(S.name.replace(/\.[^.]+$/,"")||"image");
+  const out=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:5}},
+    m=>{ bar.style.width=(70+Math.round(m.percent*0.3))+"%"; });
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(out);
+  a.download=safeName(base)+"_sliced_"+total+".zip";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  bar.style.width="100%";
+  setState("DONE · "+total+" TILES");
+  btn.disabled=false;
+  setTimeout(()=>{ prog.className="prog"; },1200);
+}
+
+/* ---------- wiring ---------- */
+const drop=$("drop"), file=$("file");
+drop.onclick=()=>file.click();
+file.onchange=()=>{ if(file.files[0]) loadFile(file.files[0]); file.value=""; };
+["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",ev=>{ if(ev.dataTransfer?.files[0]) loadFile(ev.dataTransfer.files[0]); });
+window.addEventListener("dragover",e=>e.preventDefault());
+window.addEventListener("drop",e=>e.preventDefault());
+
+let raf=null;
+function update(){ if(raf)cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{raf=null;render();}); }
+
+function setUnits(){
+  $("xUnit").textContent=S.xMode==="count"?"cols":"px";
+  $("yUnit").textContent=S.yMode==="count"?"rows":"px";
+  $("xVal").step=1; $("yVal").step=1;
+}
+$("xModePick").addEventListener("click",e=>{const b=e.target.closest(".seg");if(!b)return;
+  S.xMode=b.dataset.m; document.querySelectorAll("#xModePick .seg").forEach(s=>s.classList.toggle("on",s===b));
+  $("xVal").value=S.xMode==="count"?4:200; S.xVal=parseFloat($("xVal").value); setUnits(); update();});
+$("yModePick").addEventListener("click",e=>{const b=e.target.closest(".seg");if(!b)return;
+  S.yMode=b.dataset.m; document.querySelectorAll("#yModePick .seg").forEach(s=>s.classList.toggle("on",s===b));
+  $("yVal").value=S.yMode==="count"?4:200; S.yVal=parseFloat($("yVal").value); setUnits(); update();});
+$("xVal").addEventListener("input",()=>{ S.xVal=Math.max(1,parseFloat($("xVal").value)||1); update(); });
+$("yVal").addEventListener("input",()=>{ S.yVal=Math.max(1,parseFloat($("yVal").value)||1); update(); });
+
+$("quick").addEventListener("click",e=>{const b=e.target.closest(".pill");if(!b)return;
+  S.xMode="count";S.yMode="count";
+  document.querySelectorAll("#xModePick .seg").forEach(s=>s.classList.toggle("on",s.dataset.m==="count"));
+  document.querySelectorAll("#yModePick .seg").forEach(s=>s.classList.toggle("on",s.dataset.m==="count"));
+  S.xVal=+b.dataset.x; S.yVal=+b.dataset.y; $("xVal").value=S.xVal; $("yVal").value=S.yVal; setUnits(); update();});
+
+function bindRange(id,vid,key,fmt,after){const el=$(id),v=$(vid);
+  el.addEventListener("input",()=>{S[key]=parseFloat(el.value);v.textContent=fmt(S[key]);if(after)after();update();});}
+bindRange("gut","gutV","gutter",n=>n+"px");
+bindRange("mar","marV","margin",n=>n+"px");
+$("partial").addEventListener("click",()=>{S.partial=!S.partial;$("partial").classList.toggle("on",S.partial);update();});
+$("nums").addEventListener("click",()=>{S.showNums=!S.showNums;$("nums").classList.toggle("on",S.showNums);update();});
+
+$("pat").addEventListener("click",e=>{const b=e.target.closest(".pill");if(!b)return;
+  document.querySelectorAll("#pat .pill").forEach(p=>p.classList.toggle("on",p===b));S.pattern=b.dataset.p;});
+$("fmt").addEventListener("click",e=>{const b=e.target.closest(".pill");if(!b)return;
+  document.querySelectorAll("#fmt .pill").forEach(p=>p.classList.toggle("on",p===b));S.fmt=b.dataset.f;
+  $("qWrap").style.display=(S.fmt==="png")?"none":"flex"; render();});
+$("q").addEventListener("input",()=>{S.quality=parseFloat($("q").value)/100;$("qV").textContent=$("q").value;});
+
+$("exportBtn").addEventListener("click",exportZip);
+
+function setState(s){ $("stState").textContent=s; }
+
+// initial placeholder
+(function(){
+  pctx.fillStyle="#0f1117"; pctx.fillRect(0,0,pv.width,pv.height);
+  pctx.fillStyle="rgba(134,142,160,.5)"; pctx.textAlign="center"; pctx.textBaseline="middle";
+  pctx.font="600 22px 'Space Grotesk',sans-serif";
+  pctx.fillText("DROP AN IMAGE TO SLICE", pv.width/2, pv.height/2);
+})();
+</script>
+</body>
+</html>

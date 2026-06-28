@@ -1,0 +1,2753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOGO//LOOP — Animated Logo Generator</title>
+<style>
+/* ════════════════════════════════════════════════════════════════
+   STUDIO TOOLS — SHARED DESIGN SYSTEM  v1.0
+   One chassis for every tool. Per-tool identity lives in three
+   tokens only: --accent, --accent-rgb, --accent2.
+   ════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0b0d12;
+  --panel: #11141b;
+  --ink: #e8ebf0;
+  --dim: #747c8a;
+  --line: #1d222c;
+  --line2: #2a3140;
+  --ok: #5fd98a;
+  --warn: #ff5b49;
+  --info: #62b6ff;
+  /* injected per tool:
+     --accent, --accent-rgb, --accent2 */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+body {
+  background-image:
+    radial-gradient(ellipse at top right, rgba(var(--accent-rgb), 0.05), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(var(--accent-rgb), 0.025), transparent 60%);
+  padding: 28px 20px 60px;
+}
+
+::selection { background: rgba(var(--accent-rgb), 0.3); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 22px 26px;
+  background: var(--panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+}
+header::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 50%; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: -0.025em; line-height: 1; }
+.title span { color: var(--accent); }
+.sub { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 10px; }
+.meta { text-align: right; font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.16em; }
+.meta b { color: var(--accent); font-weight: 500; }
+
+/* ── Panels ─────────────────────────────────────── */
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.panel h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel h3::before { content: ""; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+.panel h3 .num { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); margin-right: 4px; }
+.panel h3 .right { margin-left: auto; color: var(--ink); font-size: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
+
+/* ── Drop zones ─────────────────────────────────── */
+.drop {
+  border: 1px dashed var(--line2);
+  border-radius: 2px;
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  display: block;
+}
+.drop:hover, .drop.hover { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.03); }
+.drop .big { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.drop.small { padding: 24px 16px; }
+.drop.small .big { font-size: 14px; }
+.drop .hint { color: var(--dim); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.drop .count { margin-top: 8px; font-size: 11px; color: var(--accent); }
+.drop input { display: none; }
+
+/* ── Form options ───────────────────────────────── */
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opts.three { grid-template-columns: 1fr 1fr 1fr; }
+.opt label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); display: block; margin-bottom: 6px; }
+.opt select, .opt input[type="text"], .opt input[type="color"], .opt input[type="number"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  border-radius: 2px;
+}
+.opt input[type="color"] { padding: 2px 4px; height: 36px; cursor: pointer; }
+.opt select:focus, .opt input:focus { border-color: var(--accent); }
+.opt select option { background: var(--bg); color: var(--ink); }
+.opt .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.opt .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+
+/* Sliders (shared between .opt and .field variants) */
+input[type="range"] {
+  width: 100%; padding: 0; border: none; height: 4px;
+  background: var(--line2); -webkit-appearance: none; appearance: none; border-radius: 2px;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+input[type="range"]:disabled::-webkit-slider-thumb { background: var(--dim); cursor: not-allowed; }
+input[type="range"]:disabled::-moz-range-thumb { background: var(--dim); cursor: not-allowed; }
+
+/* Compact field rows (slider + label + value) */
+.field { margin-bottom: 14px; }
+.field.compact { margin-bottom: 10px; }
+.field .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); }
+.field .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+.field select, .field input[type="number"], .field input[type="color"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 7px 9px;
+  outline: none;
+  border-radius: 2px;
+}
+.field select:focus, .field input:focus { border-color: var(--accent); }
+.field input[type="color"] { padding: 2px 4px; height: 34px; cursor: pointer; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.range-edit { display: flex; align-items: center; gap: 8px; }
+.range-edit input[type="number"] {
+  width: 64px; flex: 0 0 auto;
+  background: var(--bg); border: 1px solid var(--line2); color: var(--ink);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 4px 6px; border-radius: 2px; outline: none; text-align: center;
+}
+.range-edit input[type="number"]:focus { border-color: var(--accent); }
+
+/* ── Checkboxes ─────────────────────────────────── */
+.check, label.check, .opt label.check { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; padding: 6px 0; font-size: 12px; margin-bottom: 0; text-transform: none; letter-spacing: normal; color: var(--ink); }
+.check input { display: none; }
+.check .box { width: 14px; height: 14px; border: 1px solid var(--line2); flex-shrink: 0; position: relative; border-radius: 2px; }
+.check input:checked + .box { background: var(--accent); border-color: var(--accent); }
+.check input:checked + .box::after {
+  content: ""; position: absolute; top: 1px; left: 4px;
+  width: 4px; height: 8px; border: solid var(--bg);
+  border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.check .desc { display: block; color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
+
+/* ── Pills / tabs ───────────────────────────────── */
+.pills { display: flex; gap: 4px; flex-wrap: nowrap; }
+.pills.wrap-row { flex-wrap: wrap; }
+.pill {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 6px 10px; cursor: pointer; border-radius: 2px;
+  white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.pill:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.pill.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tab {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+  padding: 6px 12px; cursor: pointer; border-radius: 2px;
+}
+.tab:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.tab.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+.tab-pane.hidden { display: none; }
+
+/* ── Buttons ────────────────────────────────────── */
+.btn {
+  background: var(--accent); color: var(--bg); border: none;
+  padding: 13px 26px; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.16em; cursor: pointer; border-radius: 2px;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.25); }
+.btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line2); }
+.btn.ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+.btn.small { padding: 9px 16px; font-size: 10px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ── Status / progress ──────────────────────────── */
+.status-bar {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.status { flex: 1; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.14em; min-width: 0; }
+.status b { color: var(--ink); font-weight: 500; }
+.status .ok { color: var(--ok); }
+.status .warn { color: var(--warn); }
+.status .info { color: var(--info); }
+.status .accent { color: var(--accent); }
+
+.prog-wrap { margin-top: 10px; height: 6px; background: var(--line); border-radius: 2px; overflow: hidden; display: none; }
+.prog-wrap.on { display: block; }
+.prog-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 0.2s; }
+
+.notice { margin-top: 10px; padding: 10px 14px; border-left: 2px solid var(--accent); background: rgba(var(--accent-rgb), 0.04); font-size: 11px; color: var(--dim); line-height: 1.6; }
+.notice b { color: var(--accent); }
+.notice.warn { border-color: var(--warn); background: rgba(255,91,73,0.05); }
+.notice.warn b { color: var(--warn); }
+
+/* ── Preview surfaces ───────────────────────────── */
+.preview-wrap {
+  background: #000;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+.preview-wrap canvas { width: 100%; height: 100%; display: block; }
+.preview-wrap.checker {
+  background-image:
+    linear-gradient(45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1d24 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1d24 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+.preview-label {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.16em;
+  background: rgba(0,0,0,0.6);
+  padding: 3px 8px; border-radius: 2px;
+  pointer-events: none;
+}
+.preview-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px;
+  letter-spacing: 0.3em; color: var(--line2);
+  pointer-events: none;
+}
+.preview-empty.hidden { display: none; }
+
+/* ── Footer signature ───────────────────────────── */
+.sig {
+  margin-top: 28px; font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.2em;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+
+/* ── Scrollbars ─────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 3px; }
+
+/* ── Responsive / a11y baseline ─────────────────── */
+@media (max-width: 700px) {
+  .opts, .opts.three, .two-col { grid-template-columns: 1fr; }
+  .title { font-size: 22px; }
+  header { flex-direction: column; align-items: flex-start; }
+  .meta { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ── Tool identity ────────────────────────────── */
+:root {
+  --accent: #fbbf24;
+  --accent-rgb: 251, 191, 36;
+  --accent2: #f59e0b;
+}
+
+/* ── LOGO//LOOP ─ tool layout & components ──────── */
+.wrap {
+  max-width: 1400px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } }
+header { grid-column: 1 / -1; }
+.sig { grid-column: 1 / -1; }
+
+.file-info {
+  margin-top: 14px; padding: 12px 14px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 2px;
+  display: none; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 12px;
+}
+.file-info.on { display: flex; }
+.file-info .name { color: var(--ink); font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.file-info .meta-bit { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; }
+.file-info .meta-bit b { color: var(--ink); font-weight: 500; }
+.file-info .meta-bit.alpha b { color: var(--accent); }
+
+.anim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.anim-card {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 2px;
+  padding: 14px 12px; cursor: pointer; text-align: center;
+  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+}
+.anim-card:hover { border-color: var(--line2); transform: translateY(-1px); }
+.anim-card.on { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.06); }
+.anim-card .icon { font-size: 24px; line-height: 1; margin-bottom: 8px; }
+.anim-card .name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.02em; margin-bottom: 4px; }
+.anim-card .desc { font-size: 10px; color: var(--dim); line-height: 1.4; }
+.anim-card.on .name { color: var(--accent); }
+
+.anim-knobs { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.knob-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
+
+.bg-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.bg-tab {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+  padding: 6px 10px; cursor: pointer; border-radius: 2px;
+}
+.bg-tab.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+.bg-tab:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.bg-content { display: none; }
+.bg-content.on { display: block; }
+
+.fx-section { background: var(--bg); border: 1px solid var(--line); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.fx-section summary {
+  padding: 10px 14px; cursor: pointer; user-select: none;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink);
+  list-style: none; display: flex; align-items: baseline; gap: 8px;
+}
+.fx-section summary::-webkit-details-marker { display: none; }
+.fx-section summary::before { content: "\25B8"; color: var(--accent); font-size: 10px; transition: transform 0.15s; display: inline-block; }
+.fx-section[open] summary::before { transform: rotate(90deg); }
+.fx-section .fx-hint { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; }
+.fx-section.on summary { color: var(--accent); }
+.fx-section .fx-body { padding: 12px 14px; border-top: 1px solid var(--line); }
+
+.preview-panel { position: sticky; top: 20px; }
+.video-output {
+  background: #000; border: 1px solid var(--line); border-radius: 2px;
+  position: relative; overflow: hidden; aspect-ratio: 16 / 9;
+  margin-bottom: 12px; display: none;
+}
+.video-output.on { display: block; }
+.video-output video { width: 100%; height: 100%; display: block; background: #000; }
+.preview-wrap { margin-bottom: 12px; }
+
+/* Icon pack */
+.icon-row {
+  display: flex; gap: 14px; align-items: flex-end;
+  margin-top: 14px; padding: 14px;
+  border: 1px solid var(--line); border-radius: 2px;
+  min-height: 78px; overflow-x: auto;
+}
+.icon-row .icon-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 0 0 auto; }
+.icon-row canvas { border: 1px solid var(--line2); border-radius: 2px; display: block; }
+.icon-row .icon-size { font-size: 9px; color: var(--dim); letter-spacing: 0.1em; }
+.icon-row-empty { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; align-self: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="title">LOGO<span>//</span>LOOP</div>
+      <div class="sub">Animate a single image into a looping video</div>
+    </div>
+    <div class="meta">
+      VERSION 01.00<br>
+      ENGINE · <b>CANVAS 2D</b><br>
+      OUTPUT · <b>MP4 / GIF / PNG</b>
+    </div>
+  </header>
+
+  <!-- LEFT COLUMN: CONFIG -->
+  <div>
+
+    <div class="panel">
+      <h3><span class="num">01</span> Logo</h3>
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif">
+        <div class="big">Drop a logo image</div>
+        <div class="hint">PNG / SVG / JPG / WEBP · Transparency auto-detected</div>
+      </label>
+      <div class="file-info" id="fileInfo">
+        <div class="name" id="fileName">—</div>
+        <div class="meta-bit">DIMS · <b id="fileDims">—</b></div>
+        <div class="meta-bit alpha" id="alphaInfo">TRANSPARENCY · <b id="alphaState">—</b></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">02</span> Animation
+        <span class="right" id="animName">—</span>
+      </h3>
+      <div class="anim-grid" id="animGrid">
+        <!-- Filled by JS -->
+      </div>
+      <div class="anim-knobs" id="animKnobs">
+        <div class="knob-title" id="knobTitle">Animation parameters</div>
+        <div id="knobContainer"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">03</span> Logo placement</h3>
+      <div class="opts">
+        <div class="opt">
+          <div class="row"><label>Size</label><span class="val"><span id="logoSizeVal">40</span>%</span></div>
+          <input type="range" id="logoSize" min="10" max="90" value="40" step="2">
+        </div>
+        <div class="opt">
+          <div class="row"><label>Logo padding</label><span class="val"><span id="logoPadVal">0</span>%</span></div>
+          <input type="range" id="logoPad" min="0" max="20" value="0" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">04</span> Background</h3>
+      <div class="bg-tabs">
+        <button class="bg-tab on" data-bg="solid">Solid</button>
+        <button class="bg-tab" data-bg="gradient">Gradient</button>
+        <button class="bg-tab" data-bg="radial">Radial</button>
+        <button class="bg-tab" data-bg="grid">Grid</button>
+      </div>
+      <div class="bg-content on" data-bg="solid">
+        <div class="opt">
+          <label>Color</label>
+          <input type="color" id="bgSolid" value="#0a0a0a">
+        </div>
+      </div>
+      <div class="bg-content" data-bg="gradient">
+        <div class="opts three">
+          <div class="opt"><label>Top color</label><input type="color" id="bgGradA" value="#1a1a2e"></div>
+          <div class="opt"><label>Bottom color</label><input type="color" id="bgGradB" value="#0a0a0a"></div>
+          <div class="opt">
+            <div class="row"><label>Angle</label><span class="val"><span id="bgGradAngleVal">180</span>°</span></div>
+            <input type="range" id="bgGradAngle" min="0" max="360" value="180" step="15">
+          </div>
+        </div>
+      </div>
+      <div class="bg-content" data-bg="radial">
+        <div class="opts">
+          <div class="opt"><label>Inner color</label><input type="color" id="bgRadA" value="#252540"></div>
+          <div class="opt"><label>Outer color</label><input type="color" id="bgRadB" value="#000000"></div>
+        </div>
+      </div>
+      <div class="bg-content" data-bg="grid">
+        <div class="opts three">
+          <div class="opt"><label>BG color</label><input type="color" id="bgGridBG" value="#0a0a0a"></div>
+          <div class="opt"><label>Line color</label><input type="color" id="bgGridLine" value="#1a1a2e"></div>
+          <div class="opt">
+            <div class="row"><label>Spacing</label><span class="val"><span id="bgGridSpaceVal">40</span>px</span></div>
+            <input type="range" id="bgGridSpace" min="10" max="120" value="40" step="2">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">05</span> Global effects
+        <span class="right" id="fxCount" style="color:var(--dim);">none active</span>
+      </h3>
+
+      <!-- Logo recolor (transforms source, applied before animation) -->
+      <details class="fx-section">
+        <summary>Logo recolor <span class="fx-hint">(designed for B&W logos — replaces white with chosen color)</span></summary>
+        <div class="fx-body">
+          <label class="check">
+            <input type="checkbox" id="fxRecolorOn">
+            <span class="box"></span>
+            <span>Enable</span>
+          </label>
+          <div class="opts" style="margin-top:8px;">
+            <div class="opt">
+              <label>New color</label>
+              <input type="color" id="fxRecolorColor" value="#fbbf24">
+            </div>
+            <div class="opt">
+              <label>Mode</label>
+              <select id="fxRecolorMode">
+                <option value="replace-white" selected>Replace white</option>
+                <option value="replace-black">Replace black</option>
+                <option value="tint">Tint all</option>
+                <option value="duotone">Duotone</option>
+              </select>
+            </div>
+          </div>
+          <div class="opt" id="fxRecolorSecondaryWrap" style="display:none; margin-top:8px;">
+            <label>Secondary color (duotone)</label>
+            <input type="color" id="fxRecolorColor2" value="#000000">
+          </div>
+        </div>
+      </details>
+
+      <!-- Desaturate / B&W -->
+      <details class="fx-section">
+        <summary>B&W / desaturate <span class="fx-hint">(0% = full color, 100% = greyscale)</span></summary>
+        <div class="fx-body">
+          <label class="check"><input type="checkbox" id="fxBWOn"><span class="box"></span><span>Enable</span></label>
+          <div class="opt" style="margin-top:8px;">
+            <div class="row"><label>Amount</label><span class="val"><span id="fxBWVal">100</span>%</span></div>
+            <input type="range" id="fxBW" min="0" max="100" value="100" step="5">
+          </div>
+        </div>
+      </details>
+
+      <!-- Color grade -->
+      <details class="fx-section">
+        <summary>Color grade <span class="fx-hint">(exposure, contrast, saturation)</span></summary>
+        <div class="fx-body">
+          <label class="check"><input type="checkbox" id="fxGradeOn"><span class="box"></span><span>Enable</span></label>
+          <div class="opts three" style="margin-top:8px;">
+            <div class="opt">
+              <div class="row"><label>Exposure</label><span class="val"><span id="fxExposureVal">0</span></span></div>
+              <input type="range" id="fxExposure" min="-50" max="50" value="0" step="2">
+            </div>
+            <div class="opt">
+              <div class="row"><label>Contrast</label><span class="val"><span id="fxContrastVal">0</span></span></div>
+              <input type="range" id="fxContrast" min="-50" max="50" value="0" step="2">
+            </div>
+            <div class="opt">
+              <div class="row"><label>Saturation</label><span class="val"><span id="fxSatVal">0</span></span></div>
+              <input type="range" id="fxSat" min="-50" max="50" value="0" step="2">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Vignette -->
+      <details class="fx-section">
+        <summary>Vignette <span class="fx-hint">(darkened edges)</span></summary>
+        <div class="fx-body">
+          <label class="check"><input type="checkbox" id="fxVigOn"><span class="box"></span><span>Enable</span></label>
+          <div class="opts" style="margin-top:8px;">
+            <div class="opt">
+              <div class="row"><label>Intensity</label><span class="val"><span id="fxVigIntVal">60</span>%</span></div>
+              <input type="range" id="fxVigInt" min="10" max="100" value="60" step="5">
+            </div>
+            <div class="opt">
+              <div class="row"><label>Softness</label><span class="val"><span id="fxVigSoftVal">60</span>%</span></div>
+              <input type="range" id="fxVigSoft" min="20" max="90" value="60" step="5">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- CRT -->
+      <details class="fx-section">
+        <summary>CRT curve <span class="fx-hint">(barrel distortion + RGB phosphor)</span></summary>
+        <div class="fx-body">
+          <label class="check"><input type="checkbox" id="fxCRTOn"><span class="box"></span><span>Enable</span></label>
+          <div class="opts" style="margin-top:8px;">
+            <div class="opt">
+              <div class="row"><label>Curve amount</label><span class="val"><span id="fxCRTCurveVal">15</span>%</span></div>
+              <input type="range" id="fxCRTCurve" min="0" max="40" value="15" step="2">
+            </div>
+            <div class="opt">
+              <div class="row"><label>Phosphor stripes</label><span class="val"><span id="fxCRTPhosphorVal">15</span>%</span></div>
+              <input type="range" id="fxCRTPhosphor" min="0" max="50" value="15" step="2">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Film grain -->
+      <details class="fx-section">
+        <summary>Film grain <span class="fx-hint">(procedural noise)</span></summary>
+        <div class="fx-body">
+          <label class="check"><input type="checkbox" id="fxGrainOn"><span class="box"></span><span>Enable</span></label>
+          <div class="opt" style="margin-top:8px;">
+            <div class="row"><label>Intensity</label><span class="val"><span id="fxGrainVal">15</span>%</span></div>
+            <input type="range" id="fxGrain" min="2" max="60" value="15" step="2">
+          </div>
+        </div>
+      </details>
+
+      <!-- Letterbox -->
+      <details class="fx-section">
+        <summary>Letterbox <span class="fx-hint">(cinematic black bars)</span></summary>
+        <div class="fx-body">
+          <label class="check"><input type="checkbox" id="fxLetterOn"><span class="box"></span><span>Enable</span></label>
+          <div class="opt" style="margin-top:8px;">
+            <div class="row"><label>Bar height</label><span class="val"><span id="fxLetterVal">10</span>%</span></div>
+            <input type="range" id="fxLetter" min="5" max="25" value="10" step="1">
+          </div>
+        </div>
+      </details>
+
+      <!-- Overlay image -->
+      <details class="fx-section">
+        <summary>Overlay image <span class="fx-hint">(grain, dust, light leak, etc.)</span></summary>
+        <div class="fx-body">
+          <label class="check"><input type="checkbox" id="fxOverlayOn"><span class="box"></span><span>Enable</span></label>
+          <label class="drop" id="overlayDrop" style="margin-top:8px; padding: 20px 16px;">
+            <input type="file" id="overlayFile" accept="image/*">
+            <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;" id="overlayName">Drop overlay image</div>
+            <div class="hint" style="margin-top:4px;">PNG / JPG · transparency respected</div>
+          </label>
+          <div class="opts" style="margin-top:8px;">
+            <div class="opt">
+              <label>Blend mode</label>
+              <select id="fxOverlayBlend">
+                <option value="screen" selected>Screen (lighten)</option>
+                <option value="overlay">Overlay</option>
+                <option value="multiply">Multiply (darken)</option>
+                <option value="soft-light">Soft light</option>
+                <option value="lighter">Add</option>
+                <option value="source-over">Normal</option>
+              </select>
+            </div>
+            <div class="opt">
+              <div class="row"><label>Opacity</label><span class="val"><span id="fxOverlayOpVal">60</span>%</span></div>
+              <input type="range" id="fxOverlayOp" min="5" max="100" value="60" step="5">
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">06</span> Output</h3>
+      <div class="field compact" style="margin-bottom:14px;">
+        <div class="row"><label>Format</label></div>
+        <div class="pills" id="outFormat">
+          <button type="button" class="pill on" data-format="video">Video · MP4/WebM</button>
+          <button type="button" class="pill" data-format="gif">Animated GIF</button>
+        </div>
+      </div>
+      <div id="gifOpts" style="display:none; margin-bottom:14px;">
+        <div class="opts three">
+          <div class="opt">
+            <label for="gifWidth">GIF width</label>
+            <select id="gifWidth">
+              <option value="320">320 px</option>
+              <option value="480" selected>480 px</option>
+              <option value="640">640 px</option>
+              <option value="800">800 px</option>
+            </select>
+          </div>
+          <div class="opt">
+            <label for="gifFps">GIF frame rate</label>
+            <select id="gifFps">
+              <option value="10">10 fps</option>
+              <option value="15" selected>15 fps</option>
+              <option value="20">20 fps</option>
+              <option value="25">25 fps</option>
+            </select>
+          </div>
+          <div class="opt">
+            <label for="gifColors">Colors</label>
+            <select id="gifColors">
+              <option value="64">64</option>
+              <option value="128">128</option>
+              <option value="256" selected>256</option>
+            </select>
+          </div>
+        </div>
+        <div class="notice" style="margin-top:10px;">GIFs grow fast — shorter loops, smaller widths and fewer colors keep the file lean. Height follows the selected resolution's aspect ratio; the loop stays seamless.</div>
+      </div>
+      <div class="opts three">
+        <div class="opt">
+          <label>Resolution</label>
+          <select id="resolution">
+            <option value="854x480">854×480 (480p)</option>
+            <option value="1280x720" selected>1280×720 (720p)</option>
+            <option value="1920x1080">1920×1080 (1080p)</option>
+            <option value="2560x1440">2560×1440 (1440p)</option>
+            <option value="1080x1080">1080×1080 (square)</option>
+            <option value="1080x1920">1080×1920 (vertical)</option>
+          </select>
+        </div>
+        <div class="opt">
+          <label>Frame rate</label>
+          <select id="fps">
+            <option value="24">24 fps</option>
+            <option value="30" selected>30 fps</option>
+            <option value="60">60 fps</option>
+          </select>
+        </div>
+        <div class="opt">
+          <div class="row"><label>Length</label><span class="val"><span id="lenVal">8</span>s</span></div>
+          <input type="range" id="length" min="3" max="30" value="8" step="1">
+        </div>
+      </div>
+      <div class="notice"><b>Loop guarantee:</b> All animations are designed so frame 0 matches the last frame — paste into a video player on loop and there's no visible seam.</div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">07</span> Render</h3>
+      <div class="controls">
+        <button class="btn" id="renderBtn" disabled>Render video</button>
+        <button class="btn ghost small" id="playPreview" disabled>Pause preview</button>
+        <div class="status" id="status">Drop a logo image to start</div>
+      </div>
+      <div class="prog-wrap" id="progWrap"><div class="prog-bar" id="progBar"></div></div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">08</span> Icon pack
+        <span class="right" id="iconState" style="color:var(--dim);">needs a logo</span>
+      </h3>
+      <div class="opts three">
+        <div class="opt">
+          <label>Background</label>
+          <div class="pills" id="iconBg">
+            <button type="button" class="pill on" data-bg="transparent">Transparent</button>
+            <button type="button" class="pill" data-bg="solid">Solid</button>
+          </div>
+          <input type="color" id="iconBgColor" value="#0b0d12" style="margin-top:8px; display:none; width:100%; height:34px; background:var(--bg); border:1px solid var(--line2); border-radius:2px; padding:2px 4px; cursor:pointer;">
+        </div>
+        <div class="opt">
+          <label>Corner</label>
+          <div class="pills" id="iconShape">
+            <button type="button" class="pill on" data-shape="square">Square</button>
+            <button type="button" class="pill" data-shape="rounded">Rounded</button>
+            <button type="button" class="pill" data-shape="circle">Circle</button>
+          </div>
+        </div>
+        <div class="opt">
+          <div class="row"><label>Padding</label><span class="val"><span id="iconPadVal">12</span>%</span></div>
+          <input type="range" id="iconPad" min="0" max="30" value="12" step="1">
+        </div>
+      </div>
+      <div class="icon-row checker" id="iconPreviewRow">
+        <span class="icon-row-empty" id="iconRowEmpty">drop a logo to preview icon sizes</span>
+      </div>
+      <div class="controls" style="margin-top:12px;">
+        <button class="btn small" id="iconBtn" disabled>Generate icon pack · ZIP</button>
+        <div class="status" id="iconStatus">16–512 PNG set · favicon.ico · webmanifest · head snippet</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN: PREVIEW -->
+  <div class="preview-panel">
+    <div class="panel" style="margin-bottom:14px;">
+      <h3><span class="num">P</span> Live preview</h3>
+      <div class="preview-wrap checker" id="previewWrap">
+        <canvas id="previewCanvas"></canvas>
+        <div class="preview-label" id="previewLabel">no image</div>
+      </div>
+      <div class="video-output" id="videoOutput">
+        <video id="renderedVideo" controls autoplay loop muted playsinline></video>
+        <img id="renderedGifImg" alt="Rendered GIF preview" style="display:none; width:100%; height:100%; object-fit:contain;">
+      </div>
+      <div class="controls" id="downloadRow" style="display:none;">
+        <button class="btn small" id="downloadBtn">↓ Download</button>
+        <button class="btn ghost small" id="newRender">Render again</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sig">
+    <span>// 100% LOCAL · CANVAS RENDERING · LOOPS SEAMLESSLY</span>
+    <span>SYS.READY</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* gifenc 1.0.3 — (c) Matt DesLauriers, MIT License — https://github.com/mattdesl/gifenc
+   Inlined as an IIFE so this tool stays a single self-contained file. */
+var gifenc=(function(){var X={signature:"GIF",version:"89a",trailer:59,extensionIntroducer:33,applicationExtensionLabel:255,graphicControlExtensionLabel:249,imageSeparator:44,signatureSize:3,versionSize:3,globalColorTableFlagMask:128,colorResolutionMask:112,sortFlagMask:8,globalColorTableSizeMask:7,applicationIdentifierSize:8,applicationAuthCodeSize:3,disposalMethodMask:28,userInputFlagMask:2,transparentColorFlagMask:1,localColorTableFlagMask:128,interlaceFlagMask:64,idSortFlagMask:32,localColorTableSizeMask:7};function F(t=256){let e=0,s=new Uint8Array(t);return{get buffer(){return s.buffer},reset(){e=0},bytesView(){return s.subarray(0,e)},bytes(){return s.slice(0,e)},writeByte(r){n(e+1),s[e]=r,e++},writeBytes(r,o=0,i=r.length){n(e+i);for(let c=0;c<i;c++)s[e++]=r[c+o]},writeBytesView(r,o=0,i=r.byteLength){n(e+i),s.set(r.subarray(o,o+i),e),e+=i}};function n(r){var o=s.length;if(o>=r)return;var i=1024*1024;r=Math.max(r,o*(o<i?2:1.125)>>>0),o!=0&&(r=Math.max(r,256));let c=s;s=new Uint8Array(r),e>0&&s.set(c.subarray(0,e),0)}}var O=12,J=5003,lt=[0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535];function at(t,e,s,n,r=F(512),o=new Uint8Array(256),i=new Int32Array(J),c=new Int32Array(J)){let x=i.length,a=Math.max(2,n);o.fill(0),c.fill(0),i.fill(-1);let l=0,f=0,g=a+1,h=g,b=!1,w=h,_=(1<<w)-1,u=1<<g-1,k=u+1,B=u+2,p=0,A=s[0],z=0;for(let y=x;y<65536;y*=2)++z;z=8-z,r.writeByte(a),I(u);let d=s.length;for(let y=1;y<d;y++){t:{let m=s[y],v=(m<<O)+A,M=m<<z^A;if(i[M]===v){A=c[M];break t}let V=M===0?1:x-M;for(;i[M]>=0;)if(M-=V,M<0&&(M+=x),i[M]===v){A=c[M];break t}I(A),A=m,B<1<<O?(c[M]=B++,i[M]=v):(i.fill(-1),B=u+2,b=!0,I(u))}}return I(A),I(k),r.writeByte(0),r.bytesView();function I(y){for(l&=lt[f],f>0?l|=y<<f:l=y,f+=w;f>=8;)o[p++]=l&255,p>=254&&(r.writeByte(p),r.writeBytesView(o,0,p),p=0),l>>=8,f-=8;if((B>_||b)&&(b?(w=h,_=(1<<w)-1,b=!1):(++w,_=w===O?1<<w:(1<<w)-1)),y==k){for(;f>0;)o[p++]=l&255,p>=254&&(r.writeByte(p),r.writeBytesView(o,0,p),p=0),l>>=8,f-=8;p>0&&(r.writeByte(p),r.writeBytesView(o,0,p),p=0)}}}var $=at;function D(t,e,s){return t<<8&63488|e<<2&992|s>>3}function G(t,e,s,n){return t>>4|e&240|(s&240)<<4|(n&240)<<8}function j(t,e,s){return t>>4<<8|e&240|s>>4}function R(t,e,s){return t<e?e:t>s?s:t}function T(t){return t*t}function tt(t,e,s){var n=0,r=1e100;let o=t[e],i=o.cnt,c=o.ac,x=o.rc,a=o.gc,l=o.bc;for(var f=o.fw;f!=0;f=t[f].fw){let h=t[f],b=h.cnt,w=i*b/(i+b);if(!(w>=r)){var g=0;s&&(g+=w*T(h.ac-c),g>=r)||(g+=w*T(h.rc-x),!(g>=r)&&(g+=w*T(h.gc-a),!(g>=r)&&(g+=w*T(h.bc-l),!(g>=r)&&(r=g,n=f))))}}o.err=r,o.nn=n}function Q(){return{ac:0,rc:0,gc:0,bc:0,cnt:0,nn:0,fw:0,bk:0,tm:0,mtm:0,err:0}}function ut(t,e){let s=e==="rgb444"?4096:65536,n=new Array(s),r=t.length;if(e==="rgba4444")for(let o=0;o<r;++o){let i=t[o],c=i>>24&255,x=i>>16&255,a=i>>8&255,l=i&255,f=G(l,a,x,c),g=f in n?n[f]:n[f]=Q();g.rc+=l,g.gc+=a,g.bc+=x,g.ac+=c,g.cnt++}else if(e==="rgb444")for(let o=0;o<r;++o){let i=t[o],c=i>>16&255,x=i>>8&255,a=i&255,l=j(a,x,c),f=l in n?n[l]:n[l]=Q();f.rc+=a,f.gc+=x,f.bc+=c,f.cnt++}else for(let o=0;o<r;++o){let i=t[o],c=i>>16&255,x=i>>8&255,a=i&255,l=D(a,x,c),f=l in n?n[l]:n[l]=Q();f.rc+=a,f.gc+=x,f.bc+=c,f.cnt++}return n}function H(t,e,s={}){let{format:n="rgb565",clearAlpha:r=!0,clearAlphaColor:o=0,clearAlphaThreshold:i=0,oneBitAlpha:c=!1}=s;if(!t||!t.buffer)throw new Error("quantize() expected RGBA Uint8Array data");if(!(t instanceof Uint8Array)&&!(t instanceof Uint8ClampedArray))throw new Error("quantize() expected RGBA Uint8Array data");let x=new Uint32Array(t.buffer),a=s.useSqrt!==!1,l=n==="rgba4444",f=ut(x,n),g=f.length,h=g-1,b=new Uint32Array(g+1);for(var w=0,u=0;u<g;++u){let C=f[u];if(C!=null){var _=1/C.cnt;l&&(C.ac*=_),C.rc*=_,C.gc*=_,C.bc*=_,f[w++]=C}}T(e)/w<.022&&(a=!1);for(var u=0;u<w-1;++u)f[u].fw=u+1,f[u+1].bk=u,a&&(f[u].cnt=Math.sqrt(f[u].cnt));a&&(f[u].cnt=Math.sqrt(f[u].cnt));var k,B,p;for(u=0;u<w;++u){tt(f,u,!1);var A=f[u].err;for(B=++b[0];B>1&&(p=B>>1,!(f[k=b[p]].err<=A));B=p)b[B]=k;b[B]=u}var z=w-e;for(u=0;u<z;){for(var d;;){var I=b[1];if(d=f[I],d.tm>=d.mtm&&f[d.nn].mtm<=d.tm)break;d.mtm==h?I=b[1]=b[b[0]--]:(tt(f,I,!1),d.tm=u);var A=f[I].err;for(B=1;(p=B+B)<=b[0]&&(p<b[0]&&f[b[p]].err>f[b[p+1]].err&&p++,!(A<=f[k=b[p]].err));B=p)b[B]=k;b[B]=I}var y=f[d.nn],m=d.cnt,v=y.cnt,_=1/(m+v);l&&(d.ac=_*(m*d.ac+v*y.ac)),d.rc=_*(m*d.rc+v*y.rc),d.gc=_*(m*d.gc+v*y.gc),d.bc=_*(m*d.bc+v*y.bc),d.cnt+=y.cnt,d.mtm=++u,f[y.bk].fw=y.fw,f[y.fw].bk=y.bk,y.mtm=h}let M=[];var V=0;for(u=0;;++V){let L=R(Math.round(f[u].rc),0,255),C=R(Math.round(f[u].gc),0,255),Y=R(Math.round(f[u].bc),0,255),E=255;if(l){if(E=R(Math.round(f[u].ac),0,255),c){let st=typeof c=="number"?c:127;E=E<=st?0:255}r&&E<=i&&(L=C=Y=o,E=0)}let K=l?[L,C,Y,E]:[L,C,Y];if(xt(M,K)||M.push(K),(u=f[u].fw)==0)break}return M}function xt(t,e){for(let s=0;s<t.length;s++){let n=t[s],r=n[0]===e[0]&&n[1]===e[1]&&n[2]===e[2],o=n.length>=4&&e.length>=4?n[3]===e[3]:!0;if(r&&o)return!0}return!1}function U(t,e){var s=0,n;for(n=0;n<t.length;n++){let r=t[n]-e[n];s+=r*r}return s}function P(t,e){return e>1?Math.round(t/e)*e:t}function et(t,{roundRGB:e=5,roundAlpha:s=10,oneBitAlpha:n=null}={}){let r=new Uint32Array(t.buffer);for(let o=0;o<r.length;o++){let i=r[o],c=i>>24&255,x=i>>16&255,a=i>>8&255,l=i&255;if(c=P(c,s),n){let f=typeof n=="number"?n:127;c=c<=f?0:255}l=P(l,e),a=P(a,e),x=P(x,e),r[o]=c<<24|x<<16|a<<8|l<<0}}function nt(t,e,s="rgb565"){if(!t||!t.buffer)throw new Error("quantize() expected RGBA Uint8Array data");if(!(t instanceof Uint8Array)&&!(t instanceof Uint8ClampedArray))throw new Error("quantize() expected RGBA Uint8Array data");if(e.length>256)throw new Error("applyPalette() only works with 256 colors or less");let n=new Uint32Array(t.buffer),r=n.length,o=s==="rgb444"?4096:65536,i=new Uint8Array(r),c=new Array(o),x=s==="rgba4444";if(s==="rgba4444")for(let a=0;a<r;a++){let l=n[a],f=l>>24&255,g=l>>16&255,h=l>>8&255,b=l&255,w=G(b,h,g,f),_=w in c?c[w]:c[w]=gt(b,h,g,f,e);i[a]=_}else{let a=s==="rgb444"?j:D;for(let l=0;l<r;l++){let f=n[l],g=f>>16&255,h=f>>8&255,b=f&255,w=a(b,h,g),_=w in c?c[w]:c[w]=bt(b,h,g,e);i[l]=_}}return i}function gt(t,e,s,n,r){let o=0,i=1e100;for(let c=0;c<r.length;c++){let x=r[c],a=x[3],l=q(a-n);if(l>i)continue;let f=x[0];if(l+=q(f-t),l>i)continue;let g=x[1];if(l+=q(g-e),l>i)continue;let h=x[2];l+=q(h-s),!(l>i)&&(i=l,o=c)}return o}function bt(t,e,s,n){let r=0,o=1e100;for(let i=0;i<n.length;i++){let c=n[i],x=c[0],a=q(x-t);if(a>o)continue;let l=c[1];if(a+=q(l-e),a>o)continue;let f=c[2];a+=q(f-s),!(a>o)&&(o=a,r=i)}return r}function rt(t,e,s=5){if(!t.length||!e.length)return;let n=t.map(i=>i.slice(0,3)),r=s*s,o=t[0].length;for(let i=0;i<e.length;i++){let c=e[i];c.length<o?c=[c[0],c[1],c[2],255]:c.length>o?c=c.slice(0,3):c=c.slice();let x=N(n,c.slice(0,3),U),a=x[0],l=x[1];l>0&&l<=r&&(t[a]=c)}}function q(t){return t*t}function W(t,e,s=U){let n=Infinity,r=-1;for(let o=0;o<t.length;o++){let i=t[o],c=s(e,i);c<n&&(n=c,r=o)}return r}function N(t,e,s=U){let n=Infinity,r=-1;for(let o=0;o<t.length;o++){let i=t[o],c=s(e,i);c<n&&(n=c,r=o)}return[r,n]}function ot(t,e,s=U){return t[W(t,e,s)]}function ct(t={}){let{initialCapacity:e=4096,auto:s=!0}=t,n=F(e),r=5003,o=new Uint8Array(256),i=new Int32Array(r),c=new Int32Array(r),x=!1;return{reset(){n.reset(),x=!1},finish(){n.writeByte(X.trailer)},bytes(){return n.bytes()},bytesView(){return n.bytesView()},get buffer(){return n.buffer},get stream(){return n},writeHeader:a,writeFrame(l,f,g,h={}){let{transparent:b=!1,transparentIndex:w=0,delay:_=0,palette:u=null,repeat:k=0,colorDepth:B=8,dispose:p=-1}=h,A=!1;if(s?x||(A=!0,a(),x=!0):A=Boolean(h.first),f=Math.max(0,Math.floor(f)),g=Math.max(0,Math.floor(g)),A){if(!u)throw new Error("First frame must include a { palette } option");pt(n,f,g,u,B),it(n,u),k>=0&&dt(n,k)}let z=Math.round(_/10);wt(n,p,z,b,w);let d=Boolean(u)&&!A;ht(n,f,g,d?u:null),d&&it(n,u),yt(n,l,f,g,B,o,i,c)}};function a(){ft(n,"GIF89a")}}function wt(t,e,s,n,r){t.writeByte(33),t.writeByte(249),t.writeByte(4),r<0&&(r=0,n=!1);var o,i;n?(o=1,i=2):(o=0,i=0),e>=0&&(i=e&7),i<<=2;let c=0;t.writeByte(0|i|c|o),S(t,s),t.writeByte(r||0),t.writeByte(0)}function pt(t,e,s,n,r=8){let o=1,i=0,c=Z(n.length)-1,x=o<<7|r-1<<4|i<<3|c,a=0,l=0;S(t,e),S(t,s),t.writeBytes([x,a,l])}function dt(t,e){t.writeByte(33),t.writeByte(255),t.writeByte(11),ft(t,"NETSCAPE2.0"),t.writeByte(3),t.writeByte(1),S(t,e),t.writeByte(0)}function it(t,e){let s=1<<Z(e.length);for(let n=0;n<s;n++){let r=[0,0,0];n<e.length&&(r=e[n]),t.writeByte(r[0]),t.writeByte(r[1]),t.writeByte(r[2])}}function ht(t,e,s,n){if(t.writeByte(44),S(t,0),S(t,0),S(t,e),S(t,s),n){let r=0,o=0,i=Z(n.length)-1;t.writeByte(128|r|o|0|i)}else t.writeByte(0)}function yt(t,e,s,n,r=8,o,i,c){$(s,n,e,r,t,o,i,c)}function S(t,e){t.writeByte(e&255),t.writeByte(e>>8&255)}function ft(t,e){for(var s=0;s<e.length;s++)t.writeByte(e.charCodeAt(s))}function Z(t){return Math.max(Math.ceil(Math.log2(t)),1)}var Bt=ct;;return{GIFEncoder:ct,applyPalette:nt,quantize:H,prequantize:et,nearestColor:ot,nearestColorIndex:W,snapColorsToPalette:rt};})();
+</script>
+<script>
+'use strict';
+
+// ============================================================================
+// Animation registry: each animation defines its knobs and a render(frame, opts) fn
+// `t` is normalized 0..1 over the loop. ALL animations must satisfy render(0) == render(1).
+// ============================================================================
+
+const ANIMATIONS = [
+  {
+    id: 'bouncing-dvd',
+    name: 'Bouncing DVD',
+    icon: '⌬',
+    desc: 'Classic screensaver',
+    knobs: [
+      {id: 'speed', label: 'Bounce cycles per loop', type: 'range', min: 1, max: 6, step: 1, value: 2, suffix: '×'},
+      {id: 'colorShift', label: 'Color shift on hit', type: 'range', min: 0, max: 100, step: 5, value: 0, suffix: '%'},
+      {id: 'angle', label: 'Bounce angle', type: 'range', min: 20, max: 70, step: 5, value: 45, suffix: '°'},
+    ],
+    render: drawBouncingDVD,
+  },
+  {
+    id: 'spotlights',
+    name: 'Spotlights',
+    icon: '☼',
+    desc: 'Moving colored lights',
+    knobs: [
+      {id: 'count', label: 'Spotlight count', type: 'range', min: 1, max: 5, step: 1, value: 3, suffix: ''},
+      {id: 'radius', label: 'Light radius', type: 'range', min: 20, max: 80, step: 5, value: 50, suffix: '%'},
+      {id: 'speed', label: 'Orbits per loop', type: 'range', min: 1, max: 5, step: 1, value: 1, suffix: '×'},
+    ],
+    render: drawSpotlights,
+  },
+  {
+    id: 'extrude-wobble',
+    name: '3D Extrude',
+    icon: '⊞',
+    desc: 'Pseudo-3D wobble',
+    knobs: [
+      {id: 'depth', label: 'Extrude depth', type: 'range', min: 4, max: 60, step: 2, value: 18, suffix: 'px'},
+      {id: 'wobble', label: 'Wobble amount', type: 'range', min: 0, max: 30, step: 1, value: 10, suffix: '°'},
+      {id: 'depthColor', label: 'Depth color', type: 'color', value: '#2a1f00'},
+    ],
+    render: drawExtrudeWobble,
+  },
+  {
+    id: 'pulse-breathe',
+    name: 'Pulse / Breathe',
+    icon: '◉',
+    desc: 'Gentle scale + glow',
+    knobs: [
+      {id: 'amplitude', label: 'Pulse depth', type: 'range', min: 2, max: 25, step: 1, value: 8, suffix: '%'},
+      {id: 'glowSize', label: 'Glow size', type: 'range', min: 0, max: 80, step: 2, value: 30, suffix: 'px'},
+      {id: 'glowColor', label: 'Glow color', type: 'color', value: '#fbbf24'},
+    ],
+    render: drawPulseBreathe,
+  },
+  {
+    id: 'parallax-orbit',
+    name: 'Parallax orbit',
+    icon: '◯',
+    desc: 'Background drifts behind',
+    knobs: [
+      {id: 'direction', label: 'Direction', type: 'select', value: 'horizontal', options: [
+        {value: 'horizontal', label: 'Horizontal →'},
+        {value: 'vertical', label: 'Vertical ↓'},
+        {value: 'diagonal', label: 'Diagonal ↘'},
+        {value: 'zoom-in', label: 'Zoom in (towards camera)'},
+        {value: 'zoom-out', label: 'Zoom out (away from camera)'},
+        {value: 'orbit', label: 'Orbit around center'},
+      ]},
+      {id: 'particleCount', label: 'Particles', type: 'range', min: 20, max: 200, step: 10, value: 80, suffix: ''},
+      {id: 'speed', label: 'Drift cycles per loop', type: 'range', min: 1, max: 5, step: 1, value: 1, suffix: '×'},
+      {id: 'particleColor', label: 'Particle color', type: 'color', value: '#60a5fa'},
+    ],
+    render: drawParallaxOrbit,
+  },
+  {
+    id: 'glitch',
+    name: 'Glitch',
+    icon: '⌭',
+    desc: 'RGB split, scan lines',
+    knobs: [
+      {id: 'frequency', label: 'Glitch frequency', type: 'range', min: 0.1, max: 3, step: 0.1, value: 1, suffix: 'Hz'},
+      {id: 'intensity', label: 'Intensity', type: 'range', min: 5, max: 60, step: 2, value: 25, suffix: 'px'},
+      {id: 'scanlines', label: 'Scanline alpha', type: 'range', min: 0, max: 50, step: 2, value: 12, suffix: '%'},
+    ],
+    render: drawGlitch,
+  },
+  {
+    id: 'liquid-ripple',
+    name: 'Liquid ripple',
+    icon: '〜',
+    desc: 'Concentric distortion waves',
+    knobs: [
+      {id: 'rippleCount', label: 'Wave count', type: 'range', min: 1, max: 5, step: 1, value: 2, suffix: ''},
+      {id: 'amplitude', label: 'Wave strength', type: 'range', min: 4, max: 80, step: 2, value: 30, suffix: 'px'},
+      {id: 'speed', label: 'Wave cycles per loop', type: 'range', min: 1, max: 4, step: 1, value: 1, suffix: '×'},
+    ],
+    render: drawLiquidRipple,
+  },
+  {
+    id: 'neon-hum',
+    name: 'Neon hum',
+    icon: '⚡',
+    desc: 'Flicker + electric arcs',
+    knobs: [
+      {id: 'flickerRate', label: 'Flicker rate', type: 'range', min: 0, max: 50, step: 2, value: 12, suffix: '%'},
+      {id: 'glowIntensity', label: 'Glow intensity', type: 'range', min: 10, max: 100, step: 5, value: 60, suffix: 'px'},
+      {id: 'neonColor', label: 'Neon color', type: 'color', value: '#ff00ff'},
+    ],
+    render: drawNeonHum,
+  },
+];
+
+// ============================================================================
+// State
+// ============================================================================
+
+const $ = id => document.getElementById(id);
+
+// Don't let a missed drop navigate the page away.
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
+let logoImage = null;
+let logoObjectUrl = null;     // blob URL backing logoImage, revoked on replace
+let logoHasAlpha = false;
+let logoVersion = 0;          // bumped whenever the logo pixels change (new file OR recolor settings)
+let currentAnim = ANIMATIONS[0];
+let animKnobValues = {};
+let previewRunning = true;
+let previewStartTime = 0;
+let renderedBlob = null;
+let lastVideoUrl = null;      // blob URL shown in the <video> element
+let renderedExt = 'mp4';
+let isRendering = false;
+
+// Preview renders at a capped size so heavy per-pixel effects (CRT, grain,
+// color grade) stay smooth even when output resolution is 1080p+. The final
+// video is always rendered at full resolution on a separate canvas.
+const PREVIEW_MAX_DIM = 960;
+
+// Bump whenever the effective logo bitmap changes; clears every derived cache.
+function bumpLogoVersion() {
+  logoVersion++;
+  recolorCache.dirty = true;
+  tintCache.clear();
+  channelCache.clear();
+  // Icon previews are derived from the recolored logo (hoisted declaration —
+  // safe to call before its definition point in the file).
+  if (logoImage) updateIconPreview();
+}
+
+const canvas = $('previewCanvas');
+const ctx = canvas.getContext('2d', {alpha: false});
+
+// Offscreen canvas for compositing
+const offCanvas = document.createElement('canvas');
+const offCtx = offCanvas.getContext('2d', {alpha: true});
+
+// Reusable scratch surfaces. Animations that need intermediate canvases
+// (spotlights, liquid ripple) grab one of these per frame instead of
+// allocating fresh canvases at 30–60fps, which churned the GC.
+const scratchPool = [];
+function getScratch(i, w, h) {
+  w = Math.max(1, w | 0); h = Math.max(1, h | 0);
+  let s = scratchPool[i];
+  if (!s) {
+    const c = document.createElement('canvas');
+    s = scratchPool[i] = { canvas: c, ctx: c.getContext('2d') };
+  }
+  if (s.canvas.width !== w || s.canvas.height !== h) {
+    s.canvas.width = w;   // resizing also clears
+    s.canvas.height = h;
+  } else {
+    s.ctx.clearRect(0, 0, w, h);
+  }
+  return s;
+}
+
+// ============================================================================
+// Initialization
+// ============================================================================
+
+function buildAnimGrid() {
+  const grid = $('animGrid');
+  grid.innerHTML = '';
+  for (const anim of ANIMATIONS) {
+    const card = document.createElement('div');
+    card.className = 'anim-card' + (anim === currentAnim ? ' on' : '');
+    card.dataset.anim = anim.id;
+    card.innerHTML = `
+      <div class="icon">${anim.icon}</div>
+      <div class="name">${anim.name}</div>
+      <div class="desc">${anim.desc}</div>`;
+    card.addEventListener('click', () => selectAnim(anim));
+    grid.appendChild(card);
+  }
+}
+
+function selectAnim(anim) {
+  currentAnim = anim;
+  document.querySelectorAll('.anim-card').forEach(c => c.classList.toggle('on', c.dataset.anim === anim.id));
+  $('animName').textContent = anim.name;
+  buildAnimKnobs();
+}
+
+function buildAnimKnobs() {
+  const container = $('knobContainer');
+  container.innerHTML = '';
+  animKnobValues = {};
+  const opts = document.createElement('div');
+  opts.className = 'opts';
+  for (const knob of currentAnim.knobs) {
+    animKnobValues[knob.id] = knob.value;
+    const optDiv = document.createElement('div');
+    optDiv.className = 'opt';
+    if (knob.type === 'range') {
+      optDiv.innerHTML = `
+        <div class="row">
+          <label>${knob.label}</label>
+          <span class="val"><span data-display="${knob.id}">${knob.value}</span>${knob.suffix || ''}</span>
+        </div>
+        <input type="range" min="${knob.min}" max="${knob.max}" step="${knob.step}" value="${knob.value}" data-knob="${knob.id}">`;
+    } else if (knob.type === 'color') {
+      optDiv.innerHTML = `<label>${knob.label}</label><input type="color" value="${knob.value}" data-knob="${knob.id}">`;
+    } else if (knob.type === 'select') {
+      const optsHtml = knob.options.map(o =>
+        `<option value="${o.value}"${o.value === knob.value ? ' selected' : ''}>${o.label}</option>`
+      ).join('');
+      optDiv.innerHTML = `<label>${knob.label}</label><select data-knob="${knob.id}">${optsHtml}</select>`;
+    }
+    opts.appendChild(optDiv);
+  }
+  container.appendChild(opts);
+
+  container.querySelectorAll('[data-knob]').forEach(input => {
+    input.addEventListener('input', () => {
+      const id = input.dataset.knob;
+      if (input.type === 'range') {
+        animKnobValues[id] = parseFloat(input.value);
+      } else {
+        animKnobValues[id] = input.value;
+      }
+      const display = container.querySelector(`[data-display="${id}"]`);
+      if (display) display.textContent = input.value;
+    });
+    // Selects also fire 'change'
+    if (input.tagName === 'SELECT') {
+      input.addEventListener('change', () => {
+        animKnobValues[input.dataset.knob] = input.value;
+      });
+    }
+  });
+}
+
+// ============================================================================
+// File intake
+// ============================================================================
+
+$('file').addEventListener('change', e => loadFile(e.target.files[0]));
+$('drop').addEventListener('dragover', e => { e.preventDefault(); $('drop').classList.add('hover'); });
+$('drop').addEventListener('dragleave', () => $('drop').classList.remove('hover'));
+$('drop').addEventListener('drop', e => {
+  e.preventDefault();
+  $('drop').classList.remove('hover');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+async function loadFile(file) {
+  if (!file) return;
+  $('fileName').textContent = file.name;
+  try {
+    const img = await loadImage(file);
+    // Release the previous logo's blob URL before swapping in the new one.
+    if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl);
+    logoImage = img;
+    logoObjectUrl = img.__objectUrl || null;
+    bumpLogoVersion();
+    $('fileDims').textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
+    logoHasAlpha = detectAlpha(img, file);
+    $('alphaState').textContent = logoHasAlpha ? 'transparent' : 'opaque';
+    $('fileInfo').classList.add('on');
+    $('renderBtn').disabled = false;
+    $('playPreview').disabled = false;
+    $('status').innerHTML = `Loaded · pick a format and hit <b>Render</b>`;
+    updateIconPreview();
+    previewStartTime = performance.now();
+  } catch (err) {
+    $('status').innerHTML = `<span class="warn">Failed to load: ${err.message}</span>`;
+  }
+}
+
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    // The URL must stay alive as long as the image is drawable; it is revoked
+    // when the image is replaced (see loadFile).
+    img.__objectUrl = url;
+    img.onload = () => resolve(img);
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not decode image')); };
+    img.src = url;
+  });
+}
+
+function detectAlpha(img, file) {
+  // JPEG never has alpha. PNG/WebP/SVG can.
+  if (file.type === 'image/jpeg' || file.type === 'image/jpg') return false;
+  // SVG: assume transparency (most are)
+  if (file.type === 'image/svg+xml') return true;
+  // Sample a few pixels to detect real transparency
+  const c = document.createElement('canvas');
+  c.width = Math.min(img.naturalWidth, 256);
+  c.height = Math.min(img.naturalHeight, 256);
+  const x = c.getContext('2d');
+  x.drawImage(img, 0, 0, c.width, c.height);
+  try {
+    const data = x.getImageData(0, 0, c.width, c.height).data;
+    // Check alpha channel — if any pixel is < 250, treat as transparent
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 250) return true;
+    }
+  } catch (err) {
+    return true; // CORS-tainted or similar — assume yes
+  }
+  return false;
+}
+
+// ============================================================================
+// Background tab switcher
+// ============================================================================
+
+document.querySelectorAll('.bg-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.bg-tab').forEach(t => t.classList.toggle('on', t === tab));
+    document.querySelectorAll('.bg-content').forEach(c => c.classList.toggle('on', c.dataset.bg === tab.dataset.bg));
+  });
+});
+
+// ============================================================================
+// Misc UI bindings
+// ============================================================================
+
+function bindRange(id, displayId, suffix = '') {
+  const input = $(id), disp = $(displayId);
+  if (!input || !disp) return;
+  input.addEventListener('input', () => { disp.textContent = input.value; });
+}
+bindRange('logoSize', 'logoSizeVal');
+bindRange('logoPad', 'logoPadVal');
+bindRange('length', 'lenVal');
+bindRange('bgGradAngle', 'bgGradAngleVal');
+bindRange('bgGridSpace', 'bgGridSpaceVal');
+
+$('playPreview').addEventListener('click', () => {
+  previewRunning = !previewRunning;
+  $('playPreview').textContent = previewRunning ? 'Pause preview' : 'Resume preview';
+  if (previewRunning) previewStartTime = performance.now() - (previewT * (parseFloat($('length').value) * 1000));
+});
+
+// ============================================================================
+// Global FX system
+// ============================================================================
+
+const FX_CONTROLS = [
+  // Logo recolor — pre-animation
+  {id: 'fxRecolorOn', section: 'recolor'},
+  {id: 'fxBWOn', section: 'bw'},
+  {id: 'fxGradeOn', section: 'grade'},
+  {id: 'fxVigOn', section: 'vig'},
+  {id: 'fxCRTOn', section: 'crt'},
+  {id: 'fxGrainOn', section: 'grain'},
+  {id: 'fxLetterOn', section: 'letter'},
+  {id: 'fxOverlayOn', section: 'overlay'},
+];
+
+// Wire enable checkbox → highlight section header
+FX_CONTROLS.forEach(({id}) => {
+  const el = $(id);
+  if (!el) return;
+  const section = el.closest('.fx-section');
+  const sync = () => {
+    if (section) section.classList.toggle('on', el.checked);
+    updateFxCount();
+  };
+  el.addEventListener('change', sync);
+  sync();
+});
+
+function updateFxCount() {
+  const active = FX_CONTROLS.filter(c => $(c.id) && $(c.id).checked);
+  $('fxCount').textContent = active.length ? `${active.length} active` : 'none active';
+  $('fxCount').style.color = active.length ? 'var(--accent)' : 'var(--dim)';
+}
+
+// Wire all the range displays (post-FX sliders read live; no caches to invalidate)
+function wireRange(id, displayId) {
+  const input = $(id), disp = $(displayId);
+  if (!input || !disp) return;
+  input.addEventListener('input', () => { disp.textContent = input.value; });
+}
+wireRange('fxBW', 'fxBWVal');
+wireRange('fxExposure', 'fxExposureVal');
+wireRange('fxContrast', 'fxContrastVal');
+wireRange('fxSat', 'fxSatVal');
+wireRange('fxVigInt', 'fxVigIntVal');
+wireRange('fxVigSoft', 'fxVigSoftVal');
+wireRange('fxCRTCurve', 'fxCRTCurveVal');
+wireRange('fxCRTPhosphor', 'fxCRTPhosphorVal');
+wireRange('fxGrain', 'fxGrainVal');
+wireRange('fxLetter', 'fxLetterVal');
+wireRange('fxOverlayOp', 'fxOverlayOpVal');
+
+// Recolor — toggle duotone secondary visibility
+$('fxRecolorMode')?.addEventListener('change', () => {
+  $('fxRecolorSecondaryWrap').style.display = $('fxRecolorMode').value === 'duotone' ? 'block' : 'none';
+  bumpLogoVersion();
+});
+$('fxRecolorOn')?.addEventListener('change', bumpLogoVersion);
+$('fxRecolorColor')?.addEventListener('input', bumpLogoVersion);
+$('fxRecolorColor2')?.addEventListener('input', bumpLogoVersion);
+
+// Overlay image intake
+let overlayImage = null;
+$('overlayFile')?.addEventListener('change', e => loadOverlayFile(e.target.files[0]));
+const overlayDrop = $('overlayDrop');
+if (overlayDrop) {
+  overlayDrop.addEventListener('dragover', e => { e.preventDefault(); overlayDrop.classList.add('hover'); });
+  overlayDrop.addEventListener('dragleave', () => overlayDrop.classList.remove('hover'));
+  overlayDrop.addEventListener('drop', e => {
+    e.preventDefault(); overlayDrop.classList.remove('hover');
+    if (e.dataTransfer.files[0]) loadOverlayFile(e.dataTransfer.files[0]);
+  });
+}
+async function loadOverlayFile(file) {
+  if (!file) return;
+  try {
+    const img = await loadImage(file);
+    overlayImage = img;
+    $('overlayName').textContent = file.name;
+  } catch (err) {
+    $('overlayName').textContent = `failed: ${err.message}`;
+  }
+}
+
+// ============================================================================
+// Logo recolor — returns a canvas-or-image with the recolor applied. Cached.
+// ============================================================================
+const recolorCache = {dirty: true, canvas: null, sourceImg: null};
+
+function getRecoloredLogo() {
+  if (!logoImage) return null;
+  const enabled = $('fxRecolorOn')?.checked;
+  if (!enabled) return logoImage;
+
+  if (!recolorCache.dirty && recolorCache.sourceImg === logoImage && recolorCache.canvas) {
+    return recolorCache.canvas;
+  }
+
+  const W = logoImage.naturalWidth;
+  const H = logoImage.naturalHeight;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d', {willReadFrequently: true});
+  x.drawImage(logoImage, 0, 0);
+  let imgData;
+  try {
+    imgData = x.getImageData(0, 0, W, H);
+  } catch (e) {
+    // CORS-tainted — fall back to original
+    return logoImage;
+  }
+  const data = imgData.data;
+  const mode = $('fxRecolorMode').value;
+  const [r1, g1, b1] = hexToRgb($('fxRecolorColor').value);
+  const [r2, g2, b2] = hexToRgb($('fxRecolorColor2').value);
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+    if (a === 0) continue;
+    // Luminance for the source pixel
+    const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255; // 0..1
+    if (mode === 'replace-white') {
+      // Map white (L=1) → new color, black (L=0) stays black
+      data[i]   = r1 * L;
+      data[i+1] = g1 * L;
+      data[i+2] = b1 * L;
+    } else if (mode === 'replace-black') {
+      // Map black (L=0) → new color, white stays white
+      const inv = 1 - L;
+      data[i]   = 255 - (255 - r1) * inv;
+      data[i+1] = 255 - (255 - g1) * inv;
+      data[i+2] = 255 - (255 - b1) * inv;
+    } else if (mode === 'tint') {
+      // Multiply pixel by chosen color
+      data[i]   = (r / 255) * r1;
+      data[i+1] = (g / 255) * g1;
+      data[i+2] = (b / 255) * b1;
+    } else if (mode === 'duotone') {
+      // Lerp from color2 (dark) to color1 (light) by luminance
+      data[i]   = r2 + (r1 - r2) * L;
+      data[i+1] = g2 + (g1 - g2) * L;
+      data[i+2] = b2 + (b1 - b2) * L;
+    }
+  }
+  x.putImageData(imgData, 0, 0);
+  recolorCache.canvas = c;
+  recolorCache.sourceImg = logoImage;
+  recolorCache.dirty = false;
+  return c;
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [
+    parseInt(h.substring(0, 2), 16),
+    parseInt(h.substring(2, 4), 16),
+    parseInt(h.substring(4, 6), 16),
+  ];
+}
+
+// ============================================================================
+// Post-process effect chain
+// ============================================================================
+// applyPostFX takes the rendered canvas (in `ctx`/`w`/`h`) and applies all
+// enabled global effects on top, in a sensible order.
+function applyPostFX(ctx, w, h, t) {
+  // Order: color tweaks → CRT distort → vignette → grain → letterbox → overlay
+  if ($('fxBWOn')?.checked) applyBW(ctx, w, h);
+  if ($('fxGradeOn')?.checked) applyGrade(ctx, w, h);
+  if ($('fxCRTOn')?.checked) applyCRT(ctx, w, h);
+  if ($('fxVigOn')?.checked) applyVignette(ctx, w, h);
+  if ($('fxGrainOn')?.checked) applyGrain(ctx, w, h, t);
+  if ($('fxOverlayOn')?.checked) applyOverlay(ctx, w, h);
+  if ($('fxLetterOn')?.checked) applyLetterbox(ctx, w, h);
+}
+
+function applyBW(ctx, w, h) {
+  const amt = parseFloat($('fxBW').value) / 100;
+  if (amt <= 0) return;
+  // CSS-equivalent: filter: grayscale(amt)
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+    d[i]   = d[i]   * (1 - amt) + gray * amt;
+    d[i+1] = d[i+1] * (1 - amt) + gray * amt;
+    d[i+2] = d[i+2] * (1 - amt) + gray * amt;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function applyGrade(ctx, w, h) {
+  const exposure = parseFloat($('fxExposure').value) / 100;
+  const contrast = parseFloat($('fxContrast').value) / 100;
+  const sat = parseFloat($('fxSat').value) / 100;
+  if (exposure === 0 && contrast === 0 && sat === 0) return;
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  // Pre-compute contrast factor (standard formula)
+  const c = (1 + contrast) / (1 - contrast || 0.0001);
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i], g = d[i+1], b = d[i+2];
+    // Exposure: linear scale
+    if (exposure !== 0) {
+      const expF = Math.pow(2, exposure * 2);
+      r *= expF; g *= expF; b *= expF;
+    }
+    // Contrast: around 128
+    if (contrast !== 0) {
+      r = (r - 128) * c + 128;
+      g = (g - 128) * c + 128;
+      b = (b - 128) * c + 128;
+    }
+    // Saturation
+    if (sat !== 0) {
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      r = gray + (r - gray) * (1 + sat);
+      g = gray + (g - gray) * (1 + sat);
+      b = gray + (b - gray) * (1 + sat);
+    }
+    d[i]   = Math.max(0, Math.min(255, r));
+    d[i+1] = Math.max(0, Math.min(255, g));
+    d[i+2] = Math.max(0, Math.min(255, b));
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function applyVignette(ctx, w, h) {
+  const intensity = parseFloat($('fxVigInt').value) / 100;
+  const softness = parseFloat($('fxVigSoft').value) / 100;
+  const cx = w/2, cy = h/2;
+  const maxR = Math.hypot(cx, cy);
+  // Soft inner radius = softness * maxR; outer = maxR
+  const innerR = maxR * softness;
+  const grad = ctx.createRadialGradient(cx, cy, innerR, cx, cy, maxR);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, `rgba(0,0,0,${intensity})`);
+  ctx.save();
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+// CRT: barrel distortion via per-row pixel sampling + phosphor stripes
+function applyCRT(ctx, w, h) {
+  const curveAmt = parseFloat($('fxCRTCurve').value) / 100;
+  const phosphor = parseFloat($('fxCRTPhosphor').value) / 100;
+
+  // Step 1: barrel distortion. Sample source through a barrel formula.
+  if (curveAmt > 0) {
+    const src = ctx.getImageData(0, 0, w, h);
+    const dst = ctx.createImageData(w, h);
+    const sd = src.data, dd = dst.data;
+    const cx = w/2, cy = h/2;
+    const maxR2 = cx * cx + cy * cy;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        // Normalized centered coords
+        const dx = (x - cx) / cx;
+        const dy = (y - cy) / cy;
+        const r2 = dx * dx + dy * dy;
+        // Barrel: r' = r * (1 - k*r^2), with k = curveAmt
+        const k = curveAmt * 0.5;
+        const factor = 1 - k * r2;
+        const sx = Math.round(cx + dx * cx * factor);
+        const sy = Math.round(cy + dy * cy * factor);
+        const di = (y * w + x) * 4;
+        if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
+          const si = (sy * w + sx) * 4;
+          dd[di]   = sd[si];
+          dd[di+1] = sd[si+1];
+          dd[di+2] = sd[si+2];
+          dd[di+3] = 255;
+        } else {
+          dd[di] = 0; dd[di+1] = 0; dd[di+2] = 0; dd[di+3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(dst, 0, 0);
+  }
+
+  // Step 2: phosphor RGB stripes. Each column is R, G, or B emphasized.
+  if (phosphor > 0) {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const phase = x % 3;
+        // Boost one channel, dim others
+        const boost = 1 + phosphor * 0.5;
+        const dim = 1 - phosphor * 0.4;
+        if (phase === 0) { d[i] *= boost; d[i+1] *= dim; d[i+2] *= dim; }
+        else if (phase === 1) { d[i] *= dim; d[i+1] *= boost; d[i+2] *= dim; }
+        else { d[i] *= dim; d[i+1] *= dim; d[i+2] *= boost; }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // Step 3: subtle horizontal scanlines (separate from glitch ones)
+  ctx.fillStyle = `rgba(0,0,0,${phosphor * 0.3})`;
+  for (let y = 0; y < h; y += 2) ctx.fillRect(0, y, w, 1);
+}
+
+function applyGrain(ctx, w, h, t) {
+  const intensity = parseFloat($('fxGrain').value) / 100;
+  if (intensity <= 0) return;
+  // Block-based noise — full per-pixel would be too slow. 2x2 blocks at intensity.
+  // Use seeded RNG keyed by frame # so it animates but loops.
+  const fps = parseInt($('fps').value);
+  const lenS = parseFloat($('length').value);
+  const totalFrames = Math.round(fps * lenS);
+  const frame = Math.round(t * totalFrames) % totalFrames;
+  const rng = seededRng(frame * 137 + 7);
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const step = 2;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const noise = (rng() - 0.5) * 255 * intensity;
+      for (let dy = 0; dy < step && y + dy < h; dy++) {
+        for (let dx = 0; dx < step && x + dx < w; dx++) {
+          const i = ((y + dy) * w + (x + dx)) * 4;
+          d[i]   = Math.max(0, Math.min(255, d[i]   + noise));
+          d[i+1] = Math.max(0, Math.min(255, d[i+1] + noise));
+          d[i+2] = Math.max(0, Math.min(255, d[i+2] + noise));
+        }
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function applyLetterbox(ctx, w, h) {
+  const barPct = parseFloat($('fxLetter').value) / 100;
+  const barH = h * barPct;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, barH);
+  ctx.fillRect(0, h - barH, w, barH);
+}
+
+function applyOverlay(ctx, w, h) {
+  if (!overlayImage) return;
+  const blend = $('fxOverlayBlend').value;
+  const opacity = parseFloat($('fxOverlayOp').value) / 100;
+  ctx.save();
+  ctx.globalCompositeOperation = blend;
+  ctx.globalAlpha = opacity;
+  ctx.drawImage(overlayImage, 0, 0, w, h);
+  ctx.restore();
+}
+
+// ============================================================================
+// Background rendering
+// ============================================================================
+
+function getActiveBgMode() {
+  const t = document.querySelector('.bg-tab.on');
+  return t ? t.dataset.bg : 'solid';
+}
+
+function drawBackground(c, ctx, w, h) {
+  const mode = getActiveBgMode();
+  if (mode === 'solid') {
+    ctx.fillStyle = $('bgSolid').value;
+    ctx.fillRect(0, 0, w, h);
+  } else if (mode === 'gradient') {
+    const a = $('bgGradA').value, b = $('bgGradB').value;
+    const angle = parseFloat($('bgGradAngle').value) * Math.PI / 180;
+    const dx = Math.cos(angle) * w / 2, dy = Math.sin(angle) * h / 2;
+    const grad = ctx.createLinearGradient(w/2 - dx, h/2 - dy, w/2 + dx, h/2 + dy);
+    grad.addColorStop(0, a); grad.addColorStop(1, b);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  } else if (mode === 'radial') {
+    const a = $('bgRadA').value, b = $('bgRadB').value;
+    const r = Math.max(w, h) * 0.7;
+    const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, r);
+    grad.addColorStop(0, a); grad.addColorStop(1, b);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  } else if (mode === 'grid') {
+    ctx.fillStyle = $('bgGridBG').value;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = $('bgGridLine').value;
+    ctx.lineWidth = 1;
+    const spacing = parseInt($('bgGridSpace').value);
+    ctx.beginPath();
+    for (let x = 0; x < w; x += spacing) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+    for (let y = 0; y < h; y += spacing) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+    ctx.stroke();
+  }
+}
+
+// ============================================================================
+// Logo helpers
+// ============================================================================
+
+function getLogoSize(w, h) {
+  if (!logoImage) return {w: 0, h: 0};
+  const pct = parseInt($('logoSize').value) / 100;
+  const padPct = parseInt($('logoPad').value) / 100;
+  const maxW = w * pct;
+  const maxH = h * pct * (h / w); // keep aspect-equivalent height bound
+  const ar = logoImage.naturalWidth / logoImage.naturalHeight;
+  let lw, lh;
+  if (ar > 1) {
+    lw = maxW;
+    lh = maxW / ar;
+  } else {
+    lh = h * pct;
+    lw = lh * ar;
+  }
+  // Apply padding (shrink the logo within its allotted space)
+  const padShrink = 1 - padPct;
+  return {w: lw * padShrink, h: lh * padShrink};
+}
+
+// ============================================================================
+// ANIMATION 1: Bouncing DVD
+// ============================================================================
+function drawBouncingDVD(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  const logo = getRecoloredLogo();
+  if (!logo) return;
+  const {w: lw, h: lh} = getLogoSize(w, h);
+  const speed = Math.max(1, Math.round(opts.speed || 2));
+  const angle = (opts.angle || 45) * Math.PI / 180;
+  const dx_total = w - lw, dy_total = h - lh;
+
+  // Speed = total full triangle-wave cycles (across both axes) per loop.
+  // Distribute cycles across X and Y by angle:
+  // X gets `speed * cos(angle)`, Y gets `speed * sin(angle)`, both rounded up
+  // to at least 1, both integer so they close.
+  const cyclesX = Math.max(1, Math.round(speed * Math.abs(Math.cos(angle)) * 2));
+  const cyclesY = Math.max(1, Math.round(speed * Math.abs(Math.sin(angle)) * 2));
+
+  const tri = phase => {
+    const f = ((phase % 1) + 1) % 1;
+    return f < 0.5 ? f * 2 : 2 - f * 2;
+  };
+  const px = tri(t * cyclesX) * dx_total;
+  const py = tri(t * cyclesY) * dy_total;
+
+  // Color shift on bounce. Need a value that's identical at t=0 and t=1.
+  // Use the floor of a function that wraps cleanly. The wall hits happen at
+  // every half-cycle of the triangle wave. Total hits per loop = cyclesX*2 + cyclesY*2
+  // — which is a fixed integer. So shifting hue by N * 360/totalHits per hit
+  // will end up at exactly 360 at t=1 (same as 0).
+  const totalHits = cyclesX * 2 + cyclesY * 2;
+  const bounces = Math.floor(t * cyclesX * 2) + Math.floor(t * cyclesY * 2);
+  const hueStep = (opts.colorShift / 100) * 360 / totalHits;
+  const hue = (bounces * hueStep) % 360;
+
+  if (opts.colorShift > 0) {
+    ctx.save();
+    ctx.translate(px + lw/2, py + lh/2);
+    ctx.filter = `hue-rotate(${hue}deg) saturate(${1 + opts.colorShift/50})`;
+    ctx.drawImage(logo, -lw/2, -lh/2, lw, lh);
+    ctx.restore();
+  } else {
+    ctx.drawImage(logo, px, py, lw, lh);
+  }
+}
+
+// ============================================================================
+// ANIMATION 2: Spotlights
+// ============================================================================
+function drawSpotlights(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  const logo = getRecoloredLogo();
+  if (!logo) return;
+
+  const {w: lw, h: lh} = getLogoSize(w, h);
+  const cx = w/2, cy = h/2;
+
+  // Draw logo onto offscreen at center
+  offCanvas.width = w; offCanvas.height = h;
+  offCtx.clearRect(0, 0, w, h);
+  offCtx.drawImage(logo, cx - lw/2, cy - lh/2, lw, lh);
+
+  // Build spotlight mask onto a reusable scratch surface
+  const mask = getScratch(0, w, h);
+  const maskCanvas = mask.canvas, maskCtx = mask.ctx;
+  maskCtx.globalCompositeOperation = 'source-over';
+  maskCtx.fillStyle = '#000';
+  maskCtx.fillRect(0, 0, w, h);
+
+  const count = Math.max(1, Math.round(opts.count));
+  const radius = w * (opts.radius / 100);
+  const speed = opts.speed;
+  // Softer pastel colors so overlaps don't blow out
+  const colors = [
+    [255, 100, 140],   // pink
+    [100, 140, 255],   // blue
+    [140, 255, 180],   // mint
+    [255, 200, 120],   // amber
+    [200, 140, 255],   // violet
+  ];
+
+  // Per-spotlight alpha capped — overlap won't blow out
+  const perLightAlpha = 0.55 / Math.sqrt(count);
+
+  maskCtx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < count; i++) {
+    const phase = (i / count) + t * speed;
+    const orbitR = Math.min(w, h) * 0.32;
+    const sx = cx + Math.cos(phase * Math.PI * 2) * orbitR;
+    const sy = cy + Math.sin(phase * Math.PI * 2 + i * 0.7) * (orbitR * 0.55);
+    const [r, g, b] = colors[i % colors.length];
+    const grad = maskCtx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+    // Soft, no hot center — gentle bell curve
+    grad.addColorStop(0,    `rgba(${r},${g},${b},${perLightAlpha * 0.6})`);
+    grad.addColorStop(0.2,  `rgba(${r},${g},${b},${perLightAlpha * 0.7})`);
+    grad.addColorStop(0.5,  `rgba(${r},${g},${b},${perLightAlpha * 0.5})`);
+    grad.addColorStop(0.8,  `rgba(${r},${g},${b},${perLightAlpha * 0.18})`);
+    grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+    maskCtx.fillStyle = grad;
+    maskCtx.fillRect(0, 0, w, h);
+  }
+
+  // Draw the soft spotlights to the canvas
+  ctx.drawImage(maskCanvas, 0, 0);
+
+  // Now mask the logo by the spotlights — logo only visible where lights are
+  const lm = getScratch(1, w, h);
+  const logoMask = lm.canvas, lmctx = lm.ctx;
+  lmctx.globalCompositeOperation = 'source-over';
+  // Use the mask's luminance as alpha for the logo
+  // Easiest: copy mask, then source-in with logo
+  lmctx.drawImage(maskCanvas, 0, 0);
+  // Boost the mask so even dim light reveals logo
+  lmctx.globalCompositeOperation = 'source-in';
+  lmctx.drawImage(offCanvas, 0, 0);
+  // Use screen blend so logo brightens lit areas without doubling intensity
+  ctx.globalCompositeOperation = 'screen';
+  ctx.drawImage(logoMask, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// ============================================================================
+// ANIMATION 3: 3D Extrude
+// ============================================================================
+function drawExtrudeWobble(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  const logo = getRecoloredLogo();
+  if (!logo) return;
+  const {w: lw, h: lh} = getLogoSize(w, h);
+  const cx = w/2, cy = h/2;
+
+  // Oscillate yaw and pitch. Two harmonics so motion doesn't feel too rhythmic.
+  // Both periodic over t=0..1 so loop is clean.
+  const yawDeg = Math.sin(t * Math.PI * 2) * opts.wobble;
+  const pitchDeg = Math.sin(t * Math.PI * 4 + 0.5) * (opts.wobble * 0.4);
+  const yaw = yawDeg * Math.PI / 180;
+  const pitch = pitchDeg * Math.PI / 180;
+
+  // The extrude direction in screen-space is governed by the tilt.
+  // A positive yaw → logo tips right, so back faces shift LEFT relative to front.
+  const depth = opts.depth;
+  const dx = -Math.sin(yaw) * depth;
+  const dy = Math.sin(pitch) * depth;
+
+  // Cache a tinted "depth" version of the logo so we don't recreate per frame.
+  const tintedDepth = getTintedCachedImage(logo, lw, lh, opts.depthColor);
+
+  // Draw depth layers from back (i = depth) to front (i = 0)
+  const layers = Math.min(24, Math.max(4, Math.round(depth)));
+  for (let i = layers; i >= 1; i--) {
+    const f = i / layers;
+    const offX = dx * f;
+    const offY = dy * f;
+    ctx.globalAlpha = 0.55 + 0.35 * (1 - f);
+    ctx.drawImage(tintedDepth, cx - lw/2 + offX, cy - lh/2 + offY, lw, lh);
+  }
+  ctx.globalAlpha = 1;
+
+  // Sharp front face on top, slightly tilted for perspective hint
+  ctx.save();
+  ctx.translate(cx, cy);
+  const skewH = Math.sin(yaw) * 0.08;
+  const skewV = Math.sin(pitch) * 0.08;
+  ctx.transform(1, skewV, skewH, 1, 0, 0);
+  ctx.drawImage(logo, -lw/2, -lh/2, lw, lh);
+  ctx.restore();
+}
+
+// Cache tinted versions keyed by (logo version, size, color). logoVersion is
+// bumped whenever the logo file or recolor settings change, so entries can
+// never go stale — and canvas sources (which have no .src) key correctly.
+const tintCache = new Map();
+function getTintedCachedImage(img, w, h, color) {
+  const key = `v${logoVersion}::${w|0}x${h|0}::${color}`;
+  if (tintCache.has(key)) return tintCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = w|0; c.height = h|0;
+  const x = c.getContext('2d');
+  // Draw image
+  x.drawImage(img, 0, 0, w, h);
+  // Tint via source-in
+  x.globalCompositeOperation = 'source-in';
+  x.fillStyle = color;
+  x.fillRect(0, 0, w, h);
+  tintCache.set(key, c);
+  // Bound cache
+  if (tintCache.size > 30) {
+    const firstKey = tintCache.keys().next().value;
+    tintCache.delete(firstKey);
+  }
+  return c;
+}
+
+// ============================================================================
+// ANIMATION 4: Pulse / Breathe
+// ============================================================================
+function drawPulseBreathe(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  const logo = getRecoloredLogo();
+  if (!logo) return;
+  const {w: lw, h: lh} = getLogoSize(w, h);
+  const cx = w/2, cy = h/2;
+
+  const breath = breatheCurve(t);
+  const amp = opts.amplitude / 100;
+  const scale = 1 + (breath - 0.5) * amp;
+  const drawLW = lw * scale, drawLH = lh * scale;
+
+  if (opts.glowSize > 0) {
+    ctx.save();
+    const glowAmount = opts.glowSize * (0.3 + 0.7 * breath);
+    ctx.shadowBlur = glowAmount;
+    ctx.shadowColor = opts.glowColor;
+    for (let i = 0; i < 3; i++) {
+      ctx.drawImage(logo, cx - drawLW/2, cy - drawLH/2, drawLW, drawLH);
+    }
+    ctx.restore();
+  }
+
+  ctx.drawImage(logo, cx - drawLW/2, cy - drawLH/2, drawLW, drawLH);
+}
+
+// Asymmetric breathing curve. t=0..1 → returns 0..1.
+// 0 at t=0 (smallest), peaks somewhere around t=0.42 (after inhale),
+// dips back to 0 at t=1. Smooth (C1 continuous) so the loop is seamless.
+function breatheCurve(t) {
+  // Use two cosine half-waves of different periods stitched together.
+  // Inhale: t ∈ [0, 0.42], maps to cos(π * t / 0.42) flipped = 0 → 1
+  // Exhale: t ∈ [0.42, 1.0], maps to cos(π * (t - 0.42) / 0.58) = 1 → -1 → 0
+  // Actually simpler: use 0.5 - 0.5 * cos(2π * t) BUT pre-warp t to make
+  // the inhale faster than exhale.
+  // Warp: power curve. t' = t^1.4 stretches the front, ^0.7 stretches the back.
+  // Combined warp: piece-wise.
+  let warped;
+  if (t < 0.42) {
+    warped = (t / 0.42) * 0.5;
+  } else {
+    warped = 0.5 + ((t - 0.42) / 0.58) * 0.5;
+  }
+  return 0.5 - 0.5 * Math.cos(warped * Math.PI * 2);
+}
+
+// ============================================================================
+// ANIMATION 5: Parallax Orbit
+// ============================================================================
+let particleCache = null;
+function getParticles(count, w, h, direction) {
+  const key = `${count}::${w}::${h}::${direction}`;
+  if (particleCache && particleCache.key === key) return particleCache.list;
+  const list = [];
+  for (let i = 0; i < count; i++) {
+    list.push({
+      x: Math.random(),       // start position (0..1 in canvas coords)
+      y: Math.random(),
+      z: 0.1 + Math.random() * 0.9,  // depth: closer to 1 = closer to camera
+      angle: Math.random() * Math.PI * 2,   // for orbit
+      orbitR: 0.1 + Math.random() * 0.9,    // orbit radius (0..1 of canvas)
+      size: 1 + Math.random() * 3,
+      offset: Math.random(),
+    });
+  }
+  particleCache = {key, list};
+  return list;
+}
+
+function drawParallaxOrbit(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  const cx = w/2, cy = h/2;
+  const count = Math.round(opts.particleCount);
+  const speed = opts.speed;
+  const color = opts.particleColor;
+  const direction = opts.direction || 'horizontal';
+  const particles = getParticles(count, w, h, direction);
+
+  for (const p of particles) {
+    let x, y, size;
+    // Phase wraps from 0..1 over the loop period (so seamless)
+    const phase = (p.offset + t * speed) % 1;
+
+    if (direction === 'horizontal') {
+      x = phase * w;
+      const wobble = Math.sin(t * Math.PI * 2 + p.offset * 7) * 20 * p.z;
+      y = p.y * h + wobble;
+      size = p.size * (0.4 + p.z * 0.8);
+      ctx.globalAlpha = 0.3 + 0.5 * p.z;
+    } else if (direction === 'vertical') {
+      x = p.x * w + Math.sin(t * Math.PI * 2 + p.offset * 7) * 20 * p.z;
+      y = phase * h;
+      size = p.size * (0.4 + p.z * 0.8);
+      ctx.globalAlpha = 0.3 + 0.5 * p.z;
+    } else if (direction === 'diagonal') {
+      x = phase * w;
+      y = (phase + p.y) % 1 * h;
+      size = p.size * (0.4 + p.z * 0.8);
+      ctx.globalAlpha = 0.3 + 0.5 * p.z;
+    } else if (direction === 'zoom-in') {
+      // Particles start small at center, grow as they approach camera
+      // Pos: pick a random direction from center, distance = phase
+      const dirAngle = p.angle;
+      const dist = phase; // 0..1
+      x = cx + Math.cos(dirAngle) * dist * Math.hypot(w, h) * 0.6;
+      y = cy + Math.sin(dirAngle) * dist * Math.hypot(w, h) * 0.6;
+      // Size grows from 0 to max
+      size = p.size * dist * 4;
+      // Fade in then out so seam is clean
+      const alpha = Math.min(1, dist * 3) * (1 - dist * dist);
+      ctx.globalAlpha = alpha * (0.5 + p.z * 0.5);
+    } else if (direction === 'zoom-out') {
+      // Inverse of zoom-in: particles start large at edge, shrink toward center
+      const dirAngle = p.angle;
+      const dist = 1 - phase;
+      x = cx + Math.cos(dirAngle) * dist * Math.hypot(w, h) * 0.6;
+      y = cy + Math.sin(dirAngle) * dist * Math.hypot(w, h) * 0.6;
+      size = p.size * dist * 4;
+      const alpha = Math.min(1, dist * 3) * (1 - dist * dist);
+      ctx.globalAlpha = alpha * (0.5 + p.z * 0.5);
+    } else if (direction === 'orbit') {
+      // Orbit around center, radius proportional to depth-stored r
+      const orbitAngle = p.angle + phase * Math.PI * 2;
+      const r = p.orbitR * Math.min(w, h) * 0.5;
+      x = cx + Math.cos(orbitAngle) * r;
+      y = cy + Math.sin(orbitAngle) * r * 0.6; // slight ellipse
+      size = p.size * (0.4 + p.z * 0.8);
+      ctx.globalAlpha = 0.3 + 0.5 * p.z;
+    }
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Logo always center, sharp on top
+  const logo = getRecoloredLogo();
+  if (logo) {
+    const {w: lw, h: lh} = getLogoSize(w, h);
+    ctx.drawImage(logo, cx - lw/2, cy - lh/2, lw, lh);
+  }
+}
+
+// ============================================================================
+// ANIMATION 6: Glitch
+// ============================================================================
+function drawGlitch(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  const logo = getRecoloredLogo();
+  if (!logo) return;
+  const {w: lw, h: lh} = getLogoSize(w, h);
+  const cx = w/2, cy = h/2;
+
+  const freq = opts.frequency;
+  const intensity = opts.intensity;
+
+  // Render the logo once to an offscreen at its final size
+  offCanvas.width = lw; offCanvas.height = lh;
+  offCtx.clearRect(0, 0, lw, lh);
+  offCtx.drawImage(logo, 0, 0, lw, lh);
+
+  // Glitch "events" — N events per loop, evenly distributed.
+  // Use a fixed integer event count so t=1 maps to the same event-state as t=0.
+  const cyclesPerLoop = Math.max(2, Math.round(freq * 8));
+  const eventPhase = t * cyclesPerLoop;
+  // Wrap event index so the last event at t≈1 actually starts back at index 0
+  const eventIdx = Math.floor(eventPhase) % cyclesPerLoop;
+  const eventLocalT = eventPhase - Math.floor(eventPhase);  // 0..1 within this event
+
+  // Each "glitch event" lasts for a fraction of the cycle. Outside that,
+  // the logo renders normally.
+  const eventDuration = 0.4;  // 40% of each cycle has glitch
+  const isGlitching = eventLocalT < eventDuration;
+
+  if (!isGlitching) {
+    // Clean render
+    ctx.drawImage(offCanvas, cx - lw/2, cy - lh/2);
+    drawScanlines(ctx, w, h, opts.scanlines);
+    return;
+  }
+
+  // Glitch active. Build a set of horizontal bands that get displaced.
+  // Use seeded PRNG so the same event produces the same bands every loop.
+  const rng = seededRng(eventIdx * 9973 + 1);
+  const numBands = 4 + Math.floor(rng() * 4);  // 4-7 bands
+  const bands = [];
+  for (let i = 0; i < numBands; i++) {
+    const bandY = Math.floor(rng() * lh);
+    const bandH = Math.max(2, Math.floor(rng() * 14) + 2);
+    const offset = (rng() - 0.5) * 2 * intensity;
+    bands.push({y: bandY, h: bandH, offset});
+  }
+
+  // Intensity envelope across the event — quick rise, slow fall
+  const envelope = Math.min(1, eventLocalT / 0.1) * Math.max(0, 1 - (eventLocalT - 0.1) / 0.3);
+
+  // First: draw the un-glitched logo as a base
+  ctx.drawImage(offCanvas, cx - lw/2, cy - lh/2);
+
+  // Then: for each glitch band, redraw the strip from offCanvas with x-offset.
+  // Apply chromatic aberration: draw R-shifted, G-original, B-shifted using
+  // tinted copies on additive blend.
+  for (const band of bands) {
+    const off = band.offset * envelope;
+    if (Math.abs(off) < 1) continue;
+
+    // Clear the band area (overdraw with bg piece would be ideal, but we use
+    // the offCanvas pixels themselves and just shift them)
+    // Erase original band
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cx - lw/2, cy - lh/2 + band.y, lw, band.h);
+    ctx.clip();
+    // Re-fill with background under the band
+    drawBackground(null, ctx, w, h);
+
+    // Now draw three color-shifted copies of the band slice
+    const sx = 0, sy = band.y, sw_ = lw, sh = band.h;
+    const dx = cx - lw/2 + off;
+    const dy_ = cy - lh/2 + band.y;
+
+    // R channel slightly more to the right
+    drawColorChannel(ctx, offCanvas, sx, sy, sw_, sh, dx + 3 * Math.sign(off), dy_, 'r');
+    // B channel slightly to the left
+    drawColorChannel(ctx, offCanvas, sx, sy, sw_, sh, dx - 3 * Math.sign(off), dy_, 'b');
+    // G/center on top, additive — this brightens overlap zones (intended)
+    ctx.globalCompositeOperation = 'lighter';
+    drawColorChannel(ctx, offCanvas, sx, sy, sw_, sh, dx, dy_, 'g');
+    ctx.globalCompositeOperation = 'source-over';
+
+    ctx.restore();
+  }
+
+  // Occasionally add a horizontal "tear" line
+  if (envelope > 0.5 && rng() < 0.3) {
+    const tearY = Math.floor(rng() * lh);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(cx - lw/2, cy - lh/2 + tearY, lw, 1);
+  }
+
+  drawScanlines(ctx, w, h, opts.scanlines);
+}
+
+// Draw one RGB channel of an image source. Uses globalCompositeOperation
+// dance to extract a single channel via tinting. Channel extracts are cached
+// per (logo version, channel, size) — the previous key lookup had a
+// precedence bug that made it miss every call, rebuilding the canvas for
+// every glitch band on every frame.
+const channelCache = new Map();
+function drawColorChannel(ctx, srcCanvas, sx, sy, sw, sh, dx, dy, channel) {
+  const cacheKey = `v${logoVersion}::${channel}::${srcCanvas.width}x${srcCanvas.height}`;
+  let chanCanvas = channelCache.get(cacheKey);
+  if (!chanCanvas) {
+    chanCanvas = document.createElement('canvas');
+    chanCanvas.width = srcCanvas.width;
+    chanCanvas.height = srcCanvas.height;
+    const c = chanCanvas.getContext('2d');
+    c.drawImage(srcCanvas, 0, 0);
+    // Multiply by channel mask to extract that channel
+    c.globalCompositeOperation = 'multiply';
+    c.fillStyle = channel === 'r' ? '#ff0000' : channel === 'g' ? '#00ff00' : '#0000ff';
+    c.fillRect(0, 0, chanCanvas.width, chanCanvas.height);
+    // Restore original alpha
+    c.globalCompositeOperation = 'destination-in';
+    c.drawImage(srcCanvas, 0, 0);
+    channelCache.set(cacheKey, chanCanvas);
+    if (channelCache.size > 20) {
+      const firstKey = channelCache.keys().next().value;
+      channelCache.delete(firstKey);
+    }
+  }
+  ctx.drawImage(chanCanvas, sx, sy, sw, sh, dx, dy, sw, sh);
+}
+
+function drawScanlines(ctx, w, h, alphaPct) {
+  if (alphaPct <= 0) return;
+  ctx.fillStyle = `rgba(0,0,0,${alphaPct/100})`;
+  for (let y = 0; y < h; y += 3) {
+    ctx.fillRect(0, y, w, 1);
+  }
+}
+
+// Tiny seeded PRNG (mulberry32). Good enough for picking glitch bands.
+function seededRng(seed) {
+  let a = seed | 0;
+  return function() {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ============================================================================
+// ANIMATION 7: Liquid Ripple
+// ============================================================================
+function drawLiquidRipple(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  if (!getRecoloredLogo()) return;
+  const {w: lw, h: lh} = getLogoSize(w, h);
+  const cx = w/2, cy = h/2;
+
+  const amp = opts.amplitude;          // pixels
+  const count = Math.max(1, Math.round(opts.rippleCount));
+  const speed = opts.speed;
+
+  // Source logo at final size (reusable scratch surface)
+  const srcLogo = getRecoloredLogo();
+  const src = getScratch(0, lw, lh);
+  const srcCanvas = src.canvas, srcCtx = src.ctx;
+  srcCtx.drawImage(srcLogo, 0, 0, lw, lh);
+
+  // For radial ring displacement: slice the source into thin annular rings,
+  // then redraw each ring at its OWN radial offset position.
+  // A point at radius r in source moves to radius r + offset(r, t) in dest.
+
+  const dst = getScratch(1, lw, lh);
+  const dstCanvas = dst.canvas, dstCtx = dst.ctx;
+
+  const maxR = Math.hypot(lw, lh) / 2;
+  // Visible wavelength: maxR / (count * 2) ish, so 2*count visible rings per radius
+  const wavelength = maxR / (count * 1.8);
+
+  // Number of rings to slice into. Higher = smoother but slower.
+  const ringCount = 80;
+  const ringWidth = maxR / ringCount;
+
+  // Draw the source onto dst, sliced by rings, each ring shifted radially.
+  // For each ring i, source annulus is [i*rw, (i+1)*rw]. We "lift" that annulus
+  // by `offset(i*rw, t)` pixels outward. The lifted annulus is rendered by
+  // (a) drawing the entire source image
+  // (b) clipped to a destination annulus [(i*rw + offset), ((i+1)*rw + offset)]
+  // (c) translated so the source's content at radius r appears at radius r+offset.
+  //
+  // Drawing back-to-front (outer to inner) so inner rings paint on top — works
+  // because each ring fully covers its annulus.
+
+  for (let i = ringCount - 1; i >= 0; i--) {
+    const r = i * ringWidth;
+    const rNext = (i + 1) * ringWidth;
+
+    // Sum sine waves emanating from center for this radius
+    let off = 0;
+    for (let k = 0; k < count; k++) {
+      const phaseOff = k / count;
+      off += Math.sin(((t * speed - r / wavelength) + phaseOff) * Math.PI * 2);
+    }
+    off = (off / count) * amp;
+
+    const rOutInner = Math.max(0, r + off);
+    const rOutOuter = Math.max(0, rNext + off);
+    if (rOutOuter < 1) continue;
+
+    // The displacement field: a pixel at dest radius p should sample source at p - off.
+    // We're approximating by drawing the source image translated radially.
+    // Geometric trick: if we translate the source toward/away from center
+    // we shift its rings outward/inward. But translation isn't radial — it's
+    // directional. We need to scale around center.
+    // The scale factor is rOutMid / rMid where rMid = (r + rNext)/2.
+    const rMid = (r + rNext) / 2;
+    const rOutMid = rMid + off;
+    if (rMid < 0.5) continue;
+    const scale = rOutMid / rMid;
+
+    dstCtx.save();
+    // Clip to dest annulus
+    dstCtx.beginPath();
+    dstCtx.arc(lw/2, lh/2, rOutOuter, 0, Math.PI * 2);
+    dstCtx.arc(lw/2, lh/2, rOutInner, 0, Math.PI * 2, true);
+    dstCtx.clip();
+
+    // Scale source about center by `scale` so the original ring lands at new radius
+    dstCtx.translate(lw/2, lh/2);
+    dstCtx.scale(scale, scale);
+    dstCtx.drawImage(srcCanvas, -lw/2, -lh/2);
+    dstCtx.restore();
+  }
+
+  ctx.drawImage(dstCanvas, cx - lw/2, cy - lh/2);
+}
+
+// ============================================================================
+// ANIMATION 8: Neon Hum
+// ============================================================================
+function drawNeonHum(ctx, w, h, t, opts) {
+  drawBackground(null, ctx, w, h);
+  const logo = getRecoloredLogo();
+  if (!logo) return;
+  const {w: lw, h: lh} = getLogoSize(w, h);
+  const cx = w/2, cy = h/2;
+
+  // Flicker — deterministic so it loops. Use integer-count sample windows.
+  // Sample 60 frames-worth across the loop, snap to a per-window state, so
+  // the t=1 state matches t=0.
+  const flickerRate = opts.flickerRate / 100;
+  let brightness = 1;
+  if (flickerRate > 0) {
+    const flickerSteps = 60;
+    const stepIdx = Math.floor(t * flickerSteps) % flickerSteps;
+    // Seeded RNG per step. Two values: should-flicker, and brightness-during-flicker.
+    const rng = seededRng(stepIdx * 9001 + 17);
+    const shouldFlicker = rng() < flickerRate;
+    if (shouldFlicker) {
+      brightness = 0.5 + rng() * 0.3;
+    }
+  }
+
+  // Glow
+  ctx.save();
+  ctx.shadowBlur = opts.glowIntensity * brightness;
+  ctx.shadowColor = opts.neonColor;
+  ctx.filter = `brightness(${brightness})`;
+  for (let i = 0; i < 4; i++) ctx.drawImage(logo, cx - lw/2, cy - lh/2, lw, lh);
+  ctx.restore();
+
+  // Sharp logo on top
+  ctx.save();
+  ctx.filter = `brightness(${brightness})`;
+  ctx.drawImage(logo, cx - lw/2, cy - lh/2, lw, lh);
+  ctx.restore();
+}
+
+// ============================================================================
+// Preview loop
+// ============================================================================
+
+let lastAspect = '';
+function applyPreviewAspect(resW, resH) {
+  const aspect = `${resW} / ${resH}`;
+  if (aspect !== lastAspect) {
+    $('previewWrap').style.aspectRatio = aspect;
+    lastAspect = aspect;
+  }
+}
+
+function getPreviewSize() {
+  const [resW, resH] = $('resolution').value.split('x').map(Number);
+  const s = Math.min(1, PREVIEW_MAX_DIM / Math.max(resW, resH));
+  return { resW, resH, s, pw: Math.round(resW * s), ph: Math.round(resH * s) };
+}
+
+// Pixel-valued knobs (suffix 'px') are scaled so reduced-size renders
+// (capped preview, GIF) look proportionally identical to full resolution.
+function scaleKnobs(s) {
+  if (s === 1) return animKnobValues;
+  const scaled = { ...animKnobValues };
+  for (const knob of currentAnim.knobs) {
+    if (knob.suffix === 'px' && typeof scaled[knob.id] === 'number') {
+      scaled[knob.id] *= s;
+    }
+  }
+  return scaled;
+}
+
+function renderFrame(t) {
+  const { resW, resH, s, pw, ph } = getPreviewSize();
+  if (canvas.width !== pw || canvas.height !== ph) {
+    canvas.width = pw; canvas.height = ph;
+  }
+  applyPreviewAspect(resW, resH);
+  currentAnim.render(ctx, pw, ph, t, scaleKnobs(s));
+  applyPostFX(ctx, pw, ph, t);
+}
+
+let previewT = 0;
+function previewLoop() {
+  if (!previewRunning) {
+    requestAnimationFrame(previewLoop);
+    return;
+  }
+  const length = parseFloat($('length').value) * 1000;
+  const elapsed = (performance.now() - previewStartTime) % length;
+  previewT = elapsed / length;
+  if (logoImage) {
+    $('previewLabel').textContent = `t=${previewT.toFixed(2)} · ${$('animName').textContent}`;
+    renderFrame(previewT);
+  } else {
+    // Show empty placeholder
+    const { resW, resH, pw, ph } = getPreviewSize();
+    if (canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw; canvas.height = ph;
+    }
+    applyPreviewAspect(resW, resH);
+    drawBackground(null, ctx, pw, ph);
+    ctx.fillStyle = '#444';
+    ctx.font = `${Math.min(pw, ph) * 0.04}px 'Space Grotesk', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText('drop a logo to preview', pw/2, ph/2);
+  }
+  requestAnimationFrame(previewLoop);
+}
+
+// ============================================================================
+// Output format (video / GIF)
+// ============================================================================
+let outFormat = 'video';
+document.querySelectorAll('#outFormat .pill').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#outFormat .pill').forEach(x => x.classList.toggle('on', x === b));
+    outFormat = b.dataset.format;
+    $('gifOpts').style.display = outFormat === 'gif' ? 'block' : 'none';
+    $('fps').disabled = outFormat === 'gif'; // GIF has its own frame rate
+    $('renderBtn').textContent = outFormat === 'gif' ? 'Render GIF' : 'Render video';
+  });
+});
+
+// ============================================================================
+// Render to video (MediaRecorder)
+// ============================================================================
+
+$('renderBtn').addEventListener('click', async () => {
+  if (!logoImage || isRendering) return;
+  if (outFormat === 'gif') return renderGif();
+  if (typeof MediaRecorder === 'undefined') {
+    $('status').innerHTML = '<span class="warn">MediaRecorder is not supported in this browser</span>';
+    return;
+  }
+  isRendering = true;
+  $('renderBtn').disabled = true;
+  $('progWrap').classList.add('on');
+  $('progBar').style.width = '0%';
+  $('status').innerHTML = '<span class="accent">Setting up encoder…</span>';
+
+  // Pause the live preview while recording: both pipelines share the
+  // offscreen compositing surfaces, so concurrent draws would corrupt frames
+  // (and steal CPU from the encoder).
+  const wasPreviewRunning = previewRunning;
+  previewRunning = false;
+
+  try {
+    const [resW, resH] = $('resolution').value.split('x').map(Number);
+    const fps = parseInt($('fps').value);
+    const length = parseFloat($('length').value);
+    const totalFrames = Math.round(length * fps);
+
+    // Off-screen render canvas (separate from preview), always full resolution
+    const recCanvas = document.createElement('canvas');
+    recCanvas.width = resW; recCanvas.height = resH;
+    const recCtx = recCanvas.getContext('2d', {alpha: false});
+
+    // Pick MP4 if browser supports it, else WebM
+    let mimeType = 'video/mp4;codecs=avc1.42E01E';
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'video/webm;codecs=vp9';
+      renderedExt = 'webm';
+    } else {
+      renderedExt = 'mp4';
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'video/webm';
+      renderedExt = 'webm';
+    }
+
+    const stream = recCanvas.captureStream(0);
+    const videoTrack = stream.getVideoTracks()[0];
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+
+    const startTime = performance.now();
+
+    await new Promise((resolve, reject) => {
+      recorder.onstop = resolve;
+      recorder.onerror = e => reject(e.error || new Error('Recorder error'));
+      recorder.start();
+
+      // Render each frame, manually pacing the requestFrame calls so timestamps
+      // are correctly distributed across the video duration. We can't draw all
+      // frames in a tight loop because MediaRecorder stamps each requestFrame
+      // at "now"; we'd end up with everything compressed into 1 second.
+      let frame = 0;
+      function drawFrame() {
+        try {
+          if (frame >= totalFrames) {
+            recorder.stop();
+            return;
+          }
+          const t = frame / totalFrames;
+          // Same animation render, full resolution, raw knob values.
+          currentAnim.render(recCtx, resW, resH, t, animKnobValues);
+          applyPostFX(recCtx, resW, resH, t);
+          videoTrack.requestFrame();
+          // Progress UI (throttled)
+          if (frame % Math.max(1, Math.floor(totalFrames / 50)) === 0) {
+            const pct = (frame / totalFrames) * 100;
+            $('progBar').style.width = `${pct}%`;
+            const elapsedSec = (performance.now() - startTime) / 1000;
+            const eta = elapsedSec / (frame + 1) * (totalFrames - frame);
+            $('status').innerHTML = `<span class="accent">Rendering</span> · frame <b>${frame + 1}/${totalFrames}</b> · ~${eta.toFixed(0)}s remaining`;
+          }
+          frame++;
+          // Schedule next at the correct video-timestamp wall-clock
+          const targetMs = (frame / fps) * 1000;
+          const nowMs = performance.now() - startTime;
+          const wait = Math.max(0, targetMs - nowMs);
+          setTimeout(drawFrame, wait);
+        } catch (err) {
+          try { recorder.stop(); } catch (_) {}
+          reject(err);
+        }
+      }
+      drawFrame();
+    });
+
+    const blob = new Blob(chunks, { type: mimeType });
+    renderedBlob = blob;
+    if (lastVideoUrl) URL.revokeObjectURL(lastVideoUrl);
+    lastVideoUrl = URL.createObjectURL(blob);
+    $('renderedVideo').src = lastVideoUrl;
+    $('renderedVideo').style.display = 'block';
+    $('renderedGifImg').style.display = 'none';
+    $('videoOutput').classList.add('on');
+    $('downloadRow').style.display = 'flex';
+
+    const dur = ((performance.now() - startTime) / 1000).toFixed(1);
+    const sizeKB = (blob.size / 1024).toFixed(0);
+    $('status').innerHTML = `<span class="ok">Done</span> · ${dur}s render · ${sizeKB}KB · ${renderedExt.toUpperCase()}`;
+    $('progBar').style.width = '100%';
+  } catch (err) {
+    console.error('Render failed:', err);
+    $('status').innerHTML = `<span class="warn">Render failed: ${err.message || err}</span>`;
+  } finally {
+    isRendering = false;
+    $('renderBtn').disabled = false;
+    previewRunning = wasPreviewRunning;
+    if (previewRunning) previewStartTime = performance.now() - (previewT * (parseFloat($('length').value) * 1000));
+  }
+});
+
+$('downloadBtn').addEventListener('click', () => {
+  if (!renderedBlob) return;
+  const url = URL.createObjectURL(renderedBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `logo-loop.${renderedExt}`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+});
+
+$('newRender').addEventListener('click', () => {
+  $('videoOutput').classList.remove('on');
+  $('downloadRow').style.display = 'none';
+  renderedBlob = null;
+  $('progBar').style.width = '0%';
+  $('progWrap').classList.remove('on');
+});
+
+// ============================================================================
+// Render to animated GIF (gifenc, inlined above)
+// ============================================================================
+
+async function renderGif() {
+  if (!logoImage || isRendering) return;
+  if (typeof gifenc === 'undefined') {
+    $('status').innerHTML = '<span class="warn">GIF encoder failed to load — reload the page</span>';
+    return;
+  }
+  isRendering = true;
+  $('renderBtn').disabled = true;
+  $('progWrap').classList.add('on');
+  $('progBar').style.width = '0%';
+  $('status').innerHTML = '<span class="accent">Building palette…</span>';
+
+  // Same rule as video: the live preview shares offscreen surfaces with the
+  // render pipeline, so pause it for the duration.
+  const wasPreviewRunning = previewRunning;
+  previewRunning = false;
+
+  try {
+    const [resW, resH] = $('resolution').value.split('x').map(Number);
+    const gifW = parseInt($('gifWidth').value);
+    const gifH = Math.max(2, Math.round(gifW * resH / resW));
+    const s = gifW / resW;
+    const fps = parseInt($('gifFps').value);
+    const maxColors = parseInt($('gifColors').value);
+    const length = parseFloat($('length').value);
+    const totalFrames = Math.max(2, Math.round(length * fps));
+    const delay = Math.round(1000 / fps); // gifenc takes ms
+
+    const gc = document.createElement('canvas');
+    gc.width = gifW; gc.height = gifH;
+    const gctx = gc.getContext('2d', { alpha: false, willReadFrequently: true });
+    const opts = scaleKnobs(s);
+    const startTime = performance.now();
+
+    // One shared palette built from three sampled frames: per-frame palettes
+    // flicker between frames and triple the quantization cost.
+    const samples = [];
+    for (const ts of [0, 1 / 3, 2 / 3]) {
+      currentAnim.render(gctx, gifW, gifH, ts, opts);
+      applyPostFX(gctx, gifW, gifH, ts);
+      const d = gctx.getImageData(0, 0, gifW, gifH).data;
+      for (let i = 0; i < d.length; i += 16) { // every 4th pixel
+        samples.push(d[i], d[i + 1], d[i + 2], 255);
+      }
+    }
+    const palette = gifenc.quantize(new Uint8ClampedArray(samples), maxColors);
+
+    const gif = gifenc.GIFEncoder();
+    for (let i = 0; i < totalFrames; i++) {
+      const t = i / totalFrames; // never reaches 1 — frame 0 is the loop seam
+      currentAnim.render(gctx, gifW, gifH, t, opts);
+      applyPostFX(gctx, gifW, gifH, t);
+      const data = gctx.getImageData(0, 0, gifW, gifH).data;
+      const index = gifenc.applyPalette(data, palette);
+      gif.writeFrame(index, gifW, gifH, { palette, delay, repeat: 0 });
+      if (i % 3 === 0 || i === totalFrames - 1) {
+        $('progBar').style.width = `${((i + 1) / totalFrames) * 100}%`;
+        $('status').innerHTML = `<span class="accent">Encoding GIF</span> · frame <b>${i + 1}/${totalFrames}</b>`;
+        await new Promise(requestAnimationFrame);
+      }
+    }
+    gif.finish();
+
+    const blob = new Blob([gif.bytes()], { type: 'image/gif' });
+    renderedBlob = blob;
+    renderedExt = 'gif';
+    if (lastVideoUrl) URL.revokeObjectURL(lastVideoUrl);
+    lastVideoUrl = URL.createObjectURL(blob);
+    $('renderedGifImg').src = lastVideoUrl;
+    $('renderedGifImg').style.display = 'block';
+    $('renderedVideo').style.display = 'none';
+    $('renderedVideo').removeAttribute('src');
+    $('videoOutput').classList.add('on');
+    $('downloadRow').style.display = 'flex';
+
+    const dur = ((performance.now() - startTime) / 1000).toFixed(1);
+    const sizeKB = (blob.size / 1024).toFixed(0);
+    $('status').innerHTML = `<span class="ok">Done</span> · ${dur}s encode · ${sizeKB}KB · GIF · ${gifW}×${gifH} @ ${fps}fps`;
+    $('progBar').style.width = '100%';
+  } catch (err) {
+    console.error('GIF render failed:', err);
+    $('status').innerHTML = `<span class="warn">GIF render failed: ${err.message || err}</span>`;
+  } finally {
+    isRendering = false;
+    $('renderBtn').disabled = false;
+    previewRunning = wasPreviewRunning;
+    if (previewRunning) previewStartTime = performance.now() - (previewT * (parseFloat($('length').value) * 1000));
+  }
+}
+
+// ============================================================================
+// Icon pack — full favicon/app-icon set from the loaded (recolored) logo
+// ============================================================================
+
+const ICON_SIZES = [16, 32, 48, 64, 128, 180, 192, 256, 512];
+const ICO_SIZES = [16, 32, 48];
+const ICON_PREVIEW_SIZES = [16, 32, 64, 128];
+let iconBgMode = 'transparent';
+let iconShapeMode = 'square';
+
+document.querySelectorAll('#iconBg .pill').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#iconBg .pill').forEach(x => x.classList.toggle('on', x === b));
+    iconBgMode = b.dataset.bg;
+    $('iconBgColor').style.display = iconBgMode === 'solid' ? 'block' : 'none';
+    updateIconPreview();
+  });
+});
+document.querySelectorAll('#iconShape .pill').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#iconShape .pill').forEach(x => x.classList.toggle('on', x === b));
+    iconShapeMode = b.dataset.shape;
+    updateIconPreview();
+  });
+});
+$('iconBgColor').addEventListener('input', updateIconPreview);
+$('iconPad').addEventListener('input', () => {
+  $('iconPadVal').textContent = $('iconPad').value;
+  updateIconPreview();
+});
+$('iconBtn').addEventListener('click', generateIconPack);
+
+function roundRectPath(x, px, py, w, h, r) {
+  if (x.roundRect) { x.roundRect(px, py, w, h, r); return; }
+  x.moveTo(px + r, py);
+  x.arcTo(px + w, py, px + w, py + h, r);
+  x.arcTo(px + w, py + h, px, py + h, r);
+  x.arcTo(px, py + h, px, py, r);
+  x.arcTo(px, py, px + w, py, r);
+  x.closePath();
+}
+
+function drawIcon(size) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const x = c.getContext('2d');
+  x.imageSmoothingEnabled = true;
+  x.imageSmoothingQuality = 'high';
+  x.save();
+  if (iconShapeMode !== 'square') {
+    x.beginPath();
+    if (iconShapeMode === 'circle') x.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    else roundRectPath(x, 0, 0, size, size, size * 0.22);
+    x.clip();
+  }
+  if (iconBgMode === 'solid') {
+    x.fillStyle = $('iconBgColor').value;
+    x.fillRect(0, 0, size, size);
+  }
+  const logo = getRecoloredLogo();
+  if (logo) {
+    const pad = size * (parseFloat($('iconPad').value) / 100);
+    const avail = Math.max(1, size - pad * 2);
+    const lw0 = logo.width || logo.naturalWidth;
+    const lh0 = logo.height || logo.naturalHeight;
+    const ar = lw0 / lh0;
+    let lw = avail, lh = avail / ar;
+    if (lh > avail) { lh = avail; lw = avail * ar; }
+    x.drawImage(logo, (size - lw) / 2, (size - lh) / 2, lw, lh);
+  }
+  x.restore();
+  return c;
+}
+
+function updateIconPreview() {
+  const row = $('iconPreviewRow');
+  row.innerHTML = '';
+  if (!logoImage) {
+    const empty = document.createElement('span');
+    empty.className = 'icon-row-empty';
+    empty.textContent = 'drop a logo to preview icon sizes';
+    row.appendChild(empty);
+    $('iconBtn').disabled = true;
+    $('iconState').textContent = 'needs a logo';
+    $('iconState').style.color = 'var(--dim)';
+    return;
+  }
+  $('iconBtn').disabled = false;
+  $('iconState').textContent = 'ready';
+  $('iconState').style.color = 'var(--accent)';
+  for (const size of ICON_PREVIEW_SIZES) {
+    const cell = document.createElement('div');
+    cell.className = 'icon-cell';
+    const c = drawIcon(size); // shown at native size — real legibility check
+    const label = document.createElement('div');
+    label.className = 'icon-size';
+    label.textContent = String(size);
+    cell.append(c, label);
+    row.appendChild(cell);
+  }
+}
+
+function canvasToPngBytes(c) {
+  return new Promise((resolve, reject) => {
+    c.toBlob(async b => {
+      if (!b) return reject(new Error('PNG encode failed'));
+      resolve(new Uint8Array(await b.arrayBuffer()));
+    }, 'image/png');
+  });
+}
+
+// ICO container with embedded PNGs (supported everywhere since Vista).
+function buildIco(entries) {
+  const count = entries.length;
+  const headerSize = 6 + 16 * count;
+  let total = headerSize;
+  for (const e of entries) total += e.bytes.length;
+  const buf = new Uint8Array(total);
+  const dv = new DataView(buf.buffer);
+  dv.setUint16(0, 0, true);     // reserved
+  dv.setUint16(2, 1, true);     // type: icon
+  dv.setUint16(4, count, true);
+  let offset = headerSize;
+  entries.forEach((e, i) => {
+    const o = 6 + i * 16;
+    buf[o] = e.size >= 256 ? 0 : e.size;     // width  (0 = 256)
+    buf[o + 1] = e.size >= 256 ? 0 : e.size; // height
+    dv.setUint16(o + 4, 1, true);            // color planes
+    dv.setUint16(o + 6, 32, true);           // bits per pixel
+    dv.setUint32(o + 8, e.bytes.length, true);
+    dv.setUint32(o + 12, offset, true);
+    buf.set(e.bytes, offset);
+    offset += e.bytes.length;
+  });
+  return buf;
+}
+
+async function generateIconPack() {
+  if (!logoImage) return;
+  if (typeof JSZip === 'undefined') {
+    $('iconStatus').innerHTML = '<span class="warn">JSZip failed to load — check your connection and reload</span>';
+    return;
+  }
+  $('iconBtn').disabled = true;
+  $('iconStatus').innerHTML = '<span class="accent">Rendering sizes…</span>';
+  try {
+    const zip = new JSZip();
+    const pngBytes = {};
+    for (const size of ICON_SIZES) {
+      pngBytes[size] = await canvasToPngBytes(drawIcon(size));
+      zip.file(`icons/icon-${size}.png`, pngBytes[size]);
+    }
+    zip.file('apple-touch-icon.png', pngBytes[180]);
+    zip.file('favicon.ico', buildIco(ICO_SIZES.map(s => ({ size: s, bytes: pngBytes[s] }))));
+
+    const themeColor = iconBgMode === 'solid' ? $('iconBgColor').value : '#000000';
+    zip.file('site.webmanifest', JSON.stringify({
+      name: '',
+      short_name: '',
+      icons: [
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      ],
+      theme_color: themeColor,
+      background_color: themeColor,
+      display: 'standalone',
+    }, null, 2));
+
+    zip.file('head-snippet.html', [
+      '<link rel="icon" href="/favicon.ico" sizes="32x32">',
+      '<link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">',
+      '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+      '<link rel="manifest" href="/site.webmanifest">',
+    ].join('\n'));
+
+    $('iconStatus').innerHTML = '<span class="accent">Packaging zip…</span>';
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'icon-pack.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    $('iconStatus').innerHTML = `<span class="ok">Downloaded</span> · ${ICON_SIZES.length} PNGs · favicon.ico · webmanifest · ${(blob.size / 1024).toFixed(0)}KB`;
+  } catch (err) {
+    console.error('Icon pack failed:', err);
+    $('iconStatus').innerHTML = `<span class="warn">Icon pack failed: ${err.message || err}</span>`;
+  } finally {
+    $('iconBtn').disabled = false;
+  }
+}
+
+// ============================================================================
+// Boot
+// ============================================================================
+
+buildAnimGrid();
+selectAnim(ANIMATIONS[0]);
+buildAnimKnobs();
+updateIconPreview();
+previewStartTime = performance.now();
+previewLoop();
+</script>
+</body>
+</html>

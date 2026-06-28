@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STEP//REPEAT — Pattern Layout Engine</title>
+<style>
+/* ════════════════════════════════════════════════════════════════
+   STUDIO TOOLS — SHARED DESIGN SYSTEM  v1.0
+   One chassis for every tool. Per-tool identity lives in three
+   tokens only: --accent, --accent-rgb, --accent2.
+   ════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0b0d12;
+  --panel: #11141b;
+  --ink: #e8ebf0;
+  --dim: #747c8a;
+  --line: #1d222c;
+  --line2: #2a3140;
+  --ok: #5fd98a;
+  --warn: #ff5b49;
+  --info: #62b6ff;
+  /* injected per tool:
+     --accent, --accent-rgb, --accent2 */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+body {
+  background-image:
+    radial-gradient(ellipse at top right, rgba(var(--accent-rgb), 0.05), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(var(--accent-rgb), 0.025), transparent 60%);
+  padding: 28px 20px 60px;
+}
+
+::selection { background: rgba(var(--accent-rgb), 0.3); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 22px 26px;
+  background: var(--panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+}
+header::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 50%; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: -0.025em; line-height: 1; }
+.title span { color: var(--accent); }
+.sub { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 10px; }
+.meta { text-align: right; font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.16em; }
+.meta b { color: var(--accent); font-weight: 500; }
+
+/* ── Panels ─────────────────────────────────────── */
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.panel h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel h3::before { content: ""; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+.panel h3 .num { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); margin-right: 4px; }
+.panel h3 .right { margin-left: auto; color: var(--ink); font-size: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
+
+/* ── Drop zones ─────────────────────────────────── */
+.drop {
+  border: 1px dashed var(--line2);
+  border-radius: 2px;
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  display: block;
+}
+.drop:hover, .drop.hover { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.03); }
+.drop .big { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.drop.small { padding: 24px 16px; }
+.drop.small .big { font-size: 14px; }
+.drop .hint { color: var(--dim); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.drop .count { margin-top: 8px; font-size: 11px; color: var(--accent); }
+.drop input { display: none; }
+
+/* ── Form options ───────────────────────────────── */
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opts.three { grid-template-columns: 1fr 1fr 1fr; }
+.opt label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); display: block; margin-bottom: 6px; }
+.opt select, .opt input[type="text"], .opt input[type="color"], .opt input[type="number"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  border-radius: 2px;
+}
+.opt input[type="color"] { padding: 2px 4px; height: 36px; cursor: pointer; }
+.opt select:focus, .opt input:focus { border-color: var(--accent); }
+.opt select option { background: var(--bg); color: var(--ink); }
+.opt .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.opt .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+
+/* Sliders (shared between .opt and .field variants) */
+input[type="range"] {
+  width: 100%; padding: 0; border: none; height: 4px;
+  background: var(--line2); -webkit-appearance: none; appearance: none; border-radius: 2px;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+input[type="range"]:disabled::-webkit-slider-thumb { background: var(--dim); cursor: not-allowed; }
+input[type="range"]:disabled::-moz-range-thumb { background: var(--dim); cursor: not-allowed; }
+
+/* Compact field rows (slider + label + value) */
+.field { margin-bottom: 14px; }
+.field.compact { margin-bottom: 10px; }
+.field .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); }
+.field .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+.field select, .field input[type="number"], .field input[type="color"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 7px 9px;
+  outline: none;
+  border-radius: 2px;
+}
+.field select:focus, .field input:focus { border-color: var(--accent); }
+.field input[type="color"] { padding: 2px 4px; height: 34px; cursor: pointer; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.range-edit { display: flex; align-items: center; gap: 8px; }
+.range-edit input[type="number"] {
+  width: 64px; flex: 0 0 auto;
+  background: var(--bg); border: 1px solid var(--line2); color: var(--ink);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 4px 6px; border-radius: 2px; outline: none; text-align: center;
+}
+.range-edit input[type="number"]:focus { border-color: var(--accent); }
+
+/* ── Checkboxes ─────────────────────────────────── */
+.check, label.check, .opt label.check { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; padding: 6px 0; font-size: 12px; margin-bottom: 0; text-transform: none; letter-spacing: normal; color: var(--ink); }
+.check input { display: none; }
+.check .box { width: 14px; height: 14px; border: 1px solid var(--line2); flex-shrink: 0; position: relative; border-radius: 2px; }
+.check input:checked + .box { background: var(--accent); border-color: var(--accent); }
+.check input:checked + .box::after {
+  content: ""; position: absolute; top: 1px; left: 4px;
+  width: 4px; height: 8px; border: solid var(--bg);
+  border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.check .desc { display: block; color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
+
+/* ── Pills / tabs ───────────────────────────────── */
+.pills { display: flex; gap: 4px; flex-wrap: nowrap; }
+.pills.wrap-row { flex-wrap: wrap; }
+.pill {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 6px 10px; cursor: pointer; border-radius: 2px;
+  white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.pill:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.pill.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tab {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+  padding: 6px 12px; cursor: pointer; border-radius: 2px;
+}
+.tab:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.tab.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+.tab-pane.hidden { display: none; }
+
+/* ── Buttons ────────────────────────────────────── */
+.btn {
+  background: var(--accent); color: var(--bg); border: none;
+  padding: 13px 26px; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.16em; cursor: pointer; border-radius: 2px;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.25); }
+.btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line2); }
+.btn.ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+.btn.small { padding: 9px 16px; font-size: 10px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ── Status / progress ──────────────────────────── */
+.status-bar {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.status { flex: 1; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.14em; min-width: 0; }
+.status b { color: var(--ink); font-weight: 500; }
+.status .ok { color: var(--ok); }
+.status .warn { color: var(--warn); }
+.status .info { color: var(--info); }
+.status .accent { color: var(--accent); }
+
+.prog-wrap { margin-top: 10px; height: 6px; background: var(--line); border-radius: 2px; overflow: hidden; display: none; }
+.prog-wrap.on { display: block; }
+.prog-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 0.2s; }
+
+.notice { margin-top: 10px; padding: 10px 14px; border-left: 2px solid var(--accent); background: rgba(var(--accent-rgb), 0.04); font-size: 11px; color: var(--dim); line-height: 1.6; }
+.notice b { color: var(--accent); }
+.notice.warn { border-color: var(--warn); background: rgba(255,91,73,0.05); }
+.notice.warn b { color: var(--warn); }
+
+/* ── Preview surfaces ───────────────────────────── */
+.preview-wrap {
+  background: #000;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+.preview-wrap canvas { width: 100%; height: 100%; display: block; }
+.preview-wrap.checker {
+  background-image:
+    linear-gradient(45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1d24 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1d24 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+.preview-label {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.16em;
+  background: rgba(0,0,0,0.6);
+  padding: 3px 8px; border-radius: 2px;
+  pointer-events: none;
+}
+.preview-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px;
+  letter-spacing: 0.3em; color: var(--line2);
+  pointer-events: none;
+}
+.preview-empty.hidden { display: none; }
+
+/* ── Footer signature ───────────────────────────── */
+.sig {
+  margin-top: 28px; font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.2em;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+
+/* ── Scrollbars ─────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 3px; }
+
+/* ── Responsive / a11y baseline ─────────────────── */
+@media (max-width: 700px) {
+  .opts, .opts.three, .two-col { grid-template-columns: 1fr; }
+  .title { font-size: 22px; }
+  header { flex-direction: column; align-items: flex-start; }
+  .meta { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ── Tool identity ───────────────────────────────── */
+:root {
+  --accent: #ff4d6d;
+  --accent-rgb: 255, 77, 109;
+  --accent2: #ff8fa3;
+}
+
+/* ── STEP//REPEAT ─ tool layout & components ────── */
+.wrap {
+  max-width: 1400px; margin: 0 auto;
+  display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } }
+header { grid-column: 1 / -1; }
+.status-bar { grid-column: 1 / -1; }
+.sig { grid-column: 1 / -1; }
+
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.thumb-item { position: relative; width: 48px; height: 48px; }
+.img-thumb {
+  width: 48px; height: 48px;
+  border: 1px solid var(--line2); border-radius: 2px;
+  object-fit: contain; background: var(--bg);
+  display: block;
+}
+.thumb-del {
+  position: absolute; top: -5px; right: -5px; width: 18px; height: 18px;
+  border: 1px solid var(--line2); background: var(--warn); color: var(--bg);
+  border-radius: 50%; cursor: pointer; display: none;
+  align-items: center; justify-content: center;
+  font-size: 13px; line-height: 1; font-weight: 700; padding: 0;
+}
+.thumb-item:hover .thumb-del, .thumb-del:focus { display: flex; }
+.img-count { font-size: 10px; color: var(--dim); margin-top: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.bg-swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.swatch {
+  width: 24px; height: 24px; border-radius: 2px;
+  border: 1px solid var(--line2); cursor: pointer;
+  transition: transform 0.1s; padding: 0;
+}
+.swatch:hover { transform: scale(1.12); }
+.swatch.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="color"].swatch-custom {
+  width: 24px; height: 24px; border-radius: 2px;
+  border: 1px solid var(--line2); background: none; padding: 1px; cursor: pointer;
+}
+
+.seed-row { display: flex; gap: 8px; align-items: center; }
+.seed-row input[type="number"] {
+  flex: 1; background: var(--bg); border: 1px solid var(--line2);
+  color: var(--ink); font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; padding: 7px 9px; border-radius: 2px; outline: none; text-align: center;
+}
+.seed-row input[type="number"]:focus { border-color: var(--accent); }
+
+.preview-panel { position: sticky; top: 20px; }
+.preview-wrap { aspect-ratio: 4 / 3; }
+.preview-wrap canvas { width: 100%; height: 100%; object-fit: contain; }
+.preview-info {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 10px; font-size: 10px; color: var(--dim);
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.preview-info b { color: var(--ink); font-weight: 500; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="title">STEP<span>//</span>REPEAT</div>
+      <div class="sub">Pattern layout engine &middot; seeded randomization &middot; print-ready PNG</div>
+    </div>
+    <div class="meta">
+      VERSION 02.00<br>
+      ENGINE &middot; <b>CANVAS 2D</b><br>
+      OUTPUT &middot; <b>.PNG</b>
+    </div>
+  </header>
+
+  <!-- LEFT COLUMN: CONTROLS -->
+  <div>
+
+    <div class="panel">
+      <h3><span class="num">01</span> Source images</h3>
+      <label class="drop" id="drop">
+        <input type="file" id="file-input" multiple accept="image/*">
+        <div class="big">Drop images here</div>
+        <div class="hint">or click to select &middot; PNG / JPG / SVG / WEBP / GIF</div>
+      </label>
+      <div class="thumbs" id="image-list"></div>
+      <div class="img-count" id="img-count-label"></div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">02</span> Canvas</h3>
+      <div class="opts">
+        <div class="opt">
+          <label for="cv-w">Width px</label>
+          <input type="number" id="cv-w" value="1200" min="200" max="5000" step="100">
+        </div>
+        <div class="opt">
+          <label for="cv-h">Height px</label>
+          <input type="number" id="cv-h" value="900" min="200" max="5000" step="100">
+        </div>
+      </div>
+      <div class="field compact" style="margin-top:12px;">
+        <div class="row"><label>Background</label></div>
+        <div class="bg-swatches">
+          <button type="button" class="swatch selected" style="background:#ffffff" data-color="#ffffff" title="White"></button>
+          <button type="button" class="swatch" style="background:#000000" data-color="#000000" title="Black"></button>
+          <button type="button" class="swatch" style="background:#0b0d12" data-color="#0b0d12" title="Near black"></button>
+          <button type="button" class="swatch" style="background:#ff4d6d" data-color="#ff4d6d" title="Pink"></button>
+          <button type="button" class="swatch" style="background:#e8ff3c" data-color="#e8ff3c" title="Lime"></button>
+          <button type="button" class="swatch" style="background:#1a1a2e" data-color="#1a1a2e" title="Navy"></button>
+          <input type="color" id="bg-custom" class="swatch-custom" value="#ffffff" title="Custom color">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">03</span> Layout</h3>
+      <div class="opts">
+        <div class="opt">
+          <label for="layout-mode">Mode</label>
+          <select id="layout-mode">
+            <option value="grid">Grid</option>
+            <option value="brick">Brick offset</option>
+            <option value="diagonal">Diagonal</option>
+            <option value="radial">Radial</option>
+            <option value="scatter">Scatter</option>
+          </select>
+        </div>
+        <div class="opt">
+          <label for="img-order">Image order</label>
+          <select id="img-order">
+            <option value="sequence">Sequence</option>
+            <option value="alternate">Alternate rows</option>
+            <option value="random">Random</option>
+          </select>
+        </div>
+      </div>
+      <div style="height:12px;"></div>
+      <div class="field compact">
+        <div class="row"><label>Image size</label><span class="val"><span id="img-size-v">120</span></span></div>
+        <input type="range" id="img-size" min="20" max="600" value="120">
+      </div>
+      <div class="two-col">
+        <div class="field compact">
+          <div class="row"><label>Columns</label><span class="val" id="cols-v">8</span></div>
+          <input type="range" id="cols" min="1" max="30" value="8">
+        </div>
+        <div class="field compact">
+          <div class="row"><label>Rows</label><span class="val" id="rows-v">6</span></div>
+          <input type="range" id="rows" min="1" max="30" value="6">
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="field compact">
+          <div class="row"><label>Gap X</label><span class="val" id="gap-x-v">10</span></div>
+          <input type="range" id="gap-x" min="-100" max="200" value="10">
+        </div>
+        <div class="field compact">
+          <div class="row"><label>Gap Y</label><span class="val" id="gap-y-v">10</span></div>
+          <input type="range" id="gap-y" min="-100" max="200" value="10">
+        </div>
+      </div>
+      <div class="field compact">
+        <div class="row"><label>Rotation</label><span class="val" id="base-rot-v">0&deg;</span></div>
+        <input type="range" id="base-rot" min="-180" max="180" value="0">
+      </div>
+      <div class="field compact">
+        <div class="row"><label>Opacity</label><span class="val" id="base-opacity-v">100%</span></div>
+        <input type="range" id="base-opacity" min="5" max="100" value="100">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">04</span> Jitter / randomization
+        <span class="right" id="jitter-count">2 active</span>
+      </h3>
+      <div class="pills wrap-row" style="margin-bottom:12px;" id="jitter-pills">
+        <button type="button" class="pill" data-jitter="jit-pos">Position</button>
+        <button type="button" class="pill on" data-jitter="jit-scale">Scale</button>
+        <button type="button" class="pill on" data-jitter="jit-rot">Rotate</button>
+        <button type="button" class="pill" data-jitter="jit-opa">Opacity</button>
+        <button type="button" class="pill" data-jitter="jit-hue">Hue</button>
+      </div>
+      <div class="field compact">
+        <div class="row"><label>Position jitter</label><span class="val" id="jit-pos-v">0</span></div>
+        <input type="range" id="jit-pos" min="0" max="200" value="40">
+      </div>
+      <div class="field compact">
+        <div class="row"><label>Scale jitter</label><span class="val" id="jit-scale-v">20%</span></div>
+        <input type="range" id="jit-scale" min="0" max="100" value="20">
+      </div>
+      <div class="field compact">
+        <div class="row"><label>Rotation jitter</label><span class="val" id="jit-rot-v">15&deg;</span></div>
+        <input type="range" id="jit-rot" min="0" max="180" value="15">
+      </div>
+      <div class="field compact">
+        <div class="row"><label>Opacity jitter</label><span class="val" id="jit-opa-v">0%</span></div>
+        <input type="range" id="jit-opa" min="0" max="100" value="30">
+      </div>
+      <div class="field compact">
+        <div class="row"><label>Hue jitter</label><span class="val" id="jit-hue-v">0&deg;</span></div>
+        <input type="range" id="jit-hue" min="0" max="360" value="60">
+      </div>
+      <div class="field compact" style="margin-top:14px;">
+        <div class="row"><label>Random seed</label></div>
+        <div class="seed-row">
+          <input type="number" id="rand-seed" value="42" min="0" max="99999">
+          <button type="button" class="btn ghost small" id="new-seed-btn">&#10227; New seed</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN: PREVIEW -->
+  <div class="preview-panel">
+    <div class="panel">
+      <h3><span class="num">P</span> Pattern preview</h3>
+      <div class="preview-wrap" id="previewWrap">
+        <canvas id="canvas" width="1200" height="900"></canvas>
+        <div class="preview-empty" id="no-img-msg">
+          <div>NO PATTERN</div>
+          <div style="color:var(--line2); font-size:10px;">add images to begin</div>
+        </div>
+      </div>
+      <div class="preview-info">
+        <span>CANVAS &middot; <b id="cv-info">1200 &times; 900</b></span>
+        <span>ITEMS &middot; <b id="item-count">0</b></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status" id="status">Add images to begin</div>
+    <div class="btns">
+      <button class="btn ghost" id="clear-btn" disabled>Clear</button>
+      <button class="btn" id="export-btn" disabled>Export PNG</button>
+    </div>
+  </div>
+
+  <div class="sig">
+    <span>// CLIENT-SIDE &middot; NO UPLOAD &middot; SEEDED CANVAS PATTERNS</span>
+    <span>SYS.READY</span>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ============================================================================
+// State + helpers
+// ============================================================================
+const $id = id => document.getElementById(id);
+
+// Don't let a missed drop navigate the page away from loaded images.
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
+const images = []; // { img, name, url }
+let bgColor = '#ffffff';
+
+const canvas = $id('canvas');
+const ctx = canvas.getContext('2d');
+const previewWrap = $id('previewWrap');
+const statusEl = $id('status');
+const exportBtn = $id('export-btn');
+const clearBtn = $id('clear-btn');
+
+// Seeded RNG (mulberry32) — same seed always produces the same pattern.
+function makeRng(seed) {
+  let a = seed | 0;
+  return function() {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), a | 1);
+    t = (t + Math.imul(t ^ (t >>> 7), t | 61)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function rangeVal(id) { return parseFloat($id(id).value); }
+
+// Coalesce regenerate requests into one per animation frame so dragging a
+// slider over a dense pattern doesn't redraw hundreds of times per second.
+let regenQueued = false;
+function scheduleGenerate() {
+  if (regenQueued) return;
+  regenQueued = true;
+  requestAnimationFrame(() => {
+    regenQueued = false;
+    generate();
+  });
+}
+
+// ============================================================================
+// Jitter channels — pills genuinely enable/disable each channel.
+// A disabled channel contributes zero regardless of its slider value.
+// ============================================================================
+const jitterState = {};
+document.querySelectorAll('#jitter-pills .pill').forEach(pill => {
+  const sliderId = pill.dataset.jitter;
+  jitterState[sliderId] = pill.classList.contains('on');
+  $id(sliderId).disabled = !jitterState[sliderId];
+  pill.setAttribute('aria-pressed', String(jitterState[sliderId]));
+  pill.addEventListener('click', () => {
+    jitterState[sliderId] = !jitterState[sliderId];
+    pill.classList.toggle('on', jitterState[sliderId]);
+    pill.setAttribute('aria-pressed', String(jitterState[sliderId]));
+    $id(sliderId).disabled = !jitterState[sliderId];
+    updateJitterCount();
+    scheduleGenerate();
+  });
+});
+function updateJitterCount() {
+  const n = Object.values(jitterState).filter(Boolean).length;
+  const label = $id('jitter-count');
+  label.textContent = n ? `${n} active` : 'none active';
+  label.style.color = n ? 'var(--accent)' : 'var(--dim)';
+}
+function jitterVal(id) { return jitterState[id] ? rangeVal(id) : 0; }
+
+// ============================================================================
+// Control bindings
+// ============================================================================
+function bindRange(id, suffix = '') {
+  const el = $id(id);
+  const vEl = $id(id + '-v');
+  const update = () => { vEl.textContent = el.value + suffix; };
+  el.addEventListener('input', () => { update(); scheduleGenerate(); });
+  update();
+}
+bindRange('img-size');
+bindRange('cols');
+bindRange('rows');
+bindRange('gap-x');
+bindRange('gap-y');
+bindRange('base-rot', '\u00B0');
+bindRange('base-opacity', '%');
+bindRange('jit-pos');
+bindRange('jit-scale', '%');
+bindRange('jit-rot', '\u00B0');
+bindRange('jit-opa', '%');
+bindRange('jit-hue', '\u00B0');
+
+[$id('cv-w'), $id('cv-h')].forEach(el => el.addEventListener('change', () => {
+  resizeCanvas();
+  scheduleGenerate();
+}));
+[$id('layout-mode'), $id('img-order')].forEach(el => el.addEventListener('change', scheduleGenerate));
+
+$id('rand-seed').addEventListener('change', scheduleGenerate);
+$id('new-seed-btn').addEventListener('click', () => {
+  $id('rand-seed').value = Math.floor(Math.random() * 100000);
+  scheduleGenerate();
+});
+
+// Background swatches
+document.querySelectorAll('.swatch').forEach(s => {
+  s.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach(x => x.classList.remove('selected'));
+    s.classList.add('selected');
+    bgColor = s.dataset.color;
+    $id('bg-custom').value = bgColor;
+    scheduleGenerate();
+  });
+});
+$id('bg-custom').addEventListener('input', e => {
+  bgColor = e.target.value;
+  document.querySelectorAll('.swatch').forEach(x => x.classList.remove('selected'));
+  scheduleGenerate();
+});
+
+// ============================================================================
+// File intake
+// ============================================================================
+const drop = $id('drop');
+const fileInput = $id('file-input');
+
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('hover'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
+drop.addEventListener('drop', e => {
+  e.preventDefault();
+  drop.classList.remove('hover');
+  handleFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', () => {
+  handleFiles([...fileInput.files]);
+  fileInput.value = ''; // allow re-selecting the same files
+});
+
+function loadOne(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => resolve({ img, name: file.name, url });
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+    img.src = url;
+  });
+}
+
+async function handleFiles(files) {
+  const imgFiles = files.filter(f => f.type.startsWith('image/') || /\.svg$/i.test(f.name));
+  if (!imgFiles.length) return;
+  const results = await Promise.allSettled(imgFiles.map(loadOne));
+  let added = 0, failed = 0;
+  for (const r of results) {
+    if (r.status === 'fulfilled') { images.push(r.value); added++; }
+    else failed++;
+  }
+  updateImageUI();
+  generate();
+  statusEl.innerHTML = failed
+    ? `Loaded <b>${added}</b> \u00B7 <span class="warn">${failed} failed to decode</span>`
+    : `Ready \u00B7 <b>${images.length}</b> image${images.length === 1 ? '' : 's'} loaded`;
+}
+
+function removeImage(index) {
+  const [removed] = images.splice(index, 1);
+  if (removed) URL.revokeObjectURL(removed.url);
+  updateImageUI();
+  generate();
+}
+
+function clearImages() {
+  for (const item of images) URL.revokeObjectURL(item.url);
+  images.length = 0;
+  updateImageUI();
+  generate();
+}
+clearBtn.addEventListener('click', clearImages);
+
+function updateImageUI() {
+  const list = $id('image-list');
+  list.innerHTML = '';
+  images.forEach((item, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'thumb-item';
+    const thumb = document.createElement('img');
+    thumb.className = 'img-thumb';
+    thumb.src = item.img.src;
+    thumb.alt = item.name;
+    thumb.title = item.name;
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'thumb-del';
+    del.textContent = '\u00D7';
+    del.title = `Remove ${item.name}`;
+    del.addEventListener('click', e => { e.stopPropagation(); removeImage(i); });
+    wrap.append(thumb, del);
+    list.appendChild(wrap);
+  });
+
+  const has = images.length > 0;
+  $id('img-count-label').textContent = has
+    ? `${images.length} image${images.length > 1 ? 's' : ''} loaded`
+    : '';
+  $id('no-img-msg').classList.toggle('hidden', has);
+  exportBtn.disabled = !has;
+  clearBtn.disabled = !has;
+  statusEl.innerHTML = has
+    ? `Ready \u00B7 <b>${images.length}</b> image${images.length === 1 ? '' : 's'} loaded`
+    : 'Add images to begin';
+}
+
+// ============================================================================
+// Canvas sizing
+// ============================================================================
+function resizeCanvas() {
+  const w = Math.max(200, Math.min(5000, parseInt($id('cv-w').value) || 1200));
+  const h = Math.max(200, Math.min(5000, parseInt($id('cv-h').value) || 900));
+  $id('cv-w').value = w;
+  $id('cv-h').value = h;
+  canvas.width = w;
+  canvas.height = h;
+  previewWrap.style.aspectRatio = `${w} / ${h}`;
+  $id('cv-info').textContent = `${w} \u00D7 ${h}`;
+}
+
+// ============================================================================
+// Pattern generation
+// ============================================================================
+function buildPositions(mode, cols, rows, size, gapX, gapY, rng) {
+  // Each slot carries an index used by the "alternate rows" image order, so
+  // adjacent rows genuinely offset which image they start from.
+  const stepX = size + gapX;
+  const stepY = size + gapY;
+  const positions = [];
+
+  if (mode === 'grid' || mode === 'brick') {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const brickOff = (mode === 'brick' && r % 2 === 1) ? stepX * 0.5 : 0;
+        positions.push({ x: c * stepX + brickOff, y: r * stepY, slot: c + r });
+      }
+    }
+  } else if (mode === 'diagonal') {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        positions.push({ x: c * stepX + r * (stepX * 0.4), y: r * stepY, slot: c + r });
+      }
+    }
+  }
+  if (mode === 'grid' || mode === 'brick' || mode === 'diagonal') {
+    // Center the pattern block on the canvas. When the grid is larger than
+    // the canvas this keeps it full-bleed with symmetric edge crop; when it's
+    // smaller it no longer hugs the top-left corner.
+    const skew = (mode === 'diagonal') ? (rows - 1) * stepX * 0.4 : 0;
+    const offX = (canvas.width - (cols - 1) * stepX - skew) / 2;
+    const offY = (canvas.height - (rows - 1) * stepY) / 2;
+    for (const p of positions) { p.x += offX; p.y += offY; }
+  } else if (mode === 'radial') {
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    positions.push({ x: cx, y: cy, slot: 0 });
+    const rings = Math.max(1, rows);
+    for (let ring = 1; ring <= rings; ring++) {
+      const radius = ring * (size + gapX);
+      const count = Math.max(1, Math.round(cols * ring * 0.8));
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        positions.push({
+          x: cx + Math.cos(angle) * radius,
+          y: cy + Math.sin(angle) * radius,
+          slot: ring + i,
+        });
+      }
+    }
+  } else if (mode === 'scatter') {
+    const total = cols * rows;
+    for (let i = 0; i < total; i++) {
+      positions.push({ x: rng() * canvas.width, y: rng() * canvas.height, slot: i });
+    }
+  }
+  return positions;
+}
+
+function generate() {
+  resizeCanvas(); // also clears
+
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (!images.length) {
+    $id('item-count').textContent = '0';
+    return;
+  }
+
+  const rng = makeRng(parseInt($id('rand-seed').value) || 0);
+
+  const size     = rangeVal('img-size');
+  const cols     = rangeVal('cols');
+  const rows     = rangeVal('rows');
+  const gapX     = rangeVal('gap-x');
+  const gapY     = rangeVal('gap-y');
+  const baseRot  = rangeVal('base-rot') * Math.PI / 180;
+  const baseOpa  = rangeVal('base-opacity') / 100;
+  const jitPos   = jitterVal('jit-pos');
+  const jitScale = jitterVal('jit-scale') / 100;
+  const jitRot   = jitterVal('jit-rot') * Math.PI / 180;
+  const jitOpa   = jitterVal('jit-opa') / 100;
+  const jitHue   = jitterVal('jit-hue');
+  const mode     = $id('layout-mode').value;
+  const order    = $id('img-order').value;
+
+  const positions = buildPositions(mode, cols, rows, size, gapX, gapY, rng);
+
+  // Image selection. "Alternate rows" was previously identical to "Sequence"
+  // (Math.floor(i / 1)); it now shifts the starting image per row/ring so
+  // neighbouring rows checker against each other.
+  function pickImg(i, slot) {
+    if (order === 'sequence') return images[i % images.length].img;
+    if (order === 'alternate') return images[slot % images.length].img;
+    return images[Math.floor(rng() * images.length)].img;
+  }
+
+  let count = 0;
+  positions.forEach((pos, i) => {
+    const img = pickImg(i, pos.slot);
+
+    // Draw jitter values unconditionally so toggling a channel on/off never
+    // re-rolls the others — the seed stays stable per slot.
+    const sJ = (rng() - 0.5) * 2;
+    const rJ = (rng() - 0.5) * 2;
+    const pxJ = (rng() - 0.5) * 2;
+    const pyJ = (rng() - 0.5) * 2;
+    const oJ = (rng() - 0.5) * 2;
+    const hJ = (rng() - 0.5) * 2;
+
+    const finalSize = Math.max(1, size * (1 + sJ * jitScale));
+    const finalRot  = baseRot + rJ * jitRot;
+    const finalOpa  = Math.max(0, Math.min(1, baseOpa - oJ * jitOpa));
+    const fx = pos.x + pxJ * jitPos;
+    const fy = pos.y + pyJ * jitPos;
+
+    ctx.save();
+    ctx.globalAlpha = finalOpa;
+    if (jitHue > 0) ctx.filter = `hue-rotate(${(hJ * jitHue).toFixed(1)}deg)`;
+    ctx.translate(fx, fy);
+    ctx.rotate(finalRot);
+    ctx.drawImage(img, -finalSize / 2, -finalSize / 2, finalSize, finalSize);
+    ctx.restore();
+    count++;
+  });
+
+  $id('item-count').textContent = count;
+}
+
+// ============================================================================
+// Export
+// ============================================================================
+exportBtn.addEventListener('click', () => {
+  if (!images.length) return;
+  exportBtn.disabled = true;
+  statusEl.innerHTML = 'Encoding PNG\u2026';
+  canvas.toBlob(blob => {
+    exportBtn.disabled = false;
+    if (!blob) {
+      statusEl.innerHTML = '<span class="warn">PNG encode failed</span>';
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `step-repeat_${$id('layout-mode').value}_${$id('rand-seed').value}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    const sizeKB = (blob.size / 1024).toFixed(0);
+    statusEl.innerHTML = `<span class="ok">Exported</span> \u00B7 ${canvas.width}\u00D7${canvas.height} \u00B7 ${sizeKB}KB`;
+  }, 'image/png');
+});
+
+// ============================================================================
+// Boot
+// ============================================================================
+updateJitterCount();
+updateImageUI();
+generate();
+</script>
+</body>
+</html>

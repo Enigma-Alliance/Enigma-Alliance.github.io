@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TEX//TURE — Seamless Tileable Texture Generator</title>
+<style>
+/* ════════════════════════════════════════════════════════════════
+   STUDIO TOOLS — SHARED DESIGN SYSTEM  v1.0
+   One chassis for every tool. Per-tool identity lives in three
+   tokens only: --accent, --accent-rgb, --accent2.
+   ════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0b0d12;
+  --panel: #11141b;
+  --ink: #e8ebf0;
+  --dim: #747c8a;
+  --line: #1d222c;
+  --line2: #2a3140;
+  --ok: #5fd98a;
+  --warn: #ff5b49;
+  --info: #62b6ff;
+  /* injected per tool:
+     --accent, --accent-rgb, --accent2 */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+body {
+  background-image:
+    radial-gradient(ellipse at top right, rgba(var(--accent-rgb), 0.05), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(var(--accent-rgb), 0.025), transparent 60%);
+  padding: 28px 20px 60px;
+}
+
+::selection { background: rgba(var(--accent-rgb), 0.3); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 22px 26px;
+  background: var(--panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  position: relative;
+  overflow: hidden;
+}
+header::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 50%; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: -0.025em; line-height: 1; }
+.title span { color: var(--accent); }
+.sub { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 10px; }
+.meta { text-align: right; font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.16em; }
+.meta b { color: var(--accent); font-weight: 500; }
+
+/* ── Panels ─────────────────────────────────────── */
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.panel h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel h3::before { content: ""; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; }
+.panel h3 .num { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); margin-right: 4px; }
+.panel h3 .right { margin-left: auto; color: var(--ink); font-size: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
+
+/* ── Drop zones ─────────────────────────────────── */
+.drop {
+  border: 1px dashed var(--line2);
+  border-radius: 2px;
+  padding: 36px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  display: block;
+}
+.drop:hover, .drop.hover { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.03); }
+.drop .big { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+.drop.small { padding: 24px 16px; }
+.drop.small .big { font-size: 14px; }
+.drop .hint { color: var(--dim); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.drop .count { margin-top: 8px; font-size: 11px; color: var(--accent); }
+.drop input { display: none; }
+
+/* ── Form options ───────────────────────────────── */
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opts.three { grid-template-columns: 1fr 1fr 1fr; }
+.opt label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); display: block; margin-bottom: 6px; }
+.opt select, .opt input[type="text"], .opt input[type="color"], .opt input[type="number"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  border-radius: 2px;
+}
+.opt input[type="color"] { padding: 2px 4px; height: 36px; cursor: pointer; }
+.opt select:focus, .opt input:focus { border-color: var(--accent); }
+.opt select option { background: var(--bg); color: var(--ink); }
+.opt .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.opt .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+
+/* Sliders (shared between .opt and .field variants) */
+input[type="range"] {
+  width: 100%; padding: 0; border: none; height: 4px;
+  background: var(--line2); -webkit-appearance: none; appearance: none; border-radius: 2px;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; background: var(--accent);
+  cursor: pointer; border-radius: 50%; border: 2px solid var(--bg);
+}
+input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+input[type="range"]:disabled::-webkit-slider-thumb { background: var(--dim); cursor: not-allowed; }
+input[type="range"]:disabled::-moz-range-thumb { background: var(--dim); cursor: not-allowed; }
+
+/* Compact field rows (slider + label + value) */
+.field { margin-bottom: 14px; }
+.field.compact { margin-bottom: 10px; }
+.field .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); }
+.field .val { font-size: 11px; color: var(--accent); font-weight: 500; }
+.field select, .field input[type="number"], .field input[type="color"] {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 7px 9px;
+  outline: none;
+  border-radius: 2px;
+}
+.field select:focus, .field input:focus { border-color: var(--accent); }
+.field input[type="color"] { padding: 2px 4px; height: 34px; cursor: pointer; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.range-edit { display: flex; align-items: center; gap: 8px; }
+.range-edit input[type="number"] {
+  width: 64px; flex: 0 0 auto;
+  background: var(--bg); border: 1px solid var(--line2); color: var(--ink);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 4px 6px; border-radius: 2px; outline: none; text-align: center;
+}
+.range-edit input[type="number"]:focus { border-color: var(--accent); }
+
+/* ── Checkboxes ─────────────────────────────────── */
+.check, label.check, .opt label.check { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; padding: 6px 0; font-size: 12px; margin-bottom: 0; text-transform: none; letter-spacing: normal; color: var(--ink); }
+.check input { display: none; }
+.check .box { width: 14px; height: 14px; border: 1px solid var(--line2); flex-shrink: 0; position: relative; border-radius: 2px; }
+.check input:checked + .box { background: var(--accent); border-color: var(--accent); }
+.check input:checked + .box::after {
+  content: ""; position: absolute; top: 1px; left: 4px;
+  width: 4px; height: 8px; border: solid var(--bg);
+  border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.check .desc { display: block; color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
+
+/* ── Pills / tabs ───────────────────────────────── */
+.pills { display: flex; gap: 4px; flex-wrap: nowrap; }
+.pills.wrap-row { flex-wrap: wrap; }
+.pill {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 6px 10px; cursor: pointer; border-radius: 2px;
+  white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.pill:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.pill.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tab {
+  background: transparent; border: 1px solid var(--line2);
+  color: var(--dim); font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+  padding: 6px 12px; cursor: pointer; border-radius: 2px;
+}
+.tab:hover:not(.on) { color: var(--ink); border-color: var(--line); }
+.tab.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+.tab-pane.hidden { display: none; }
+
+/* ── Buttons ────────────────────────────────────── */
+.btn {
+  background: var(--accent); color: var(--bg); border: none;
+  padding: 13px 26px; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.16em; cursor: pointer; border-radius: 2px;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.25); }
+.btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line2); }
+.btn.ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+.btn.small { padding: 9px 16px; font-size: 10px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ── Status / progress ──────────────────────────── */
+.status-bar {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 2px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.status { flex: 1; font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.14em; min-width: 0; }
+.status b { color: var(--ink); font-weight: 500; }
+.status .ok { color: var(--ok); }
+.status .warn { color: var(--warn); }
+.status .info { color: var(--info); }
+.status .accent { color: var(--accent); }
+
+.prog-wrap { margin-top: 10px; height: 6px; background: var(--line); border-radius: 2px; overflow: hidden; display: none; }
+.prog-wrap.on { display: block; }
+.prog-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; transition: width 0.2s; }
+
+.notice { margin-top: 10px; padding: 10px 14px; border-left: 2px solid var(--accent); background: rgba(var(--accent-rgb), 0.04); font-size: 11px; color: var(--dim); line-height: 1.6; }
+.notice b { color: var(--accent); }
+.notice.warn { border-color: var(--warn); background: rgba(255,91,73,0.05); }
+.notice.warn b { color: var(--warn); }
+
+/* ── Preview surfaces ───────────────────────────── */
+.preview-wrap {
+  background: #000;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+.preview-wrap canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.preview-wrap.smooth canvas { image-rendering: auto; }
+.preview-wrap.checker {
+  background-image:
+    linear-gradient(45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(-45deg, #1a1d24 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a1d24 75%),
+    linear-gradient(-45deg, transparent 75%, #1a1d24 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+.preview-label {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.16em;
+  background: rgba(0,0,0,0.6);
+  padding: 3px 8px; border-radius: 2px;
+  pointer-events: none;
+}
+.preview-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px;
+  letter-spacing: 0.3em; color: var(--line2);
+  pointer-events: none;
+}
+.preview-empty.hidden { display: none; }
+
+/* ── Footer signature ───────────────────────────── */
+.sig {
+  margin-top: 28px; font-size: 9px; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.2em;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+
+/* ── Scrollbars ─────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 3px; }
+
+/* ── Responsive / a11y baseline ─────────────────── */
+@media (max-width: 700px) {
+  .opts, .opts.three, .two-col { grid-template-columns: 1fr; }
+  .title { font-size: 22px; }
+  header { flex-direction: column; align-items: flex-start; }
+  .meta { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ── Tool identity ───────────────────────────────── */
+:root {
+  --accent: #2dd4bf;
+  --accent-rgb: 45, 212, 191;
+  --accent2: #14b8a6;
+}
+
+/* ── TEX//TURE ─ tool layout & components ───────── */
+.wrap {
+  max-width: 1320px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } }
+header { grid-column: 1 / -1; }
+.sig { grid-column: 1 / -1; }
+
+.pat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+.pat-card {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 2px;
+  padding: 14px 12px; cursor: pointer; text-align: center;
+  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+}
+.pat-card:hover { border-color: var(--line2); transform: translateY(-1px); }
+.pat-card.on { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.06); }
+.pat-card .icon { font-size: 26px; line-height: 1; margin-bottom: 8px; color: var(--accent); }
+.pat-card .name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+.pat-card .desc { font-size: 10px; color: var(--dim); line-height: 1.4; }
+.pat-card.on .name { color: var(--accent); }
+
+.pat-knobs { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.knob-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
+
+.ramp-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.ramp-chip {
+  position: relative; height: 34px; border: 1px solid var(--line2);
+  border-radius: 2px; cursor: pointer; padding: 0; overflow: hidden;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.ramp-chip span {
+  position: absolute; left: 6px; bottom: 4px;
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  pointer-events: none;
+}
+.ramp-chip:hover { transform: translateY(-1px); }
+.ramp-chip.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.seed-row { display: flex; gap: 8px; align-items: center; }
+.seed-row input[type="number"] {
+  flex: 1; background: var(--bg); border: 1px solid var(--line2);
+  color: var(--ink); font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; padding: 7px 9px; border-radius: 2px; outline: none; text-align: center;
+}
+.seed-row input[type="number"]:focus { border-color: var(--accent); }
+
+.preview-panel { position: sticky; top: 20px; }
+.preview-wrap { aspect-ratio: 1 / 1; }
+.preview-wrap canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.preview-info {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 10px; font-size: 10px; color: var(--dim);
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.preview-info b { color: var(--ink); font-weight: 500; }
+
+/* ── Mixer (Custom / Advanced) ──────────────────── */
+.pat-card-mix .icon { letter-spacing: -2px; }
+.mixer { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.mix-master {
+  background: var(--bg); border: 1px solid var(--line2); border-radius: 2px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+.mix-master .knob-title { margin-bottom: 10px; }
+.mix-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.mix-toolbar input[type="text"] {
+  flex: 1 1 160px; min-width: 0;
+  background: var(--panel); border: 1px solid var(--line2); color: var(--ink);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 7px 9px; outline: none; border-radius: 2px;
+}
+.mix-toolbar input[type="text"]:focus { border-color: var(--accent); }
+.mix-toolbar .btn { padding: 8px 10px; font-size: 9px; letter-spacing: 0.1em; }
+.mix-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.mix-presets .pill { padding: 5px 8px; font-size: 9px; }
+.mix-layer {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 2px;
+  padding: 10px 12px; margin-bottom: 8px;
+  transition: border-color 0.12s, opacity 0.12s;
+  opacity: 0.55;
+}
+.mix-layer.active { border-color: rgba(var(--accent-rgb), 0.5); opacity: 1; }
+.mix-layer.hidden { display: none; }
+.mix-layer.solo { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.mix-head { display: flex; align-items: center; gap: 10px; }
+.mix-head .micon { color: var(--accent); width: 18px; text-align: center; font-size: 16px; flex: 0 0 auto; }
+.mix-head .mname {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px;
+  flex: 0 0 96px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mix-head .mw { flex: 1; }
+.mix-head .mwval { flex: 0 0 auto; width: 38px; text-align: right; font-size: 11px; color: var(--accent); font-weight: 500; }
+.mix-controls { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.mix-quick { display: flex; gap: 4px; flex-wrap: wrap; }
+.mix-quick button {
+  background: transparent; border: 1px solid var(--line2); color: var(--dim);
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.08em; padding: 5px 7px; cursor: pointer; border-radius: 2px;
+}
+.mix-quick button:hover { color: var(--accent); border-color: var(--accent); }
+.mix-blend {
+  flex: 0 0 auto; min-width: 120px;
+  background: var(--panel); border: 1px solid var(--line2); color: var(--ink);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 5px 8px; border-radius: 2px; outline: none; cursor: pointer;
+}
+.mix-blend:focus { border-color: var(--accent); }
+.mix-controls .check { padding: 0; }
+.mix-opts { margin-top: 8px; }
+.mix-opts summary {
+  cursor: pointer; user-select: none; list-style: none;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim);
+  display: flex; align-items: center; gap: 6px;
+}
+.mix-opts summary::-webkit-details-marker { display: none; }
+.mix-opts summary::before { content: "\25B8"; color: var(--accent); font-size: 9px; transition: transform 0.15s; }
+.mix-opts[open] summary::before { transform: rotate(90deg); }
+.mix-opts-body { margin-top: 10px; }
+
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="title">TEX<span>//</span>TURE</div>
+      <div class="sub">Seamless tileable texture generator &middot; seeded &middot; 64&ndash;4096px PNG</div>
+    </div>
+    <div class="meta">
+      VERSION 01.00<br>
+      ENGINE &middot; <b>CANVAS 2D</b><br>
+      OUTPUT &middot; <b>.PNG</b>
+    </div>
+  </header>
+
+  <!-- LEFT COLUMN: CONTROLS -->
+  <div>
+
+    <div class="panel">
+      <h3><span class="num">01</span> Pattern <span class="right" id="patName">Fractal noise</span></h3>
+      <div class="pat-grid" id="patGrid"><!-- filled by JS --></div>
+      <div class="pat-knobs" id="patKnobs">
+        <div class="knob-title">Pattern parameters</div>
+        <div id="knobContainer"></div>
+      </div>
+      <div class="mixer" id="mixer" style="display:none;"></div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">02</span> Tiling &amp; size</h3>
+      <div class="field compact">
+        <div class="row"><label>Tile direction</label></div>
+        <div class="pills wrap-row" id="tileMode">
+          <button type="button" class="pill on" data-tile="both">Both axes</button>
+          <button type="button" class="pill" data-tile="x">Horizontal</button>
+          <button type="button" class="pill" data-tile="y">Vertical</button>
+          <button type="button" class="pill" data-tile="none">None</button>
+        </div>
+      </div>
+      <div class="opts three" style="margin-top:6px;">
+        <div class="opt">
+          <label for="resolution">Export resolution</label>
+          <select id="resolution">
+            <option value="64">64 × 64</option>
+            <option value="128">128 × 128</option>
+            <option value="256">256 × 256</option>
+            <option value="512" selected>512 × 512</option>
+            <option value="1024">1024 × 1024</option>
+            <option value="2048">2048 × 2048</option>
+            <option value="4096">4096 × 4096 (4K)</option>
+          </select>
+        </div>
+        <div class="opt">
+          <label for="previewQuality">Preview quality</label>
+          <select id="previewQuality">
+            <option value="fast">Fast</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="sharp">Sharp</option>
+            <option value="exact">Exact / slow</option>
+          </select>
+        </div>
+        <div class="opt">
+          <label>Preview draw</label>
+          <label class="check" style="margin-top:4px;">
+            <input type="checkbox" id="showTiled" checked>
+            <span class="box"></span>
+            <span class="txt">Show as 3&times;3 tiled</span>
+          </label>
+        </div>
+      </div>
+      <div class="opts" style="margin-top:10px;">
+        <div class="opt">
+          <div class="row"><label>Resolution detail</label><span class="val"><span id="resDetailVal">0</span>%</span></div>
+          <input type="range" id="resDetail" min="0" max="100" value="0" step="5">
+        </div>
+        <div class="opt">
+          <label>&nbsp;</label>
+          <label class="check" style="margin-top:4px;">
+            <input type="checkbox" id="smoothPreview">
+            <span class="box"></span>
+            <span class="txt">Smooth preview scaling</span>
+          </label>
+        </div>
+      </div>
+      <div class="notice" id="tileNote">Both edges wrap — the tile repeats seamlessly in every direction. Preview renders at reduced size; export is full resolution.</div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">03</span> Domain transform</h3>
+      <div class="opts three">
+        <div class="opt">
+          <div class="row"><label>Repeat X</label><span class="val"><span id="repeatXVal">1</span>x</span></div>
+          <input type="range" id="repeatX" min="1" max="8" value="1" step="1">
+        </div>
+        <div class="opt">
+          <div class="row"><label>Repeat Y</label><span class="val"><span id="repeatYVal">1</span>x</span></div>
+          <input type="range" id="repeatY" min="1" max="8" value="1" step="1">
+        </div>
+        <div class="opt">
+          <label for="rotate">Rotate</label>
+          <select id="rotate">
+            <option value="0" selected>0 deg</option>
+            <option value="90">90 deg</option>
+            <option value="180">180 deg</option>
+            <option value="270">270 deg</option>
+          </select>
+        </div>
+      </div>
+      <div class="opts three" style="margin-top:10px;">
+        <div class="opt">
+          <div class="row"><label>Offset X</label><span class="val"><span id="offsetXVal">0</span>%</span></div>
+          <input type="range" id="offsetX" min="0" max="100" value="0" step="1">
+        </div>
+        <div class="opt">
+          <div class="row"><label>Offset Y</label><span class="val"><span id="offsetYVal">0</span>%</span></div>
+          <input type="range" id="offsetY" min="0" max="100" value="0" step="1">
+        </div>
+        <div class="opt">
+          <div class="row"><label>Global warp</label><span class="val"><span id="globalWarpVal">0</span>%</span></div>
+          <input type="range" id="globalWarp" min="0" max="100" value="0" step="5">
+        </div>
+      </div>
+      <div class="opts" style="margin-top:8px;">
+        <label class="check">
+          <input type="checkbox" id="mirrorX">
+          <span class="box"></span>
+          <span class="txt">Mirror X</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="mirrorY">
+          <span class="box"></span>
+          <span class="txt">Mirror Y</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">04</span> Color</h3>
+      <div class="field compact">
+        <div class="row"><label>Ramp</label></div>
+        <div class="ramp-row" id="rampRow"><!-- filled by JS --></div>
+      </div>
+      <div class="opts" id="monoColors" style="margin-top:10px;">
+        <div class="opt"><label>Low / background</label><input type="color" id="colorA" value="#0b0d12"></div>
+        <div class="opt"><label>High / ink</label><input type="color" id="colorB" value="#2dd4bf"></div>
+      </div>
+      <div class="opts three" style="margin-top:10px;">
+        <div class="opt">
+          <div class="row"><label>Brightness</label><span class="val"><span id="brightVal">0</span></span></div>
+          <input type="range" id="bright" min="-50" max="50" value="0" step="2">
+        </div>
+        <div class="opt">
+          <div class="row"><label>Contrast</label><span class="val"><span id="contrastVal">0</span></span></div>
+          <input type="range" id="contrast" min="-50" max="80" value="0" step="2">
+        </div>
+        <div class="opt">
+          <label>Output</label>
+          <div class="pills" id="bgMode" style="margin-top:4px;">
+            <button type="button" class="pill on" data-bg="opaque">Color</button>
+            <button type="button" class="pill" data-bg="alpha">Transparent</button>
+          </div>
+        </div>
+      </div>
+      <label class="check" style="margin-top:8px;">
+        <input type="checkbox" id="invert">
+        <span class="box"></span>
+        <span class="txt">Invert</span>
+      </label>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">05</span> Surface shaping</h3>
+      <div class="opts three">
+        <div class="opt">
+          <div class="row"><label>Low clip</label><span class="val"><span id="levelLowVal">0</span>%</span></div>
+          <input type="range" id="levelLow" min="0" max="90" value="0" step="1">
+        </div>
+        <div class="opt">
+          <div class="row"><label>High clip</label><span class="val"><span id="levelHighVal">100</span>%</span></div>
+          <input type="range" id="levelHigh" min="10" max="100" value="100" step="1">
+        </div>
+        <div class="opt">
+          <div class="row"><label>Gamma</label><span class="val"><span id="gammaVal">100</span>%</span></div>
+          <input type="range" id="gamma" min="25" max="300" value="100" step="5">
+        </div>
+      </div>
+      <div class="opts three" style="margin-top:10px;">
+        <div class="opt">
+          <label for="posterize">Posterize</label>
+          <select id="posterize">
+            <option value="0" selected>Off</option>
+            <option value="2">2 levels</option>
+            <option value="3">3 levels</option>
+            <option value="4">4 levels</option>
+            <option value="5">5 levels</option>
+            <option value="8">8 levels</option>
+            <option value="16">16 levels</option>
+          </select>
+        </div>
+        <div class="opt">
+          <div class="row"><label>Threshold</label><span class="val"><span id="thresholdVal">0</span>%</span></div>
+          <input type="range" id="threshold" min="0" max="100" value="0" step="1">
+        </div>
+        <div class="opt">
+          <div class="row"><label>Micro detail</label><span class="val"><span id="detailVal">0</span>%</span></div>
+          <input type="range" id="detail" min="0" max="100" value="0" step="5">
+        </div>
+      </div>
+      <div class="field compact" style="margin-top:10px;">
+        <div class="row"><label>Detail scale</label><span class="val"><span id="detailScaleVal">24</span></span></div>
+        <input type="range" id="detailScale" min="4" max="96" value="24" step="4">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">06</span> Seed</h3>
+      <div class="seed-row">
+        <input type="number" id="seed" value="42" min="0" max="999999">
+        <button type="button" class="btn ghost small" id="newSeed">&#10227; New seed</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3><span class="num">07</span> Export</h3>
+      <div class="opts" style="margin-bottom:12px;">
+        <div class="opt">
+          <label for="outputMap">Output map</label>
+          <select id="outputMap">
+            <option value="color" selected>Color / alpha</option>
+            <option value="height">Height grayscale</option>
+            <option value="normal">Normal map</option>
+            <option value="roughness">Roughness</option>
+            <option value="ao">Ambient occlusion mask</option>
+          </select>
+        </div>
+        <div class="opt">
+          <div class="row"><label>Map strength</label><span class="val"><span id="mapStrengthVal">50</span>%</span></div>
+          <input type="range" id="mapStrength" min="5" max="200" value="50" step="5">
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="exportBtn">Export PNG</button>
+        <div class="status" id="status">Ready</div>
+      </div>
+      <div class="prog-wrap" id="progWrap"><div class="prog-bar" id="progBar"></div></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN: PREVIEW -->
+  <div class="preview-panel">
+    <div class="panel">
+      <h3><span class="num">P</span> Preview <span class="right" id="previewLabel">&mdash;</span></h3>
+      <div class="preview-wrap checker" id="previewWrap">
+        <canvas id="preview"></canvas>
+      </div>
+      <div class="preview-info">
+        <span>TILE &middot; <b id="infoSize">512 × 512</b></span>
+        <span>PREVIEW &middot; <b id="infoPreview">512 px</b></span>
+        <span>WRAP &middot; <b id="infoTile">both</b></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sig">
+    <span>// CLIENT-SIDE &middot; NO UPLOAD &middot; SEEDED PERIODIC NOISE</span>
+    <span>SYS.READY</span>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+
+// ============================================================================
+// Math helpers — all generators are periodic over the unit tile by construction
+// ============================================================================
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+function smoothstep(e0, e1, x) {
+  const t = clamp01((x - e0) / (e1 - e0));
+  return t * t * (3 - 2 * t);
+}
+function fract(x) { return x - Math.floor(x); }
+function wrap(c, p) { return p ? ((c % p) + p) % p : c; }
+function remap01(v, lo, hi) { return clamp01((v - lo) / ((hi - lo) || 0.0001)); }
+function dist2d(x, y, metric) {
+  const ax = Math.abs(x), ay = Math.abs(y);
+  if (metric === 'manhattan') return ax + ay;
+  if (metric === 'chebyshev') return Math.max(ax, ay);
+  return Math.sqrt(x * x + y * y);
+}
+
+// Integer hash → [0,1)
+function hashf(x, y, s) {
+  let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+// Tileable value noise. perX/perY = lattice period in cells (0 = that axis free).
+function vnoise(lx, ly, perX, perY, seed) {
+  const ix = Math.floor(lx), iy = Math.floor(ly);
+  const fx = lx - ix, fy = ly - iy;
+  const corner = (cx, cy) => hashf(wrap(cx, perX), wrap(cy, perY), seed);
+  const v00 = corner(ix, iy), v10 = corner(ix + 1, iy);
+  const v01 = corner(ix, iy + 1), v11 = corner(ix + 1, iy + 1);
+  const ux = fade(fx), uy = fade(fy);
+  return lerp(lerp(v00, v10, ux), lerp(v01, v11, ux), uy);
+}
+
+// Fractal Brownian motion. cellsX/cellsY are integer base frequencies (cells
+// across the tile); each octave doubles, so every octave stays periodic.
+function fbm(nx, ny, cellsX, cellsY, octaves, persistence, tx, ty, seed) {
+  let amp = 1, sum = 0, norm = 0;
+  for (let k = 0; k < octaves; k++) {
+    const cx = cellsX * (1 << k), cy = cellsY * (1 << k);
+    sum += vnoise(nx * cx, ny * cy, tx ? cx : 0, ty ? cy : 0, seed + k * 101) * amp;
+    norm += amp;
+    amp *= persistence;
+  }
+  return sum / norm;
+}
+
+// ============================================================================
+// Pattern registry — each `value(nx, ny, o, tx, ty, seed)` returns 0..1 and is
+// periodic in nx (when tx) and ny (when ty).
+// ============================================================================
+const PATTERNS = [
+  {
+    id: 'fractal', name: 'Fractal noise', icon: '≋', desc: 'Clouds, marble, organic',
+    knobs: [
+      { id: 'cellsX', label: 'Frequency X', type: 'range', min: 1, max: 16, step: 1, value: 3 },
+      { id: 'cellsY', label: 'Frequency Y', type: 'range', min: 1, max: 16, step: 1, value: 3 },
+      { id: 'octaves', label: 'Octaves (detail)', type: 'range', min: 1, max: 6, step: 1, value: 5 },
+      { id: 'persistence', label: 'Roughness', type: 'range', min: 20, max: 90, step: 5, value: 60, suffix: '%' },
+      { id: 'warp', label: 'Domain warp', type: 'range', min: 0, max: 100, step: 5, value: 0, suffix: '%' },
+      { id: 'gain', label: 'Gain', type: 'range', min: 20, max: 220, step: 5, value: 100, suffix: '%' },
+      { id: 'type', label: 'Type', type: 'select', value: 'fbm', options: [
+        { value: 'fbm', label: 'Soft FBM' },
+        { value: 'billow', label: 'Billow' },
+        { value: 'turbulence', label: 'Turbulence' },
+        { value: 'terrace', label: 'Terraced' },
+      ] },
+      { id: 'ridged', label: 'Ridged (veins)', type: 'toggle', value: false },
+    ],
+    value(nx, ny, o, tx, ty, seed) {
+      const oct = o.octaves, pers = o.persistence / 100;
+      let x = nx, y = ny;
+      if (o.warp > 0) {
+        const wAmt = o.warp / 100 * 0.5;
+        const qx = fbm(nx, ny, o.cellsX, o.cellsY, 2, 0.6, tx, ty, seed + 31) - 0.5;
+        const qy = fbm(nx, ny, o.cellsX, o.cellsY, 2, 0.6, tx, ty, seed + 53) - 0.5;
+        x = nx + qx * wAmt;
+        y = ny + qy * wAmt;
+      }
+      let v = fbm(x, y, o.cellsX, o.cellsY, oct, pers, tx, ty, seed);
+      if (o.type === 'billow') v = 1 - Math.abs(2 * v - 1);
+      if (o.type === 'turbulence') v = Math.abs(2 * v - 1);
+      if (o.type === 'terrace') v = Math.floor(v * 6) / 5;
+      if (o.ridged) v = 1 - Math.abs(2 * v - 1);
+      return clamp01((v - 0.5) * (o.gain / 100) + 0.5);
+    },
+  },
+  {
+    id: 'cellular', name: 'Cells / Dots', icon: '⬡', desc: 'Organic cells, dots, cracks',
+    knobs: [
+      { id: 'cells', label: 'Columns', type: 'range', min: 2, max: 32, step: 1, value: 8 },
+      { id: 'rows', label: 'Rows', type: 'range', min: 2, max: 32, step: 1, value: 8 },
+      { id: 'size', label: 'Dot size', type: 'range', min: 5, max: 95, step: 5, value: 45, suffix: '%' },
+      { id: 'jitter', label: 'Irregularity / scatter', type: 'range', min: 0, max: 100, step: 5, value: 80, suffix: '%' },
+      { id: 'softness', label: 'Edge softness', type: 'range', min: 0, max: 50, step: 2, value: 8, suffix: '%' },
+      { id: 'metric', label: 'Distance', type: 'select', value: 'euclidean', options: [
+        { value: 'euclidean', label: 'Round' },
+        { value: 'manhattan', label: 'Diamond' },
+        { value: 'chebyshev', label: 'Square' },
+      ] },
+      { id: 'mode', label: 'Style', type: 'select', value: 'cells', options: [
+        { value: 'cells', label: 'Organic cells' },
+        { value: 'inv', label: 'Pebbles' },
+        { value: 'cracks', label: 'Cracks' },
+        { value: 'edges', label: 'Cell borders' },
+        { value: 'dots', label: 'Round dots' },
+        { value: 'squares', label: 'Square dots' },
+      ] },
+    ],
+    value(nx, ny, o, tx, ty, seed) {
+      const g = o.cells, gy = o.rows || o.cells, jit = o.jitter / 100;
+      const cx = Math.floor(nx * g), cy = Math.floor(ny * gy);
+      let f1 = 1e9, f2 = 1e9, squareBest = 1e9;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const ncx = cx + dx, ncy = cy + dy;
+          const hx = tx ? wrap(ncx, g) : ncx, hy = ty ? wrap(ncy, gy) : ncy;
+          const jx = (hashf(hx, hy, seed) - 0.5) * jit;
+          const jy = (hashf(hx, hy, seed + 911) - 0.5) * jit;
+          const px = (ncx + 0.5 + jx) / g, py = (ncy + 0.5 + jy) / gy;
+          const ddx = (nx - px) * g, ddy = (ny - py) * gy;
+          const d = dist2d(ddx, ddy, o.metric);
+          const sq = Math.max(Math.abs(ddx), Math.abs(ddy));
+          if (sq < squareBest) squareBest = sq;
+          if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) { f2 = d; }
+        }
+      }
+      if (o.mode === 'dots' || o.mode === 'squares') {
+        const R = o.size / 100;
+        const soft = Math.max(0.005, o.softness / 100);
+        const d = o.mode === 'squares' ? squareBest : f1;
+        return 1 - smoothstep(R - soft, R + soft * 0.35, d);
+      }
+      if (o.mode === 'edges') return 1 - smoothstep(0.02, 0.22 + o.softness / 100, f2 - f1);
+      if (o.mode === 'cracks') return clamp01((f2 - f1) * 1.4);
+      const v = clamp01(f1 * 1.4);
+      return o.mode === 'inv' ? 1 - v : v;
+    },
+  },
+  {
+    id: 'stripes', name: 'Stripes', icon: '⁝', desc: 'Lines, weave, waves',
+    knobs: [
+      { id: 'cyclesX', label: 'Cycles across', type: 'range', min: 0, max: 24, step: 1, value: 6 },
+      { id: 'cyclesY', label: 'Cycles down', type: 'range', min: 0, max: 24, step: 1, value: 0 },
+      { id: 'warp', label: 'Waviness', type: 'range', min: 0, max: 100, step: 5, value: 0, suffix: '%' },
+      { id: 'sharpness', label: 'Sharpness', type: 'range', min: 0, max: 100, step: 5, value: 0, suffix: '%' },
+      { id: 'duty', label: 'Fill width', type: 'range', min: 5, max: 95, step: 5, value: 50, suffix: '%' },
+      { id: 'mode', label: 'Waveform', type: 'select', value: 'sine', options: [
+        { value: 'sine', label: 'Sine' },
+        { value: 'bands', label: 'Hard bands' },
+        { value: 'triangle', label: 'Triangle' },
+        { value: 'saw', label: 'Saw' },
+      ] },
+    ],
+    value(nx, ny, o, tx, ty, seed) {
+      let phase = o.cyclesX * nx + o.cyclesY * ny;
+      if (o.warp > 0) {
+        const w = (fbm(nx, ny, 3, 3, 3, 0.6, tx, ty, seed) - 0.5) * (o.warp / 100) * 1.2;
+        phase += w;
+      }
+      const f = fract(phase);
+      let s = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
+      if (o.mode === 'bands') s = f < (o.duty / 100) ? 1 : 0;
+      if (o.mode === 'triangle') s = 1 - Math.abs(f * 2 - 1);
+      if (o.mode === 'saw') s = f;
+      if (o.sharpness > 0) {
+        const k = o.sharpness / 100;
+        const sq = smoothstep(0.5 - 0.5 * (1 - k), 0.5 + 0.5 * (1 - k), s);
+        s = lerp(s, sq, k);
+      }
+      return s;
+    },
+  },
+  {
+    id: 'grid', name: 'Grid / Checkers', icon: '╬', desc: 'Lines, tiles, checkerboard',
+    knobs: [
+      { id: 'divX', label: 'Columns', type: 'range', min: 1, max: 32, step: 1, value: 8 },
+      { id: 'divY', label: 'Rows', type: 'range', min: 1, max: 32, step: 1, value: 8 },
+      { id: 'thickness', label: 'Line weight', type: 'range', min: 2, max: 50, step: 2, value: 12, suffix: '%' },
+      { id: 'rounding', label: 'Tile bevel', type: 'range', min: 0, max: 100, step: 5, value: 0, suffix: '%' },
+      { id: 'offset', label: 'Row offset', type: 'range', min: 0, max: 100, step: 5, value: 0, suffix: '%' },
+      { id: 'style', label: 'Style', type: 'select', value: 'lines', options: [
+        { value: 'lines', label: 'Grid lines' },
+        { value: 'checkers', label: 'Checkers' },
+        { value: 'both', label: 'Checkers + lines' },
+        { value: 'tiles', label: 'Tile centers' },
+      ] },
+    ],
+    value(nx, ny, o) {
+      const oy = Math.floor(ny * o.divY);
+      const x = nx + (oy * o.offset / 100) / Math.max(1, o.divX);
+      const checker = ((Math.floor(x * o.divX) + oy) & 1) ? 1 : 0;
+      if (o.style === 'checkers') return checker;
+      const lw = o.thickness / 100 * 0.5;
+      const fx = fract(x * o.divX), fy = fract(ny * o.divY);
+      const dxl = Math.min(fx, 1 - fx), dyl = Math.min(fy, 1 - fy);
+      const line = Math.min(dxl, dyl);
+      const grid = 1 - smoothstep(lw - 0.02, lw, line);
+      if (o.style === 'tiles') {
+        const cx = Math.abs(fx - 0.5) * 2, cy = Math.abs(fy - 0.5) * 2;
+        const edge = Math.max(cx, cy);
+        const bevel = Math.max(0.001, o.rounding / 100);
+        return 1 - smoothstep(1 - bevel, 1, edge);
+      }
+      return o.style === 'both' ? Math.max(checker * 0.55, grid) : grid;
+    },
+  },
+  {
+    id: 'bricks', name: 'Bricks / Blocks', icon: '▤', desc: 'Masonry, pavers, panels',
+    knobs: [
+      { id: 'cols', label: 'Columns', type: 'range', min: 1, max: 24, step: 1, value: 8 },
+      { id: 'rows', label: 'Rows', type: 'range', min: 1, max: 24, step: 1, value: 5 },
+      { id: 'mortar', label: 'Mortar width', type: 'range', min: 1, max: 35, step: 1, value: 8, suffix: '%' },
+      { id: 'bevel', label: 'Bevel / edge falloff', type: 'range', min: 0, max: 50, step: 2, value: 14, suffix: '%' },
+      { id: 'stagger', label: 'Row stagger', type: 'range', min: 0, max: 100, step: 5, value: 50, suffix: '%' },
+      { id: 'chips', label: 'Surface chips', type: 'range', min: 0, max: 100, step: 5, value: 20, suffix: '%' },
+      { id: 'style', label: 'Style', type: 'select', value: 'brick', options: [
+        { value: 'brick', label: 'Brick height' },
+        { value: 'mortar', label: 'Mortar mask' },
+        { value: 'blocks', label: 'Panel blocks' },
+      ] },
+    ],
+    value(nx, ny, o, tx, ty, seed) {
+      const row = Math.floor(ny * o.rows);
+      const stagger = (row * o.stagger / 100) / Math.max(1, o.cols);
+      const x = o.style === 'blocks' ? nx : nx + stagger;
+      const fx = fract(x * o.cols), fy = fract(ny * o.rows);
+      const edge = Math.min(fx, 1 - fx, fy, 1 - fy);
+      const mortar = o.mortar / 100 * 0.5;
+      const bevel = Math.max(0.001, o.bevel / 100 * 0.35);
+      const inside = smoothstep(mortar, mortar + bevel, edge);
+      const chip = fbm(x, ny, o.cols * 2, o.rows * 2, 3, 0.55, tx, ty, seed + 333);
+      const pitted = clamp01(inside - Math.max(0, chip - 0.55) * (o.chips / 100) * 1.8);
+      if (o.style === 'mortar') return 1 - inside;
+      return pitted;
+    },
+  },
+  {
+    id: 'weave', name: 'Weave / Fabric', icon: '⊞', desc: 'Threads, baskets, cloth',
+    knobs: [
+      { id: 'threadsX', label: 'Warp threads', type: 'range', min: 1, max: 48, step: 1, value: 14 },
+      { id: 'threadsY', label: 'Weft threads', type: 'range', min: 1, max: 48, step: 1, value: 14 },
+      { id: 'width', label: 'Thread width', type: 'range', min: 10, max: 95, step: 5, value: 70, suffix: '%' },
+      { id: 'softness', label: 'Fiber softness', type: 'range', min: 0, max: 60, step: 2, value: 18, suffix: '%' },
+      { id: 'warp', label: 'Fiber wobble', type: 'range', min: 0, max: 100, step: 5, value: 20, suffix: '%' },
+      { id: 'style', label: 'Style', type: 'select', value: 'plain', options: [
+        { value: 'plain', label: 'Plain weave' },
+        { value: 'basket', label: 'Basket weave' },
+        { value: 'vertical', label: 'Warp only' },
+        { value: 'horizontal', label: 'Weft only' },
+      ] },
+    ],
+    value(nx, ny, o, tx, ty, seed) {
+      const wob = (o.warp / 100) * 0.08;
+      const x = nx + (fbm(nx, ny, 4, 4, 2, 0.6, tx, ty, seed + 701) - 0.5) * wob;
+      const y = ny + (fbm(nx, ny, 4, 4, 2, 0.6, tx, ty, seed + 702) - 0.5) * wob;
+      const fx = fract(x * o.threadsX), fy = fract(y * o.threadsY);
+      const dx = Math.abs(fx - 0.5) * 2, dy = Math.abs(fy - 0.5) * 2;
+      const half = o.width / 100;
+      const soft = Math.max(0.005, o.softness / 100);
+      const warpThread = 1 - smoothstep(half, half + soft, dx);
+      const weftThread = 1 - smoothstep(half, half + soft, dy);
+      if (o.style === 'vertical') return warpThread;
+      if (o.style === 'horizontal') return weftThread;
+      const ix = Math.floor(x * o.threadsX), iy = Math.floor(y * o.threadsY);
+      const block = o.style === 'basket' ? 2 : 1;
+      const over = ((Math.floor(ix / block) + Math.floor(iy / block)) & 1) ? warpThread : weftThread;
+      const under = ((Math.floor(ix / block) + Math.floor(iy / block)) & 1) ? weftThread : warpThread;
+      const rib = 0.18 * Math.cos((fx - 0.5) * Math.PI * 2) + 0.18 * Math.cos((fy - 0.5) * Math.PI * 2);
+      return clamp01(Math.max(over, under * 0.58) + rib);
+    },
+  },
+  {
+    id: 'wood', name: 'Wood / Rings', icon: '≋', desc: 'Grain, growth rings, planks',
+    knobs: [
+      { id: 'rings', label: 'Ring frequency', type: 'range', min: 2, max: 48, step: 1, value: 14 },
+      { id: 'grain', label: 'Fine grain', type: 'range', min: 0, max: 100, step: 5, value: 45, suffix: '%' },
+      { id: 'warp', label: 'Growth warp', type: 'range', min: 0, max: 100, step: 5, value: 35, suffix: '%' },
+      { id: 'contrast', label: 'Ring contrast', type: 'range', min: 10, max: 200, step: 5, value: 100, suffix: '%' },
+      { id: 'planks', label: 'Plank count', type: 'range', min: 0, max: 16, step: 1, value: 0 },
+      { id: 'style', label: 'Style', type: 'select', value: 'grain', options: [
+        { value: 'grain', label: 'Linear grain' },
+        { value: 'rings', label: 'Growth rings' },
+        { value: 'planks', label: 'Planks' },
+      ] },
+    ],
+    value(nx, ny, o, tx, ty, seed) {
+      const warp = (fbm(nx, ny, 3, 3, 4, 0.55, tx, ty, seed + 120) - 0.5) * (o.warp / 100);
+      let phase;
+      if (o.style === 'rings') {
+        const dx = nx - 0.5, dy = ny - 0.5;
+        phase = Math.sqrt(dx * dx + dy * dy) * o.rings * 2 + warp * 4;
+      } else {
+        phase = nx * o.rings + warp * 3;
+      }
+      let ring = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
+      ring = Math.pow(ring, 2.2);
+      const fine = fbm(nx, ny, Math.max(1, o.rings), 48, 3, 0.45, tx, ty, seed + 302);
+      let v = lerp(ring, fine, o.grain / 100 * 0.45);
+      if (o.style === 'planks' && o.planks > 0) {
+        const p = Math.floor(ny * o.planks);
+        const seam = Math.min(fract(ny * o.planks), 1 - fract(ny * o.planks));
+        const plankTone = hashf(p, 0, seed + 44) * 0.35 - 0.175;
+        v = clamp01(v + plankTone - (1 - smoothstep(0.015, 0.04, seam)) * 0.45);
+      }
+      return clamp01((v - 0.5) * (o.contrast / 100) + 0.5);
+    },
+  },
+  {
+    id: 'scratches', name: 'Scratches / Dust', icon: '╱', desc: 'Wear, fibers, speckles',
+    knobs: [
+      { id: 'density', label: 'Density', type: 'range', min: 1, max: 64, step: 1, value: 24 },
+      { id: 'length', label: 'Scratch length', type: 'range', min: 5, max: 95, step: 5, value: 55, suffix: '%' },
+      { id: 'width', label: 'Scratch width', type: 'range', min: 1, max: 30, step: 1, value: 5, suffix: '%' },
+      { id: 'angle', label: 'Angle', type: 'range', min: 0, max: 180, step: 5, value: 25 },
+      { id: 'randomness', label: 'Randomness', type: 'range', min: 0, max: 100, step: 5, value: 45, suffix: '%' },
+      { id: 'style', label: 'Style', type: 'select', value: 'scratches', options: [
+        { value: 'scratches', label: 'Directional scratches' },
+        { value: 'dust', label: 'Dust speckles' },
+        { value: 'fibers', label: 'Fibers' },
+      ] },
+    ],
+    value(nx, ny, o, tx, ty, seed) {
+      if (o.style === 'dust') {
+        const d = fbm(nx, ny, o.density, o.density, 2, 0.35, tx, ty, seed + 88);
+        return smoothstep(0.72 - o.randomness / 300, 0.95, d);
+      }
+      const a = o.angle * Math.PI / 180;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const wob = (fbm(nx, ny, 5, 5, 2, 0.5, tx, ty, seed + 515) - 0.5) * o.randomness / 100;
+      const u = nx * ca + ny * sa + wob * 0.18;
+      const v = -nx * sa + ny * ca;
+      const lines = fract(v * o.density);
+      const across = Math.min(lines, 1 - lines);
+      const along = fract(u * Math.max(1, o.density / Math.max(0.08, o.length / 100)));
+      const broken = hashf(Math.floor(v * o.density), Math.floor(u * o.density), seed + 22);
+      const width = o.width / 100 * 0.5;
+      const line = 1 - smoothstep(width, width + 0.025, across);
+      const seg = along < o.length / 100 ? 1 : 0;
+      const fiber = o.style === 'fibers' ? 0.45 + 0.55 * fbm(nx, ny, 32, 4, 3, 0.45, tx, ty, seed + 91) : 1;
+      return clamp01(line * seg * fiber * smoothstep(0.2, 0.95, broken + o.randomness / 180));
+    },
+  },
+];
+
+// ============================================================================
+// Color ramps
+// ============================================================================
+const RAMPS = {
+  grayscale: { label: 'Grayscale', stops: [[0, [10, 10, 12]], [1, [240, 242, 245]]] },
+  mono: { label: 'Two-color', stops: null }, // uses colorA → colorB
+  fire: { label: 'Fire', stops: [[0, [4, 2, 6]], [0.35, [120, 22, 12]], [0.6, [230, 92, 22]], [0.85, [248, 200, 64]], [1, [255, 248, 232]]] },
+  ice: { label: 'Ice', stops: [[0, [4, 8, 28]], [0.4, [22, 72, 158]], [0.7, [62, 172, 230]], [1, [236, 250, 255]]] },
+  earth: { label: 'Earth', stops: [[0, [28, 20, 13]], [0.4, [92, 66, 40]], [0.62, [142, 122, 72]], [0.8, [108, 138, 70]], [1, [212, 222, 184]]] },
+  teal: { label: 'Teal', stops: [[0, [6, 14, 18]], [0.45, [16, 90, 96]], [0.75, [45, 212, 191]], [1, [222, 255, 248]]] },
+};
+const RAMP_ORDER = ['grayscale', 'mono', 'fire', 'ice', 'earth', 'teal'];
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function rampColor(ramp, s, a, bRgb) {
+  if (ramp === 'mono') {
+    return [Math.round(lerp(a[0], bRgb[0], s)), Math.round(lerp(a[1], bRgb[1], s)), Math.round(lerp(a[2], bRgb[2], s))];
+  }
+  const stops = RAMPS[ramp].stops;
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [p0, c0] = stops[i], [p1, c1] = stops[i + 1];
+    if (s <= p1) {
+      const t = (s - p0) / (p1 - p0 || 1);
+      return [Math.round(lerp(c0[0], c1[0], t)), Math.round(lerp(c0[1], c1[1], t)), Math.round(lerp(c0[2], c1[2], t))];
+    }
+  }
+  const last = stops[stops.length - 1][1];
+  return [last[0], last[1], last[2]];
+}
+
+// Pseudo-pattern: the advanced mixer. Lives in the grid alongside the six
+// base patterns but swaps the knob area for the layer mixer.
+const MIXER = { id: 'custom', name: 'Custom / Mix', icon: '≣', desc: 'Blend every pattern', isMixer: true };
+const GRID_ITEMS = [...PATTERNS, MIXER];
+
+// ============================================================================
+// State
+// ============================================================================
+let currentPat = PATTERNS[0];
+let knobValues = {};
+const knobStore = {}; // per-pattern persistence
+let tileMode = 'both';
+let ramp = 'teal';
+let bgMode = 'opaque';
+const preview = $('preview');
+const pctx = preview.getContext('2d');
+const texCanvas = document.createElement('canvas'); // single tile, preview-sized
+const tctx = texCanvas.getContext('2d');
+
+const PREVIEW_MAX = 512;
+
+// ============================================================================
+// UI: pattern grid + dynamic knobs
+// ============================================================================
+function buildPatGrid() {
+  const grid = $('patGrid');
+  grid.innerHTML = '';
+  for (const pat of GRID_ITEMS) {
+    const card = document.createElement('div');
+    card.className = 'pat-card' + (pat === currentPat ? ' on' : '') + (pat.isMixer ? ' pat-card-mix' : '');
+    card.dataset.pat = pat.id;
+    card.innerHTML = `<div class="icon">${pat.icon}</div><div class="name">${pat.name}</div><div class="desc">${pat.desc}</div>`;
+    card.addEventListener('click', () => selectPattern(pat));
+    grid.appendChild(card);
+  }
+}
+function selectPattern(pat) {
+  currentPat = pat;
+  document.querySelectorAll('.pat-card').forEach(c => c.classList.toggle('on', c.dataset.pat === pat.id));
+  $('patName').textContent = pat.name;
+  const mixing = !!pat.isMixer;
+  $('patKnobs').style.display = mixing ? 'none' : 'block';
+  $('mixer').style.display = mixing ? 'block' : 'none';
+  if (mixing) buildMixer();
+  else buildKnobs();
+  $('previewLabel').textContent = `${pat.name} · seed ${$('seed').value}`;
+  schedulePreview();
+}
+// Build a set of knob controls into `container`, reading/writing `store`
+// (an object keyed by knob id) and calling onChange after any edit. Used by
+// both single-pattern mode and every layer of the mixer.
+function buildKnobSet(container, knobs, store, onChange) {
+  container.innerHTML = '';
+  const opts = document.createElement('div');
+  opts.className = 'opts';
+  for (const k of knobs) {
+    if (!(k.id in store)) store[k.id] = k.value;
+    const v = store[k.id];
+    const o = document.createElement('div');
+    o.className = 'opt';
+    if (k.type === 'range') {
+      o.innerHTML = `<div class="row"><label>${k.label}</label><span class="val"><span data-disp="${k.id}">${v}</span>${k.suffix || ''}</span></div>
+        <input type="range" min="${k.min}" max="${k.max}" step="${k.step}" value="${v}" data-knob="${k.id}">`;
+    } else if (k.type === 'select') {
+      const oo = k.options.map(op => `<option value="${op.value}"${op.value === v ? ' selected' : ''}>${op.label}</option>`).join('');
+      o.innerHTML = `<label>${k.label}</label><select data-knob="${k.id}">${oo}</select>`;
+    } else if (k.type === 'toggle') {
+      o.innerHTML = `<label>&nbsp;</label><label class="check"><input type="checkbox" data-knob="${k.id}"${v ? ' checked' : ''}><span class="box"></span><span class="txt">${k.label}</span></label>`;
+    }
+    opts.appendChild(o);
+  }
+  container.appendChild(opts);
+  container.querySelectorAll('[data-knob]').forEach(input => {
+    const handler = () => {
+      const id = input.dataset.knob;
+      let val;
+      if (input.type === 'range') val = parseFloat(input.value);
+      else if (input.type === 'checkbox') val = input.checked;
+      else val = input.value;
+      store[id] = val;
+      const disp = container.querySelector(`[data-disp="${id}"]`);
+      if (disp) disp.textContent = input.value;
+      onChange();
+    };
+    input.addEventListener('input', handler);
+    input.addEventListener('change', handler);
+  });
+}
+
+function buildKnobs() {
+  const store = knobStore[currentPat.id] || (knobStore[currentPat.id] = {});
+  knobValues = store;
+  buildKnobSet($('knobContainer'), currentPat.knobs, knobValues, schedulePreview);
+}
+
+// ============================================================================
+// Blend modes — combine two scalars (0..1). Used by the mixer.
+// ============================================================================
+const BLEND_MODES = [
+  ['normal', 'Normal'], ['add', 'Add'], ['multiply', 'Multiply'], ['screen', 'Screen'],
+  ['overlay', 'Overlay'], ['softlight', 'Soft light'], ['subtract', 'Subtract'],
+  ['difference', 'Difference'], ['darken', 'Darken (min)'], ['lighten', 'Lighten (max)'],
+];
+function blend(a, b, mode) {
+  switch (mode) {
+    case 'add': return Math.min(1, a + b);
+    case 'multiply': return a * b;
+    case 'screen': return 1 - (1 - a) * (1 - b);
+    case 'overlay': return a < 0.5 ? 2 * a * b : 1 - 2 * (1 - a) * (1 - b);
+    case 'softlight': return b < 0.5 ? a - (1 - 2 * b) * a * (1 - a)
+      : a + (2 * b - 1) * (((a < 0.25) ? ((16 * a - 12) * a + 4) * a : Math.sqrt(a)) - a);
+    case 'subtract': return Math.max(0, a - b);
+    case 'difference': return Math.abs(a - b);
+    case 'darken': return Math.min(a, b);
+    case 'lighten': return Math.max(a, b);
+    case 'normal': default: return b;
+  }
+}
+
+// ============================================================================
+// Mixer — every base pattern is a layer with a weight, blend mode, invert, and
+// its own full knob set. Layers stack bottom→top (registry order); each blends
+// onto the accumulator at opacity = weight. Periodic in → periodic out, so the
+// mix stays seamless on whichever axes are tiled.
+// ============================================================================
+const mixLayers = {};
+const mixUi = { query: '', activeOnly: false };
+const mixMaster = { warp: 0, contrast: 0, bias: 0, levels: 0, norm: false };
+function initMixLayers() {
+  const defaultWeight = { fractal: 100, cellular: 30, stripes: 20 };
+  const defaultBlend = { cellular: 'multiply', stripes: 'overlay' };
+  for (const p of PATTERNS) {
+    const knobs = {};
+    p.knobs.forEach(k => { knobs[k.id] = k.value; });
+    mixLayers[p.id] = {
+      weight: defaultWeight[p.id] || 0,
+      invert: false,
+      blend: defaultBlend[p.id] || 'normal',
+      knobs,
+    };
+  }
+}
+
+function buildMixer() {
+  const m = $('mixer');
+  m.innerHTML = '';
+
+  // Master controls
+  const master = document.createElement('div');
+  master.className = 'mix-master';
+  master.innerHTML = `
+    <div class="knob-title">Master</div>
+    <div class="opts three">
+      <div class="opt">
+        <div class="row"><label>Domain warp</label><span class="val"><span id="mixWarpVal">${mixMaster.warp}</span>%</span></div>
+        <input type="range" id="mixWarp" min="0" max="100" value="${mixMaster.warp}" step="5">
+      </div>
+      <div class="opt">
+        <div class="row"><label>Mix contrast</label><span class="val"><span id="mixContrastVal">${mixMaster.contrast}</span></span></div>
+        <input type="range" id="mixContrast" min="-50" max="100" value="${mixMaster.contrast}" step="5">
+      </div>
+      <div class="opt">
+        <div class="row"><label>Mix bias</label><span class="val"><span id="mixBiasVal">${mixMaster.bias}</span></span></div>
+        <input type="range" id="mixBias" min="-50" max="50" value="${mixMaster.bias}" step="5">
+      </div>
+    </div>
+    <div class="opts three" style="margin-top:10px;">
+      <div class="opt">
+        <label for="mixLevels">Posterize</label>
+        <select id="mixLevels">
+          <option value="0"${mixMaster.levels === 0 ? ' selected' : ''}>Off</option>
+          <option value="2"${mixMaster.levels === 2 ? ' selected' : ''}>2 levels</option>
+          <option value="3"${mixMaster.levels === 3 ? ' selected' : ''}>3 levels</option>
+          <option value="4"${mixMaster.levels === 4 ? ' selected' : ''}>4 levels</option>
+          <option value="6"${mixMaster.levels === 6 ? ' selected' : ''}>6 levels</option>
+          <option value="8"${mixMaster.levels === 8 ? ' selected' : ''}>8 levels</option>
+          <option value="12"${mixMaster.levels === 12 ? ' selected' : ''}>12 levels</option>
+          <option value="16"${mixMaster.levels === 16 ? ' selected' : ''}>16 levels</option>
+        </select>
+      </div>
+      <div class="opt">
+        <label>&nbsp;</label>
+        <label class="check"><input type="checkbox" id="mixNorm"${mixMaster.norm ? ' checked' : ''}><span class="box"></span><span class="txt">Auto-level (normalize)</span></label>
+      </div>
+    </div>
+    <div class="mix-presets">
+      <button type="button" class="pill" data-preset="terrain">Terrain</button>
+      <button type="button" class="pill" data-preset="tiles">Tiles</button>
+      <button type="button" class="pill" data-preset="fabric">Fabric</button>
+      <button type="button" class="pill" data-preset="worn">Worn</button>
+      <button type="button" class="pill" data-preset="clean">Clean</button>
+    </div>
+    <div class="mix-toolbar">
+      <input type="text" id="mixSearch" placeholder="Filter layers" value="${mixUi.query}">
+      <label class="check"><input type="checkbox" id="mixActiveOnly"${mixUi.activeOnly ? ' checked' : ''}><span class="box"></span><span class="txt">Active only</span></label>
+      <button type="button" class="btn ghost small" id="mixExpand">Expand active</button>
+      <button type="button" class="btn ghost small" id="mixCollapse">Collapse</button>
+      <button type="button" class="btn ghost small" id="mixReset">Reset</button>
+      <button type="button" class="btn ghost small" id="mixRandom">&#9863; Randomize</button>
+    </div>`;
+  m.appendChild(master);
+
+  // Layers
+  for (const p of PATTERNS) {
+    const L = mixLayers[p.id];
+    const block = document.createElement('div');
+    block.className = 'mix-layer' + (L.weight > 0 ? ' active' : '');
+    block.dataset.layer = p.id;
+
+    const head = document.createElement('div');
+    head.className = 'mix-head';
+    head.innerHTML = `
+      <span class="micon">${p.icon}</span>
+      <span class="mname">${p.name}</span>
+      <input type="range" class="mw" min="0" max="100" step="5" value="${L.weight}" data-mix="weight">
+      <span class="mwval" data-mwval>${L.weight}%</span>`;
+    block.appendChild(head);
+
+    const ctrls = document.createElement('div');
+    ctrls.className = 'mix-controls';
+    const blendOpts = BLEND_MODES.map(([v, lab]) => `<option value="${v}"${v === L.blend ? ' selected' : ''}>${lab}</option>`).join('');
+    ctrls.innerHTML = `
+      <select data-mix="blend" class="mix-blend">${blendOpts}</select>
+      <label class="check"><input type="checkbox" data-mix="invert"${L.invert ? ' checked' : ''}><span class="box"></span><span class="txt">Invert</span></label>
+      <div class="mix-quick">
+        <button type="button" data-quick="solo">Solo</button>
+        <button type="button" data-quick="0">0</button>
+        <button type="button" data-quick="25">25</button>
+        <button type="button" data-quick="50">50</button>
+        <button type="button" data-quick="100">100</button>
+      </div>`;
+    block.appendChild(ctrls);
+
+    const det = document.createElement('details');
+    det.className = 'mix-opts';
+    const sum = document.createElement('summary');
+    sum.textContent = `${p.name} options`;
+    det.appendChild(sum);
+    const body = document.createElement('div');
+    body.className = 'mix-opts-body';
+    det.appendChild(body);
+    buildKnobSet(body, p.knobs, L.knobs, schedulePreview);
+    block.appendChild(det);
+
+    // wire head/controls
+    head.querySelector('[data-mix="weight"]').addEventListener('input', e => {
+      L.weight = parseFloat(e.target.value);
+      head.querySelector('[data-mwval]').textContent = L.weight + '%';
+      block.classList.toggle('active', L.weight > 0);
+      schedulePreview();
+    });
+    ctrls.querySelector('[data-mix="blend"]').addEventListener('change', e => { L.blend = e.target.value; schedulePreview(); });
+    ctrls.querySelector('[data-mix="invert"]').addEventListener('change', e => { L.invert = e.target.checked; schedulePreview(); });
+    ctrls.querySelectorAll('[data-quick]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.quick;
+        if (v === 'solo') setMixSolo(p.id);
+        else setMixWeight(p.id, parseFloat(v));
+      });
+    });
+
+    m.appendChild(block);
+  }
+
+  // master bindings
+  $('mixWarp').addEventListener('input', () => { mixMaster.warp = parseFloat($('mixWarp').value) || 0; $('mixWarpVal').textContent = mixMaster.warp; schedulePreview(); });
+  $('mixContrast').addEventListener('input', () => { mixMaster.contrast = parseFloat($('mixContrast').value) || 0; $('mixContrastVal').textContent = mixMaster.contrast; schedulePreview(); });
+  $('mixBias').addEventListener('input', () => { mixMaster.bias = parseFloat($('mixBias').value) || 0; $('mixBiasVal').textContent = mixMaster.bias; schedulePreview(); });
+  $('mixLevels').addEventListener('change', () => { mixMaster.levels = parseInt($('mixLevels').value) || 0; schedulePreview(); });
+  $('mixNorm').addEventListener('change', () => { mixMaster.norm = $('mixNorm').checked; schedulePreview(); });
+  $('mixRandom').addEventListener('click', randomizeMix);
+  $('mixReset').addEventListener('click', () => { resetMix(); buildMixer(); schedulePreview(); });
+  $('mixExpand').addEventListener('click', () => document.querySelectorAll('.mix-layer.active .mix-opts').forEach(d => d.open = true));
+  $('mixCollapse').addEventListener('click', () => document.querySelectorAll('.mix-opts').forEach(d => d.open = false));
+  $('mixSearch').addEventListener('input', e => { mixUi.query = e.target.value; applyMixFilters(); });
+  $('mixActiveOnly').addEventListener('change', e => { mixUi.activeOnly = e.target.checked; applyMixFilters(); });
+  document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => applyMixPreset(btn.dataset.preset)));
+  applyMixFilters();
+}
+
+function setMixWeight(id, weight) {
+  const L = mixLayers[id];
+  if (!L) return;
+  L.weight = weight;
+  buildMixer();
+  schedulePreview();
+}
+
+function setMixSolo(id) {
+  for (const key of Object.keys(mixLayers)) mixLayers[key].weight = key === id ? 100 : 0;
+  buildMixer();
+  document.querySelector(`[data-layer="${id}"]`)?.classList.add('solo');
+  schedulePreview();
+}
+
+function resetMix() {
+  for (const p of PATTERNS) {
+    const L = mixLayers[p.id];
+    L.weight = p.id === 'fractal' ? 100 : 0;
+    L.blend = 'normal';
+    L.invert = false;
+  }
+}
+
+function applyMixFilters() {
+  const q = mixUi.query.trim().toLowerCase();
+  document.querySelectorAll('.mix-layer').forEach(layer => {
+    const id = layer.dataset.layer;
+    const L = mixLayers[id];
+    const p = PATTERNS.find(x => x.id === id);
+    const matches = !q || `${p.name} ${p.desc} ${p.id}`.toLowerCase().includes(q);
+    const active = !mixUi.activeOnly || L.weight > 0;
+    layer.classList.toggle('hidden', !(matches && active));
+  });
+}
+
+function applyMixPreset(name) {
+  for (const L of Object.values(mixLayers)) {
+    L.weight = 0;
+    L.blend = 'normal';
+    L.invert = false;
+  }
+  const presets = {
+    terrain: { fractal: [100, 'normal'], cellular: [35, 'multiply'], scratches: [20, 'overlay'] },
+    tiles: { grid: [100, 'normal'], bricks: [75, 'multiply'], scratches: [20, 'overlay'] },
+    fabric: { weave: [100, 'normal'], stripes: [30, 'softlight'], scratches: [20, 'overlay'] },
+    worn: { bricks: [80, 'normal'], cellular: [45, 'multiply'], scratches: [55, 'screen'], fractal: [25, 'overlay'] },
+    clean: { grid: [70, 'normal'], fractal: [12, 'softlight'] },
+  };
+  for (const [id, cfg] of Object.entries(presets[name] || {})) {
+    if (!mixLayers[id]) continue;
+    mixLayers[id].weight = cfg[0];
+    mixLayers[id].blend = cfg[1];
+  }
+  buildMixer();
+  schedulePreview();
+}
+
+function randomizeMix() {
+  const blends = BLEND_MODES.map(b => b[0]);
+  const rng = () => Math.random();
+  // pick 2–4 active layers
+  const ids = PATTERNS.map(p => p.id);
+  for (const id of ids) mixLayers[id].weight = 0;
+  const n = 2 + Math.floor(rng() * 3);
+  const shuffled = ids.slice().sort(() => rng() - 0.5).slice(0, n);
+  shuffled.forEach((id, i) => {
+    const L = mixLayers[id];
+    L.weight = i === 0 ? 100 : 20 + Math.floor(rng() * 70 / 5) * 5;
+    L.blend = i === 0 ? 'normal' : blends[1 + Math.floor(rng() * (blends.length - 1))];
+    L.invert = rng() < 0.25;
+    // jiggle a couple of that pattern's range knobs
+    const pat = PATTERNS.find(p => p.id === id);
+    pat.knobs.forEach(k => {
+      if (k.type === 'range' && rng() < 0.6) {
+        const steps = Math.floor((k.max - k.min) / k.step);
+        L.knobs[k.id] = k.min + Math.floor(rng() * (steps + 1)) * k.step;
+      }
+    });
+  });
+  mixMaster.warp = Math.floor(rng() * 6) * 10;
+  mixMaster.contrast = Math.floor((rng() * 70 - 15) / 5) * 5;
+  mixMaster.bias = Math.floor((rng() * 50 - 25) / 5) * 5;
+  mixMaster.levels = rng() < 0.25 ? [0, 3, 4, 6, 8][Math.floor(rng() * 5)] : 0;
+  mixMaster.norm = rng() < 0.35;
+  $('seed').value = Math.floor(rng() * 1000000);
+  buildMixer();
+  schedulePreview();
+}
+
+// ============================================================================
+// UI: ramp swatches
+// ============================================================================
+function buildRamps() {
+  const row = $('rampRow');
+  row.innerHTML = '';
+  for (const key of RAMP_ORDER) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ramp-chip' + (key === ramp ? ' on' : '');
+    btn.dataset.ramp = key;
+    btn.title = RAMPS[key].label;
+    if (key === 'mono') {
+      btn.style.background = `linear-gradient(90deg, ${$('colorA').value}, ${$('colorB').value})`;
+      btn.classList.add('mono-chip');
+    } else {
+      const stops = RAMPS[key].stops;
+      btn.style.background = 'linear-gradient(90deg,' + stops.map(([p, c]) => `rgb(${c[0]},${c[1]},${c[2]}) ${(p * 100).toFixed(0)}%`).join(',') + ')';
+    }
+    const lbl = document.createElement('span');
+    lbl.textContent = RAMPS[key].label;
+    btn.appendChild(lbl);
+    btn.addEventListener('click', () => {
+      ramp = key;
+      document.querySelectorAll('.ramp-chip').forEach(x => x.classList.toggle('on', x.dataset.ramp === key));
+      $('monoColors').style.display = (key === 'mono') ? 'grid' : 'none';
+      schedulePreview();
+    });
+    row.appendChild(btn);
+  }
+  $('monoColors').style.display = (ramp === 'mono') ? 'grid' : 'none';
+}
+
+// ============================================================================
+// Rendering
+// ============================================================================
+// Render one tile of size N into the given context, in row bands, awaiting a
+// frame between bands so large exports don't freeze the UI. Builds a per-pixel
+// `sample()` closure once (single pattern or mixer), with all DOM-read params
+// snapshotted up front rather than read per pixel.
+async function renderTile(targetCtx, N, onProgress, sourceN = N) {
+  const tx = (tileMode === 'both' || tileMode === 'x') ? 1 : 0;
+  const ty = (tileMode === 'both' || tileMode === 'y') ? 1 : 0;
+  const seed = (parseInt($('seed').value) || 0) | 0;
+  const repeatX = parseInt($('repeatX').value) || 1;
+  const repeatY = parseInt($('repeatY').value) || 1;
+  const offsetX = (parseFloat($('offsetX').value) || 0) / 100;
+  const offsetY = (parseFloat($('offsetY').value) || 0) / 100;
+  const rot = parseInt($('rotate').value) || 0;
+  const mirrorX = $('mirrorX').checked;
+  const mirrorY = $('mirrorY').checked;
+  const globalWarp = (parseFloat($('globalWarp').value) || 0) / 100 * 0.35;
+  const transformDomain = (nx, ny) => {
+    let x = nx, y = ny;
+    if (rot === 90) { const ox = x; x = y; y = 1 - ox; }
+    else if (rot === 180) { x = 1 - x; y = 1 - y; }
+    else if (rot === 270) { const ox = x; x = 1 - y; y = ox; }
+    x = x * repeatX + offsetX;
+    y = y * repeatY + offsetY;
+    if (mirrorX) x = 1 - fract(x);
+    if (mirrorY) y = 1 - fract(y);
+    if (tx) x = fract(x);
+    if (ty) y = fract(y);
+    if (globalWarp > 0) {
+      const wx = fbm(x, y, 3, 3, 3, 0.55, tx, ty, seed + 601) - 0.5;
+      const wy = fbm(x, y, 3, 3, 3, 0.55, tx, ty, seed + 761) - 0.5;
+      x += wx * globalWarp;
+      y += wy * globalWarp;
+      if (tx) x = fract(x);
+      if (ty) y = fract(y);
+    }
+    return [x, y];
+  };
+
+  // color/adjust snapshot
+  const a = hexToRgb($('colorA').value);
+  const bRgb = hexToRgb($('colorB').value);
+  const alphaMode = (bgMode === 'alpha');
+  const outputMap = $('outputMap').value;
+  const mapStrength = parseFloat($('mapStrength').value) / 50;
+  const inv = $('invert').checked;
+  const bright = parseFloat($('bright').value) / 100;
+  const cAmt = parseFloat($('contrast').value) / 100;
+  const cf = (1 + cAmt) / (1 - cAmt || 0.0001);
+  const levelLow = parseFloat($('levelLow').value) / 100;
+  const levelHigh = parseFloat($('levelHigh').value) / 100;
+  const gamma = parseFloat($('gamma').value) / 100;
+  const poster = parseInt($('posterize').value) || 0;
+  const threshold = parseFloat($('threshold').value) / 100;
+  const detail = parseFloat($('detail').value) / 100;
+  const resDetail = parseFloat($('resDetail').value) / 100;
+  const detailScale = parseFloat($('detailScale').value) || 24;
+  const post = (s, nx, ny) => {
+    if (detail > 0) s += (fbm(nx, ny, detailScale, detailScale, 3, 0.5, tx, ty, seed + 4041) - 0.5) * detail;
+    if (resDetail > 0) {
+      const hi = Math.max(4, Math.min(512, Math.round(sourceN / 8)));
+      s += (fbm(nx, ny, hi, hi, 2, 0.45, tx, ty, seed + 9091) - 0.5) * resDetail * 0.55;
+    }
+    s = remap01(s, levelLow, levelHigh);
+    s = Math.pow(s, 1 / gamma);
+    if (poster > 1) s = Math.round(clamp01(s) * (poster - 1)) / (poster - 1);
+    if (threshold > 0) s = s >= threshold ? 1 : 0;
+    if (inv) s = 1 - s;
+    s = (s - 0.5) * cf + 0.5 + bright;
+    return clamp01(s);
+  };
+
+  // build sampler
+  let sample;
+  if (currentPat.isMixer) {
+    const warp = (parseFloat($('mixWarp').value) || 0) / 100 * 0.6;
+    const levels = parseInt($('mixLevels').value) || 0;
+    const normalize = $('mixNorm').checked;
+    const mixContrast = (parseFloat($('mixContrast').value) || 0) / 100;
+    const mixBias = (parseFloat($('mixBias').value) || 0) / 100;
+    const mixCf = (1 + mixContrast) / (1 - mixContrast || 0.0001);
+    const layers = PATTERNS
+      .map((p, i) => ({ p, L: mixLayers[p.id], so: seed + i * 7919 }))
+      .filter(o => o.L.weight > 0);
+    const rawMix = (nx, ny) => {
+      let x = nx, y = ny;
+      if (warp > 0) {
+        x = nx + (fbm(nx, ny, 3, 3, 3, 0.6, tx, ty, seed + 777) - 0.5) * warp;
+        y = ny + (fbm(nx, ny, 3, 3, 3, 0.6, tx, ty, seed + 888) - 0.5) * warp;
+      }
+      let acc = 0;
+      for (const o of layers) {
+        let v = o.p.value(x, y, o.L.knobs, tx, ty, o.so);
+        if (o.L.invert) v = 1 - v;
+        acc = lerp(acc, blend(acc, v, o.L.blend), o.L.weight / 100);
+      }
+      return acc;
+    };
+    let mn = 0, span = 1;
+    if (normalize) {
+      const G = 56; let lo = 1, hi = 0;
+      for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+        const v = rawMix((i + 0.5) / G, (j + 0.5) / G);
+        if (v < lo) lo = v; if (v > hi) hi = v;
+      }
+      mn = lo; span = (hi - lo) || 1;
+    }
+    sample = (nx, ny) => {
+      let s = (rawMix(nx, ny) - mn) / span;
+      s = (s - 0.5) * mixCf + 0.5 + mixBias;
+      if (levels > 1) s = Math.round(clamp01(s) * (levels - 1)) / (levels - 1);
+      return clamp01(s);
+    };
+  } else {
+    const o = knobValues;
+    const pat = currentPat;
+    sample = (nx, ny) => pat.value(nx, ny, o, tx, ty, seed);
+  }
+
+  const scalarAt = (nx, ny) => {
+    const [sx, sy] = transformDomain(nx, ny);
+    return post(sample(sx, sy), sx, sy);
+  };
+
+  const img = targetCtx.createImageData(N, N);
+  const data = img.data;
+  const band = Math.max(1, Math.floor(N / 16));
+
+  for (let y0 = 0; y0 < N; y0 += band) {
+    const y1 = Math.min(N, y0 + band);
+    for (let y = y0; y < y1; y++) {
+      const ny = (y + 0.5) / N;
+      for (let x = 0; x < N; x++) {
+        const nx = (x + 0.5) / N;
+        const s = scalarAt(nx, ny);
+        const i = (y * N + x) * 4;
+        if (outputMap === 'normal') {
+          const e = 1 / N;
+          const sx0 = scalarAt(nx - e, ny), sx1 = scalarAt(nx + e, ny);
+          const sy0 = scalarAt(nx, ny - e), sy1 = scalarAt(nx, ny + e);
+          const dx = (sx0 - sx1) * mapStrength;
+          const dy = (sy0 - sy1) * mapStrength;
+          const dz = 1;
+          const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+          data[i] = Math.round((dx / len * 0.5 + 0.5) * 255);
+          data[i + 1] = Math.round((dy / len * 0.5 + 0.5) * 255);
+          data[i + 2] = Math.round((dz / len * 0.5 + 0.5) * 255);
+          data[i + 3] = 255;
+        } else if (outputMap === 'height') {
+          const g = Math.round(s * 255);
+          data[i] = g; data[i + 1] = g; data[i + 2] = g; data[i + 3] = 255;
+        } else if (outputMap === 'roughness') {
+          const g = Math.round((1 - s * clamp01(mapStrength / 2)) * 255);
+          data[i] = g; data[i + 1] = g; data[i + 2] = g; data[i + 3] = 255;
+        } else if (outputMap === 'ao') {
+          const e = 1 / N;
+          const edge = Math.abs(s - scalarAt(nx + e, ny)) + Math.abs(s - scalarAt(nx, ny + e));
+          const g = Math.round(clamp01(1 - edge * 6 * mapStrength) * 255);
+          data[i] = g; data[i + 1] = g; data[i + 2] = g; data[i + 3] = 255;
+        } else if (alphaMode) {
+          data[i] = a[0]; data[i + 1] = a[1]; data[i + 2] = a[2];
+          data[i + 3] = Math.round(s * 255);
+        } else {
+          const [r, g, b] = rampColor(ramp, s, a, bRgb);
+          data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = 255;
+        }
+      }
+    }
+    if (onProgress) {
+      onProgress(y1 / N);
+      await new Promise(requestAnimationFrame);
+    }
+  }
+  targetCtx.putImageData(img, 0, 0);
+}
+
+let previewToken = 0;
+let previewQueued = false;
+function schedulePreview() {
+  if (previewQueued) return;
+  previewQueued = true;
+  requestAnimationFrame(() => { previewQueued = false; renderPreview(); });
+}
+
+async function renderPreview() {
+  const N = parseInt($('resolution').value);
+  const previewCap = { fast: 256, balanced: PREVIEW_MAX, sharp: 1024, exact: N }[$('previewQuality').value] || PREVIEW_MAX;
+  const mixerCap = currentPat.isMixer ? Math.min(previewCap, 384) : previewCap;
+  const pN = Math.min(N, mixerCap);
+  texCanvas.width = pN; texCanvas.height = pN;
+  const token = ++previewToken;
+  // Mixer can stack several heavy layers; yield between bands so the UI stays
+  // responsive. Single patterns are light enough to render in one pass.
+  const prog = currentPat.isMixer ? (() => {}) : null;
+  await renderTile(tctx, pN, prog, N);
+  if (token !== previewToken) return; // superseded
+
+  const tiled = $('showTiled').checked;
+  const reps = tiled ? 3 : 1;
+  const W = pN * reps;
+  preview.width = W; preview.height = W;
+  pctx.imageSmoothingEnabled = false;
+  const pat = pctx.createPattern(texCanvas, 'repeat');
+  pctx.fillStyle = pat;
+  pctx.fillRect(0, 0, W, W);
+  if (tiled) {
+    // subtle tile boundary guide
+    pctx.strokeStyle = 'rgba(45,212,191,0.25)';
+    pctx.lineWidth = 1;
+    for (let i = 1; i < reps; i++) {
+      pctx.beginPath();
+      pctx.moveTo(i * pN + 0.5, 0); pctx.lineTo(i * pN + 0.5, W);
+      pctx.moveTo(0, i * pN + 0.5); pctx.lineTo(W, i * pN + 0.5);
+      pctx.stroke();
+    }
+  }
+  $('infoSize').textContent = `${N} × ${N}`;
+  $('infoPreview').textContent = `${pN} px${pN < N ? ' cap' : ''}`;
+  $('infoTile').textContent = tileMode === 'none' ? 'none' : tileMode === 'x' ? 'horizontal' : tileMode === 'y' ? 'vertical' : 'both';
+  $('previewLabel').textContent = `${currentPat.name} · seed ${$('seed').value}`;
+}
+
+// ============================================================================
+// Bindings
+// ============================================================================
+document.querySelectorAll('#tileMode .pill').forEach(b => {
+  b.addEventListener('click', () => {
+    tileMode = b.dataset.tile;
+    document.querySelectorAll('#tileMode .pill').forEach(x => x.classList.toggle('on', x === b));
+    const notes = {
+      both: 'Both edges wrap — the tile repeats seamlessly in every direction.',
+      x: 'Left and right edges wrap; top and bottom are free. Good for horizontal bands.',
+      y: 'Top and bottom edges wrap; left and right are free. Good for vertical bands.',
+      none: 'No edges wrap — a one-off texture, not seamless.',
+    };
+    $('tileNote').textContent = notes[tileMode] + ' Preview renders at reduced size; export is full resolution.';
+    schedulePreview();
+  });
+});
+document.querySelectorAll('#bgMode .pill').forEach(b => {
+  b.addEventListener('click', () => {
+    bgMode = b.dataset.bg;
+    document.querySelectorAll('#bgMode .pill').forEach(x => x.classList.toggle('on', x === b));
+    schedulePreview();
+  });
+});
+['bright', 'contrast'].forEach(id => {
+  $(id).addEventListener('input', () => { $(id + 'Val').textContent = $(id).value; schedulePreview(); });
+});
+['repeatX', 'repeatY', 'offsetX', 'offsetY', 'globalWarp'].forEach(id => {
+  $(id).addEventListener('input', () => {
+    $(id + 'Val').textContent = $(id).value;
+    schedulePreview();
+  });
+});
+$('rotate').addEventListener('change', schedulePreview);
+$('mirrorX').addEventListener('change', schedulePreview);
+$('mirrorY').addEventListener('change', schedulePreview);
+['levelLow', 'levelHigh', 'gamma', 'threshold', 'detail', 'detailScale'].forEach(id => {
+  $(id).addEventListener('input', () => {
+    $(id + 'Val').textContent = $(id).value;
+    schedulePreview();
+  });
+});
+$('posterize').addEventListener('change', schedulePreview);
+$('invert').addEventListener('change', schedulePreview);
+$('resolution').addEventListener('change', schedulePreview);
+$('previewQuality').addEventListener('change', schedulePreview);
+$('showTiled').addEventListener('change', schedulePreview);
+$('smoothPreview').addEventListener('change', () => {
+  $('previewWrap').classList.toggle('smooth', $('smoothPreview').checked);
+  schedulePreview();
+});
+$('resDetail').addEventListener('input', () => { $('resDetailVal').textContent = $('resDetail').value; schedulePreview(); });
+$('outputMap').addEventListener('change', schedulePreview);
+$('mapStrength').addEventListener('input', () => { $('mapStrengthVal').textContent = $('mapStrength').value; schedulePreview(); });
+$('seed').addEventListener('change', schedulePreview);
+$('newSeed').addEventListener('click', () => { $('seed').value = Math.floor(Math.random() * 1000000); schedulePreview(); });
+$('colorA').addEventListener('input', () => { buildRamps(); schedulePreview(); });
+$('colorB').addEventListener('input', () => { buildRamps(); schedulePreview(); });
+
+// ============================================================================
+// Export
+// ============================================================================
+$('exportBtn').addEventListener('click', async () => {
+  const N = parseInt($('resolution').value);
+  const btn = $('exportBtn');
+  btn.disabled = true;
+  $('progWrap').classList.add('on');
+  $('progBar').style.width = '0%';
+  $('status').innerHTML = `<span class="accent">Rendering ${N}×${N}…</span>`;
+  try {
+    const out = document.createElement('canvas');
+    out.width = N; out.height = N;
+    const octx = out.getContext('2d');
+    await renderTile(octx, N, frac => { $('progBar').style.width = `${(frac * 100).toFixed(0)}%`; });
+    const blob = await new Promise((res, rej) =>
+      out.toBlob(b => b ? res(b) : rej(new Error('encode failed')), 'image/png'));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `texture_${currentPat.id}_${$('outputMap').value}_${tileMode}_${N}_${$('seed').value}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    $('status').innerHTML = `<span class="ok">Exported</span> · ${N}×${N} · ${(blob.size / 1024).toFixed(0)}KB`;
+  } catch (err) {
+    console.error(err);
+    $('status').innerHTML = `<span class="warn">Export failed: ${err.message || err}</span>`;
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => $('progWrap').classList.remove('on'), 1200);
+  }
+});
+
+// ============================================================================
+// Boot
+// ============================================================================
+initMixLayers();
+buildPatGrid();
+buildKnobs();
+buildRamps();
+renderPreview();
+</script>
+</body>
+</html>

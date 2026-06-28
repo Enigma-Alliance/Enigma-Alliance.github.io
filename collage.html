@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COLL//AGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#8b5cf6;
+  --accent-rgb:139,92,246;
+  --accent2:#c4b5fd;
+  --bg:#0a0a0c;
+  --panel:#121216;
+  --panel2:#17171d;
+  --line:#26262e;
+  --line2:#34343e;
+  --text:#e8e8ee;
+  --dim:#8a8a96;
+  --dim2:#5a5a64;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --display:'Space Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:13px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
+}
+::selection{background:rgba(var(--accent-rgb),.32)}
+
+/* ---- header ---- */
+header{
+  border-bottom:1px solid var(--line);
+  padding:18px 22px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+  background:linear-gradient(180deg,rgba(var(--accent-rgb),.04),transparent);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.tick{
+  width:6px;height:34px;border-radius:2px;
+  background:linear-gradient(180deg,var(--accent),var(--accent2));
+  box-shadow:0 0 16px rgba(var(--accent-rgb),.5);
+}
+.brand h1{
+  font-family:var(--display);
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:.5px;
+}
+.brand h1 .sl{color:var(--accent)}
+.tagline{color:var(--dim);font-size:11px;letter-spacing:.5px;margin-left:2px}
+.spacer{flex:1}
+.hdr-stat{
+  font-size:11px;color:var(--dim);
+  border:1px solid var(--line);
+  padding:5px 10px;border-radius:6px;
+  background:var(--panel);
+}
+.hdr-stat b{color:var(--accent2);font-weight:500}
+
+/* ---- layout ---- */
+main{
+  flex:1;
+  display:grid;
+  grid-template-columns:340px 1fr;
+  grid-template-rows:minmax(0,1fr);
+  min-height:0;
+  overflow:hidden;
+}
+.rail{
+  border-right:1px solid var(--line);
+  overflow-y:auto;
+  min-height:0;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  background:var(--panel);
+}
+.rail>*{flex-shrink:0}
+.stage{
+  overflow:auto;
+  min-height:0;
+  min-width:0;
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  background:
+    radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/22px 22px,
+    var(--bg);
+}
+
+/* ---- panels ---- */
+.panel{
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--panel2);
+  overflow:hidden;
+}
+.panel-head{
+  display:flex;align-items:center;gap:9px;
+  padding:11px 13px;
+  border-bottom:1px solid var(--line);
+  background:var(--panel);
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(var(--accent-rgb),.7)}
+.pnum{font-size:10px;color:var(--dim2);font-weight:700;letter-spacing:1px}
+.ptitle{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.4px}
+.panel-body{padding:13px;display:flex;flex-direction:column;gap:12px}
+
+/* ---- drop zone ---- */
+.drop{
+  border:1.5px dashed var(--line2);
+  border-radius:9px;
+  padding:22px 14px;
+  text-align:center;
+  cursor:pointer;
+  transition:.15s;
+  color:var(--dim);
+  background:rgba(255,255,255,.012);
+}
+.drop:hover,.drop.over{
+  border-color:var(--accent);
+  color:var(--accent2);
+  background:rgba(var(--accent-rgb),.06);
+}
+.drop b{display:block;color:var(--text);font-weight:500;margin-bottom:3px;font-family:var(--display)}
+.drop span{font-size:11px}
+
+/* thumbs */
+.thumbs{display:flex;flex-wrap:wrap;gap:6px}
+.thumb{
+  position:relative;width:46px;height:46px;border-radius:6px;
+  overflow:hidden;border:1px solid var(--line2);background:#000;
+}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .x{
+  position:absolute;top:1px;right:1px;width:15px;height:15px;border-radius:4px;
+  background:rgba(0,0,0,.72);color:#fff;border:none;cursor:pointer;
+  font-size:11px;line-height:13px;display:none;
+}
+.thumb:hover .x{display:block}
+
+/* ---- controls ---- */
+.ctrl{display:flex;flex-direction:column;gap:6px}
+.ctrl-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ctrl label{font-size:11px;color:var(--dim);letter-spacing:.3px}
+.val{font-size:11px;color:var(--accent2);font-variant-numeric:tabular-nums;min-width:42px;text-align:right}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:3px;
+  background:var(--line2);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);cursor:pointer;border:2px solid var(--bg);
+  box-shadow:0 0 8px rgba(var(--accent-rgb),.6);
+}
+input[type=range]::-moz-range-thumb{
+  width:14px;height:14px;border-radius:50%;background:var(--accent);
+  cursor:pointer;border:2px solid var(--bg);
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:10px;color:var(--dim2);letter-spacing:.5px}
+.field input[type=number]{
+  width:100%;background:var(--bg);border:1px solid var(--line2);color:var(--text);
+  font-family:var(--mono);font-size:12px;padding:6px 8px;border-radius:6px;outline:none;
+}
+.field input:focus{border-color:var(--accent)}
+
+/* pills */
+.pills{display:flex;gap:5px;flex-wrap:wrap}
+.pill{
+  flex:1;min-width:0;border:1px solid var(--line2);background:var(--bg);
+  color:var(--dim);font-family:var(--mono);font-size:11px;padding:6px 4px;
+  border-radius:6px;cursor:pointer;transition:.12s;text-align:center;white-space:nowrap;
+}
+.pill:hover{border-color:var(--line2);color:var(--text)}
+.pill.on{
+  background:rgba(var(--accent-rgb),.14);border-color:var(--accent);color:var(--accent2);
+}
+
+/* toggle */
+.tog{display:flex;align-items:center;gap:8px;cursor:pointer}
+.tog .sw{
+  width:34px;height:19px;border-radius:11px;background:var(--line2);position:relative;transition:.15s;flex:none;
+}
+.tog .sw::after{
+  content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:var(--dim);transition:.15s;
+}
+.tog.on .sw{background:rgba(var(--accent-rgb),.4)}
+.tog.on .sw::after{left:17px;background:var(--accent)}
+.tog span{font-size:11px;color:var(--dim)}
+.tog.on span{color:var(--text)}
+
+/* buttons */
+.btn{
+  border:1px solid var(--line2);background:var(--panel);color:var(--text);
+  font-family:var(--mono);font-size:12px;font-weight:500;padding:9px 12px;
+  border-radius:7px;cursor:pointer;transition:.12s;letter-spacing:.3px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{
+  background:linear-gradient(180deg,rgba(var(--accent-rgb),.22),rgba(var(--accent-rgb),.1));
+  border-color:var(--accent);color:var(--accent2);font-weight:700;
+}
+.btn.primary:hover{background:linear-gradient(180deg,rgba(var(--accent-rgb),.32),rgba(var(--accent-rgb),.16))}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ---- canvas stage ---- */
+.canvas-wrap{
+  border:1px solid var(--line2);border-radius:10px;overflow:hidden;
+  box-shadow:0 14px 50px rgba(0,0,0,.55);max-width:100%;
+  background:
+    conic-gradient(#1a1a20 90deg,#141418 90deg 180deg,#1a1a20 180deg 270deg,#141418 270deg) 0 0/20px 20px;
+}
+#cv{display:block;max-width:100%;max-height:76vh;width:auto;height:auto}
+.stage-empty{
+  color:var(--dim2);text-align:center;font-size:12px;margin-top:60px;line-height:2;
+}
+.stage-empty b{color:var(--dim);font-family:var(--display);display:block;font-size:15px;margin-bottom:6px}
+
+/* ---- status / footer ---- */
+.statusbar{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  font-size:11px;color:var(--dim);
+  border-top:1px solid var(--line);padding:9px 22px;background:var(--panel);
+}
+.statusbar .s{display:flex;align-items:center;gap:6px}
+.statusbar b{color:var(--accent2);font-weight:500}
+.led{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 7px var(--accent)}
+.sig{margin-left:auto;color:var(--dim2);letter-spacing:1.5px;font-size:10px}
+
+@media(max-width:820px){
+  main{grid-template-columns:1fr;grid-template-rows:auto auto;overflow-y:auto}
+  .rail{border-right:none;border-bottom:1px solid var(--line);overflow-y:visible}
+  .stage{overflow-y:visible}
+  #cv{max-height:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="tick"></div>
+    <div>
+      <h1>COLL<span class="sl">//</span>AGE</h1>
+      <div class="tagline">CONSTRAINT-RELAXATION IMAGE PACKER</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="hdr-stat">SRC <b id="hSrc">0</b></div>
+  <div class="hdr-stat">PLACED <b id="hPlaced">0</b></div>
+  <div class="hdr-stat">FILL <b id="hFill">0%</b></div>
+</header>
+
+<main>
+  <aside class="rail">
+
+    <!-- 01 SOURCE -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">01</span><span class="ptitle">SOURCE</span></div>
+      <div class="panel-body">
+        <div class="drop" id="drop">
+          <b>Drop images</b><span>or click to browse · PNG / JPG / WEBP / GIF</span>
+        </div>
+        <input type="file" id="file" accept="image/*" multiple hidden>
+        <div class="thumbs" id="thumbs"></div>
+        <div class="ctrl">
+          <div class="ctrl-row"><label>COPIES (tile the set)</label><span class="val" id="copiesV">1</span></div>
+          <input type="range" id="copies" min="1" max="8" step="1" value="1">
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 CANVAS -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">02</span><span class="ptitle">CANVAS</span></div>
+      <div class="panel-body">
+        <div class="pills" id="presets">
+          <button class="pill on" data-w="1920" data-h="1080">16:9</button>
+          <button class="pill" data-w="1080" data-h="1080">1:1</button>
+          <button class="pill" data-w="1080" data-h="1350">4:5</button>
+          <button class="pill" data-w="1080" data-h="1920">9:16</button>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>WIDTH</label><input type="number" id="cw" value="1920" min="64" max="6000"></div>
+          <div class="field"><label>HEIGHT</label><input type="number" id="ch" value="1080" min="64" max="6000"></div>
+        </div>
+        <div class="ctrl-row" style="margin-top:2px">
+          <label class="tog on" id="bgTog"><span class="sw"></span><span>SOLID BACKGROUND</span></label>
+          <input type="color" id="bgColor" value="#0a0a0c" style="width:30px;height:26px;border:1px solid var(--line2);border-radius:6px;background:none;cursor:pointer">
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 PACKING -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">03</span><span class="ptitle">PACKING</span></div>
+      <div class="panel-body">
+        <div class="ctrl">
+          <div class="ctrl-row"><label>DENSITY (target fill)</label><span class="val" id="densV">0.85</span></div>
+          <input type="range" id="dens" min="0.3" max="1.6" step="0.05" value="0.85">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-row"><label>GAP (px target)</label><span class="val" id="gapV">14</span></div>
+          <input type="range" id="gap" min="0" max="120" step="1" value="14">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-row"><label>MAX OVERLAP</label><span class="val" id="ovV">0%</span></div>
+          <input type="range" id="ov" min="0" max="60" step="1" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-row"><label>MAX OFFSCREEN</label><span class="val" id="offV">0%</span></div>
+          <input type="range" id="off" min="0" max="50" step="1" value="0">
+        </div>
+        <div class="ctrl-row" style="margin-top:2px">
+          <label class="tog" id="wrapX"><span class="sw"></span><span>WRAP&nbsp;X</span></label>
+          <label class="tog" id="wrapY"><span class="sw"></span><span>WRAP&nbsp;Y</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 ARRANGE -->
+    <div class="panel">
+      <div class="panel-head"><span class="dot"></span><span class="pnum">04</span><span class="ptitle">ARRANGE</span></div>
+      <div class="panel-body">
+        <div class="grid2">
+          <div class="field"><label>SEED</label><input type="number" id="seed" value="1" min="0" max="999999"></div>
+          <div class="field" style="justify-content:flex-end">
+            <button class="btn" id="reseed" style="padding:7px">⟳ RANDOM SEED</button>
+          </div>
+        </div>
+        <div class="ctrl">
+          <label style="font-size:10px;color:var(--dim2);letter-spacing:.5px">STACK ORDER</label>
+          <div class="pills" id="zmode">
+            <button class="pill on" data-z="size">BIG → BACK</button>
+            <button class="pill" data-z="shuffle">SHUFFLE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn primary" id="regen">▶ PACK</button>
+      <button class="btn" id="export" disabled>⤓ PNG</button>
+    </div>
+
+  </aside>
+
+  <section class="stage">
+    <div class="stage-empty" id="empty">
+      <b>No images yet</b>
+      Drop images into SOURCE to begin.<br>Tune PACKING, then hit PACK.
+    </div>
+    <div class="canvas-wrap" id="cvWrap" style="display:none">
+      <canvas id="cv"></canvas>
+    </div>
+  </section>
+</main>
+
+<div class="statusbar">
+  <div class="s"><span class="led"></span><b id="stState">IDLE</b></div>
+  <div class="s">RES <b id="stRes">—</b></div>
+  <div class="s">INSTANCES <b id="stInst">0</b></div>
+  <div class="s">SOLVE <b id="stTime">—</b></div>
+  <div class="sig">SYS.READY · COLL//AGE</div>
+</div>
+
+<script>
+"use strict";
+
+/* ============ seeded RNG ============ */
+function mulberry32(a){
+  return function(){
+    a|=0;a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+
+/* ============ state ============ */
+const S={
+  sources:[],          // {img,w0,h0,url}
+  insts:[],            // placed instances
+  cw:1920, ch:1080,
+  copies:1,
+  density:0.85,
+  gap:14,
+  overlap:0,           // fraction 0..0.6
+  offscreen:0,         // fraction 0..0.5
+  wrapX:false, wrapY:false,
+  seed:1,
+  zmode:"size",
+  bgSolid:true,
+  bgColor:"#0a0a0c",
+};
+
+const $=id=>document.getElementById(id);
+const cv=$("cv"), ctx=cv.getContext("2d");
+
+/* ============ file loading ============ */
+function addFiles(list){
+  const files=[...list].filter(f=>f.type.startsWith("image/"));
+  let pending=files.length;
+  if(!pending) return;
+  files.forEach(f=>{
+    const url=URL.createObjectURL(f);
+    const img=new Image();
+    img.onload=()=>{
+      S.sources.push({img,w0:img.naturalWidth,h0:img.naturalHeight,url});
+      if(--pending===0) afterLoad();
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); if(--pending===0) afterLoad(); };
+    img.src=url;
+  });
+}
+function afterLoad(){ renderThumbs(); updateHeader(); if(S.sources.length) regen(); }
+
+function renderThumbs(){
+  const box=$("thumbs"); box.textContent="";
+  S.sources.forEach((s,i)=>{
+    const t=document.createElement("div"); t.className="thumb";
+    const im=document.createElement("img"); im.src=s.url; im.alt="";   // src is blob: object URL, safe
+    const x=document.createElement("button"); x.className="x"; x.textContent="×";
+    x.onclick=ev=>{ ev.stopPropagation(); removeSource(i); };
+    t.appendChild(im); t.appendChild(x); box.appendChild(t);
+  });
+}
+function removeSource(i){
+  URL.revokeObjectURL(S.sources[i].url);
+  S.sources.splice(i,1);
+  renderThumbs(); updateHeader();
+  if(S.sources.length) regen(); else { S.insts=[]; showEmpty(); updateHeader(); }
+}
+
+/* ============ geometry helpers ============ */
+// signed penetration on each axis between two rects (centers + half extents)
+function penetration(ax,ay,ahx,ahy,bx,by,bhx,bhy){
+  return [ (ahx+bhx)-Math.abs(ax-bx), (ahy+bhy)-Math.abs(ay-by) ];
+}
+
+/* ============ core solver ============ */
+function layout(){
+  const t0=performance.now();
+  const W=S.cw, H=S.ch;
+  const rng=mulberry32((S.seed|0)*2654435761>>>0 ^ 0x9e3779b9);
+
+  // build instances (sources × copies)
+  const insts=[];
+  for(let c=0;c<S.copies;c++){
+    for(let k=0;k<S.sources.length;k++){
+      const s=S.sources[k];
+      insts.push({src:k,w0:s.w0,h0:s.h0,x:0,y:0,scale:1});
+    }
+  }
+  const N=insts.length;
+  if(N===0){ S.insts=[]; return 0; }
+
+  // initial scale: split target area evenly across instances, then grow
+  const targetArea=W*H*S.density;
+  const perArea=targetArea/N;
+  for(const it of insts){
+    const a0=it.w0*it.h0;
+    let s=Math.sqrt(perArea/a0);
+    // never larger than fits the canvas in either dim
+    const fit=Math.min(W/it.w0, H/it.h0)*0.98;
+    s=Math.min(s, fit);
+    it.scale=s;
+    it.x=rng()*W; it.y=rng()*H;
+  }
+
+  const ovFrac=S.overlap, offFrac=S.offscreen;
+  const gap=S.gap;
+  const shiftsX=S.wrapX?[-W,0,W]:[0];
+  const shiftsY=S.wrapY?[-H,0,H]:[0];
+  const maxAreaFrac=0.92;
+
+  // clamp / wrap a single instance. Offscreen is bounded by AREA fraction:
+  // offX + offY <= offFrac  =>  area offscreen = offX+offY-offX*offY <= offFrac.
+  function constrain(it){
+    const w=it.w0*it.scale, h=it.h0*it.scale, hw=w/2, hh=h/2;
+    if(S.wrapX) it.x=((it.x%W)+W)%W;
+    if(S.wrapY) it.y=((it.y%H)+H)%H;
+    if(!S.wrapX && w>=W) it.x=W/2;   // wider than canvas -> center it
+    if(!S.wrapY && h>=H) it.y=H/2;
+    let offX=0, offY=0;
+    if(!S.wrapX && w<W){ const x0=it.x-hw,x1=it.x+hw; offX=(Math.max(0,-x0)+Math.max(0,x1-W))/w; }
+    if(!S.wrapY && h<H){ const y0=it.y-hh,y1=it.y+hh; offY=(Math.max(0,-y0)+Math.max(0,y1-H))/h; }
+    const excess=(offX+offY)-offFrac;
+    if(excess>0){
+      if(!S.wrapX && w<W && (offX>=offY || S.wrapY)){
+        const x0=it.x-hw,x1=it.x+hw;
+        if(-x0 > x1-W) it.x+=excess*w; else it.x-=excess*w;
+      }else if(!S.wrapY && h<H){
+        const y0=it.y-hh,y1=it.y+hh;
+        if(-y0 > y1-H) it.y+=excess*h; else it.y-=excess*h;
+      }
+    }
+  }
+
+  // nearest toroidal copy of b relative to a -> returns {bx,by}
+  function nearest(a,b){
+    let bx=b.x,by=b.y,bd=Infinity;
+    for(const sx of shiftsX) for(const sy of shiftsY){
+      const dx=a.x-(b.x+sx), dy=a.y-(b.y+sy);
+      const d=dx*dx+dy*dy;
+      if(d<bd){ bd=d; bx=b.x+sx; by=b.y+sy; }
+    }
+    return [bx,by];
+  }
+
+  // one relaxation pass
+  function relax(){
+    for(let i=0;i<N;i++){
+      const a=insts[i];
+      const ahx=a.w0*a.scale/2, ahy=a.h0*a.scale/2;
+      const aArea=a.w0*a.scale*a.h0*a.scale;
+      for(let j=i+1;j<N;j++){
+        const b=insts[j];
+        const bhx=b.w0*b.scale/2, bhy=b.h0*b.scale/2;
+        const bArea=b.w0*b.scale*b.h0*b.scale;
+        const [bx,by]=nearest(a,b);
+        let dx=a.x-bx, dy=a.y-by;
+        const px=(ahx+bhx)-Math.abs(dx);
+        const py=(ahy+bhy)-Math.abs(dy);
+        if(px>0 && py>0){
+          // overlapping — measure intersection area
+          const inter=px*py;
+          const allowed=ovFrac*Math.min(aArea,bArea);
+          const excess=inter-allowed;
+          if(excess>0.5){
+            // resolve along axis of smaller penetration; reduce area by excess
+            let mvx=0,mvy=0;
+            if(px<=py){
+              let d=excess/Math.max(py,1e-3); d=Math.min(d,px);
+              const sgn=dx===0?(rng()<.5?-1:1):Math.sign(dx);
+              mvx=sgn*d*0.5;
+            }else{
+              let d=excess/Math.max(px,1e-3); d=Math.min(d,py);
+              const sgn=dy===0?(rng()<.5?-1:1):Math.sign(dy);
+              mvy=sgn*d*0.5;
+            }
+            a.x+=mvx; a.y+=mvy; b.x-=mvx; b.y-=mvy;
+          }
+        }else{
+          // separated — soft spring toward gap target
+          if(gap>0){
+            // gap along the separated axis (positive = clear space)
+            let gx=-px, gy=-py;            // positive when separated on that axis
+            let need=0,ax=0,ay=0;
+            if(px>0 && py<=0){ need=gap-gy; ay=Math.sign(dy)||1; }       // separated vertically
+            else if(py>0 && px<=0){ need=gap-gx; ax=Math.sign(dx)||1; } // separated horizontally
+            else { // corner-separated
+              const gd=Math.hypot(gx,gy); need=gap-gd;
+              const n=Math.hypot(dx,dy)||1; ax=dx/n; ay=dy/n;
+            }
+            if(need>0){
+              const f=need*0.10*0.5;
+              a.x+=ax*f; a.y+=ay*f; b.x-=ax*f; b.y-=ay*f;
+            }
+          }
+        }
+      }
+      constrain(a);
+    }
+    for(const it of insts) constrain(it);
+  }
+
+  // can instance grow to trial scale without breaking overlap floor?
+  function growthOK(idx, trial){
+    const a=insts[idx];
+    const ahx=a.w0*trial/2, ahy=a.h0*trial/2;
+    const aArea=a.w0*trial*a.h0*trial;
+    if(aArea>W*H*maxAreaFrac) return false;
+    for(let j=0;j<N;j++){
+      if(j===idx) continue;
+      const b=insts[j];
+      const bhx=b.w0*b.scale/2, bhy=b.h0*b.scale/2;
+      const bArea=b.w0*b.scale*b.h0*b.scale;
+      const [bx,by]=nearest(a,b);
+      const px=(ahx+bhx)-Math.abs(a.x-bx);
+      const py=(ahy+bhy)-Math.abs(a.y-by);
+      if(px>0 && py>0){
+        const inter=px*py;
+        const allowed=ovFrac*Math.min(aArea,bArea);
+        if(inter-allowed>aArea*0.006) return false;  // tolerance
+      }
+    }
+    return true;
+  }
+
+  // hard guarantee: drive every pair to the overlap floor (convergent).
+  // Phase 1 separates in place; phase 2 shrinks-to-fit if a pair is wall-pinned.
+  function pushPass(){
+    let bad=false;
+    for(let i=0;i<N;i++){
+      const a=insts[i];
+      const ahx=a.w0*a.scale/2, ahy=a.h0*a.scale/2, aA=4*ahx*ahy;
+      for(let j=i+1;j<N;j++){
+        const b=insts[j];
+        const bhx=b.w0*b.scale/2, bhy=b.h0*b.scale/2, bA=4*bhx*bhy;
+        const [bx,by]=nearest(a,b);
+        const dx=a.x-bx, dy=a.y-by;
+        const px=(ahx+bhx)-Math.abs(dx), py=(ahy+bhy)-Math.abs(dy);
+        if(px>0 && py>0){
+          const inter=px*py, allowed=ovFrac*Math.min(aA,bA), need=inter-allowed;
+          if(need>Math.min(aA,bA)*0.004){
+            bad=true;
+            if(px<=py){ let d=Math.min(need/Math.max(py,1e-3),px); const s=dx===0?(rng()<.5?-1:1):Math.sign(dx); a.x+=s*d*0.5; b.x-=s*d*0.5; }
+            else      { let d=Math.min(need/Math.max(px,1e-3),py); const s=dy===0?(rng()<.5?-1:1):Math.sign(dy); a.y+=s*d*0.5; b.y-=s*d*0.5; }
+          }
+        }
+      }
+      constrain(a);
+    }
+    for(const it of insts) constrain(it);
+    return bad;
+  }
+  function enforce(){
+    for(let p=0;p<30;p++){ if(!pushPass()) return; }
+    for(let p=0;p<40;p++){
+      for(const it of insts) it.scale*=0.97;
+      let bad=true; for(let q=0;q<6;q++) bad=pushPass();
+      if(!bad) return;
+    }
+  }
+
+  // rounds of (settle, grow)
+  const ROUNDS=7, RELAX=Math.max(34, 70-N);
+  for(let r=0;r<ROUNDS;r++){
+    for(let k=0;k<RELAX;k++) relax();
+    // grow pass — shuffled order for fairness
+    const order=[...Array(N).keys()];
+    for(let i=N-1;i>0;i--){ const j=(rng()*(i+1))|0; [order[i],order[j]]=[order[j],order[i]]; }
+    const step=1.0 + (0.10 - r*0.011);   // bigger early steps, finer later
+    for(const idx of order){
+      let tries=4;
+      while(tries-- >0){
+        const trial=insts[idx].scale*step;
+        if(growthOK(idx,trial)){ insts[idx].scale=trial; constrain(insts[idx]); }
+        else break;
+      }
+    }
+  }
+  // final tidy
+  for(let k=0;k<RELAX;k++) relax();
+  enforce();
+
+  // z-order
+  if(S.zmode==="size"){
+    insts.sort((p,q)=>(q.w0*q.scale*q.h0*q.scale)-(p.w0*p.scale*p.h0*p.scale));
+  }else{
+    for(let i=insts.length-1;i>0;i--){ const j=(rng()*(i+1))|0; [insts[i],insts[j]]=[insts[j],insts[i]]; }
+  }
+
+  S.insts=insts;
+  return performance.now()-t0;
+}
+
+/* ============ render ============ */
+function render(){
+  const W=S.cw, H=S.ch;
+  cv.width=W; cv.height=H;
+  ctx.clearRect(0,0,W,H);
+  if(S.bgSolid){ ctx.fillStyle=S.bgColor; ctx.fillRect(0,0,W,H); }
+
+  const shiftsX=S.wrapX?[-W,0,W]:[0];
+  const shiftsY=S.wrapY?[-H,0,H]:[0];
+
+  let covered=0;
+  for(const it of S.insts){
+    const src=S.sources[it.src]; if(!src) continue;
+    const w=it.w0*it.scale, h=it.h0*it.scale;
+    covered+=w*h;
+    for(const sx of shiftsX) for(const sy of shiftsY){
+      const dx=it.x+sx-w/2, dy=it.y+sy-h/2;
+      if(dx+w<0||dx>W||dy+h<0||dy>H) continue;   // skip fully-offscreen copies
+      ctx.drawImage(src.img, dx, dy, w, h);       // uniform scale -> aspect preserved, no stretch
+    }
+  }
+
+  $("cvWrap").style.display=""; $("empty").style.display="none";
+  const fill=Math.min(100, Math.round(covered/(W*H)*100));
+  $("hFill").textContent=fill+"%";
+  $("stRes").textContent=W+"×"+H;
+  $("stInst").textContent=S.insts.length;
+  $("hPlaced").textContent=S.insts.length;
+  return fill;
+}
+
+/* ============ orchestration ============ */
+function regen(){
+  if(!S.sources.length){ showEmpty(); return; }
+  setState("SOLVING…");
+  // let UI paint the state, then solve
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const ms=layout();
+    render();
+    $("stTime").textContent=ms<1?"<1ms":Math.round(ms)+"ms";
+    setState("PACKED");
+    $("export").disabled=false;
+  }));
+}
+function showEmpty(){ drawPlaceholder(); $("export").disabled=true; setState("IDLE"); }
+
+// draw an empty canvas at the current ratio so W/H changes preview immediately
+function drawPlaceholder(){
+  const W=S.cw, H=S.ch;
+  cv.width=W; cv.height=H;
+  ctx.clearRect(0,0,W,H);
+  if(S.bgSolid){ ctx.fillStyle=S.bgColor; ctx.fillRect(0,0,W,H); }
+  const u=Math.min(W,H);
+  ctx.save();
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle="rgba(138,138,150,.55)";
+  ctx.font="600 "+Math.round(u*0.045)+"px 'Space Grotesk',sans-serif";
+  ctx.fillText(S.sources.length?"PRESS  PACK":"DROP IMAGES TO BEGIN", W/2, H/2 - u*0.03);
+  ctx.fillStyle="rgba(138,138,150,.38)";
+  ctx.font="500 "+Math.round(u*0.030)+"px 'JetBrains Mono',monospace";
+  ctx.fillText(W+" × "+H, W/2, H/2 + u*0.035);
+  ctx.restore();
+  $("cvWrap").style.display=""; $("empty").style.display="none";
+  $("stRes").textContent=W+"×"+H;
+}
+
+// resize canvas to current ratio; re-pack if images exist, else show placeholder
+function applyCanvasSize(){
+  if(S.sources.length) deferRegen(); else drawPlaceholder();
+}
+function setState(s){ $("stState").textContent=s; }
+function updateHeader(){ $("hSrc").textContent=S.sources.length; if(!S.sources.length){ $("hPlaced").textContent=0; $("hFill").textContent="0%"; } }
+
+/* ============ wiring ============ */
+// drop zone
+const drop=$("drop"), file=$("file");
+drop.onclick=()=>file.click();
+file.onchange=()=>{ addFiles(file.files); file.value=""; };
+["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",ev=>{ if(ev.dataTransfer?.files) addFiles(ev.dataTransfer.files); });
+window.addEventListener("dragover",e=>e.preventDefault());
+window.addEventListener("drop",e=>e.preventDefault());
+
+// sliders (live value, debounced relayout)
+let pending=null;
+function deferRegen(){ if(pending) cancelAnimationFrame(pending); pending=requestAnimationFrame(()=>{pending=null;regen();}); }
+function bindRange(id,vid,fmt,key,after){
+  const el=$(id), v=$(vid);
+  el.addEventListener("input",()=>{
+    const n=parseFloat(el.value); S[key]=n; v.textContent=fmt(n); if(after)after(n); deferRegen();
+  });
+}
+bindRange("copies","copiesV",n=>n,"copies");
+bindRange("dens","densV",n=>n.toFixed(2),"density");
+bindRange("gap","gapV",n=>n,"gap");
+bindRange("ov","ovV",n=>n+"%","overlap",n=>S.overlap=n/100);
+bindRange("off","offV",n=>n+"%","offscreen",n=>S.offscreen=n/100);
+// overlap/offscreen stored as fraction
+$("ov").addEventListener("input",()=>S.overlap=parseFloat($("ov").value)/100);
+$("off").addEventListener("input",()=>S.offscreen=parseFloat($("off").value)/100);
+
+// canvas size
+function setSize(w,h){ S.cw=w;S.ch=h; $("cw").value=w; $("ch").value=h; applyCanvasSize(); }
+$("cw").addEventListener("input",()=>{ S.cw=Math.max(64,Math.min(6000,parseInt($("cw").value)||64)); clearPreset(); applyCanvasSize(); });
+$("ch").addEventListener("input",()=>{ S.ch=Math.max(64,Math.min(6000,parseInt($("ch").value)||64)); clearPreset(); applyCanvasSize(); });
+function clearPreset(){ document.querySelectorAll("#presets .pill").forEach(p=>p.classList.remove("on")); }
+$("presets").addEventListener("click",e=>{
+  const b=e.target.closest(".pill"); if(!b)return;
+  document.querySelectorAll("#presets .pill").forEach(p=>p.classList.remove("on")); b.classList.add("on");
+  setSize(parseInt(b.dataset.w),parseInt(b.dataset.h));
+});
+
+// background
+$("bgTog").addEventListener("click",()=>{ S.bgSolid=!S.bgSolid; $("bgTog").classList.toggle("on",S.bgSolid); if(S.insts.length)deferRegen(); else drawPlaceholder(); });
+$("bgColor").addEventListener("input",()=>{ S.bgColor=$("bgColor").value; if(S.insts.length){ if(S.bgSolid) deferRegen(); } else if(S.bgSolid) drawPlaceholder(); });
+
+// wrap toggles
+$("wrapX").addEventListener("click",()=>{ S.wrapX=!S.wrapX; $("wrapX").classList.toggle("on",S.wrapX); deferRegen(); });
+$("wrapY").addEventListener("click",()=>{ S.wrapY=!S.wrapY; $("wrapY").classList.toggle("on",S.wrapY); deferRegen(); });
+
+// arrange
+$("seed").addEventListener("input",()=>{ S.seed=Math.max(0,parseInt($("seed").value)||0); deferRegen(); });
+$("reseed").addEventListener("click",()=>{ S.seed=(Math.random()*999999)|0; $("seed").value=S.seed; regen(); });
+$("zmode").addEventListener("click",e=>{
+  const b=e.target.closest(".pill"); if(!b)return;
+  document.querySelectorAll("#zmode .pill").forEach(p=>p.classList.remove("on")); b.classList.add("on");
+  S.zmode=b.dataset.z; deferRegen();
+});
+
+// actions
+$("regen").addEventListener("click",regen);
+$("export").addEventListener("click",()=>{
+  if(!S.insts.length) return;
+  cv.toBlob(b=>{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(b);
+    a.download="collage_"+S.cw+"x"+S.ch+"_seed"+S.seed+".png";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  },"image/png");
+});
+
+showEmpty();
+</script>
+</body>
+</html>
