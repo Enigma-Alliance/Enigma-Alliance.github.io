@@ -282,6 +282,10 @@ button.danger:hover{border-color:var(--acc);color:var(--acc)}
 
     <label class="lbl">Auto tags <span style="text-transform:none;letter-spacing:0">— generated from the fields above, updates live</span></label>
     <div class="chips" id="autoTagPrev"><span class="note">Fill in fields to generate tags.</span></div>
+    <div id="altWrap" hidden style="margin-top:14px">
+      <label class="lbl">Alternate readings <span style="text-transform:none;letter-spacing:0">— passes disagreed, tap to use one</span></label>
+      <div class="chips" id="altPrev"></div>
+    </div>
     <div id="suggWrap" hidden style="margin-top:14px">
       <label class="lbl">Suggested <span style="text-transform:none;letter-spacing:0">— from lookup, tap to keep</span></label>
       <div class="chips" id="suggPrev"></div>
@@ -720,13 +724,24 @@ function parseCardText(raw){
       if(kind!=="fax") phones.push({v,kind});
     }
   });
+  // near-identical digit strings are the same number read twice, not two numbers
+  const samePhone=(a,b)=>{
+    const A=a.replace(/\D/g,""), B=b.replace(/\D/g,"");
+    if(A.length!==B.length||!A.length) return false;
+    let same=0; for(let i=0;i<A.length;i++) if(A[i]===B[i]) same++;
+    return same/A.length>=0.7;
+  };
   const mob=phones.find(p=>p.kind==="mobile");
   const off=phones.find(p=>p.kind==="phone");
   const unk=phones.filter(p=>p.kind==="unknown");
   if(mob) out.mobile=mob.v;
   if(off) out.phone=off.v;
   if(!out.phone&&unk[0]) out.phone=unk[0].v;
-  if(!out.mobile&&unk.length>1) out.mobile=unk[1].v;
+  if(!out.mobile&&unk.length>1){
+    const second=unk.find(u=>u.v!==out.phone&&!samePhone(u.v,out.phone||""));
+    if(second) out.mobile=second.v;
+  }
+  if(out.mobile&&out.phone&&samePhone(out.mobile,out.phone)) delete out.mobile;
 
   // website — must not be the email domain
   for(const l of lines){
@@ -834,9 +849,39 @@ function wordsToLines(words){
   }).sort((a,b)=>a.y0-b.y0);
 }
 
+/* Display type routinely wraps a name onto two lines — "KAYLEIGH" over "COOMER".
+   Scoring raw lines treats each as a one-word fragment and rejects both, which is
+   how a first name ends up in the company field. Merge stacked lines of matching
+   size and alignment into one block first, then score the blocks. */
+function linesToBlocks(lines){
+  const groups=[];
+  lines.forEach(l=>{
+    const last=groups[groups.length-1];
+    if(last){
+      const prev=last[last.length-1];
+      const hRatio=Math.min(l.h,prev.h)/Math.max(l.h,prev.h);
+      const gap=l.y0-prev.y1;
+      const aligned=Math.abs(l.x0-prev.x0)<prev.h*0.9;
+      if(hRatio>0.75&&gap<prev.h*0.95&&gap>-prev.h*0.3&&aligned){ last.push(l); return; }
+    }
+    groups.push([l]);
+  });
+  return groups.map(g=>{
+    const hs=g.map(l=>l.h).sort((a,b)=>a-b);
+    return {
+      text:g.map(l=>l.text).join(" ").replace(/\s+/g," ").trim(),
+      x0:Math.min.apply(null,g.map(l=>l.x0)), x1:Math.max.apply(null,g.map(l=>l.x1)),
+      y0:Math.min.apply(null,g.map(l=>l.y0)), y1:Math.max.apply(null,g.map(l=>l.y1)),
+      h:hs[Math.floor(hs.length/2)],
+      conf:g.reduce((s,l)=>s+l.conf,0)/g.length,
+      rows:g.length
+    };
+  });
+}
+
 function parseCardLayout(lines){
   const out={};
-  const good=lines.filter(l=>l.conf>=45&&l.text.length>1);
+  const good=linesToBlocks(lines.filter(l=>l.conf>=45&&l.text.length>1));
   if(good.length<2) return out;
   const maxH=Math.max.apply(null,good.map(l=>l.h))||1;
   const bottom=Math.max.apply(null,good.map(l=>l.y1))||1;
@@ -848,9 +893,10 @@ function parseCardLayout(lines){
   good.forEach(l=>{
     if(isContact(l)) return;
     const w=l.text.split(/\s+/);
-    if(w.length<2||w.length>5) return;
+    if(w.length<1||w.length>5) return;
     if(/\d/.test(l.text)) return;
     let s=(l.h/maxH)*100;
+    if(w.length===1) s-=22;   // a lone word is a weak name; beaten by any real pair
     if(l.y0<bottom*0.55) s+=14;
     if(w.length<=3) s+=10;
     if(/^[A-Z][a-z'’-]+(?:\s+[A-Z][A-Za-z.'’-]+)+$/.test(l.text)) s+=28;   // Title Case
@@ -897,27 +943,98 @@ function parseCardLayout(lines){
 }
 
 /* ================= QR ================= */
-async function decodeQR(dataUrl){
-  const im=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl; });
+/* Stylised cards break naive decoding: blue and yellow modules on red are almost
+   identical in luminance, so greyscale erases the code entirely. Measuring each
+   pixel's distance from the face colour recovers it. Downscaling matters too —
+   rounded "blob" modules only resolve into readable squares once shrunk. */
+
+function dominantColour(src){
+  const s=cropCanvas(src,0,0,src.width,src.height);
+  const small=document.createElement("canvas");
+  small.width=120; small.height=Math.max(1,Math.round(120*src.height/src.width));
+  small.getContext("2d",{willReadFrequently:true}).drawImage(s,0,0,small.width,small.height);
+  const d=small.getContext("2d",{willReadFrequently:true}).getImageData(0,0,small.width,small.height).data;
+  const hist=new Map();
+  for(let i=0;i<d.length;i+=4){
+    const mx=Math.max(d[i],d[i+1],d[i+2]), mn=Math.min(d[i],d[i+1],d[i+2]);
+    if(mx<70||(mx-mn)/mx<0.25) continue;       // skip desk, shadow, near-greys
+    const k=(d[i]>>5)+","+(d[i+1]>>5)+","+(d[i+2]>>5);
+    hist.set(k,(hist.get(k)||0)+1);
+  }
+  if(!hist.size) return null;
+  const top=[...hist.entries()].sort((a,b)=>b[1]-a[1])[0][0].split(",").map(Number);
+  return [top[0]*32+16,top[1]*32+16,top[2]*32+16];
+}
+function distanceBinarise(src,bgc,thr){
   const c=document.createElement("canvas");
-  c.width=im.naturalWidth; c.height=im.naturalHeight;
+  c.width=src.width; c.height=src.height;
   const x=c.getContext("2d",{willReadFrequently:true});
-  x.drawImage(im,0,0);
-  // native first — Chrome ships this and it's far more tolerant of angle and blur
+  x.drawImage(src,0,0);
+  const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    const dist=Math.abs(p[i]-bgc[0])+Math.abs(p[i+1]-bgc[1])+Math.abs(p[i+2]-bgc[2]);
+    const v=dist>thr?0:255;
+    p[i]=p[i+1]=p[i+2]=v;
+  }
+  x.putImageData(d,0,0);
+  return c;
+}
+function scaleCanvas(src,w){
+  const c=document.createElement("canvas");
+  c.width=w; c.height=Math.max(1,Math.round(src.height*w/src.width));
+  const x=c.getContext("2d",{willReadFrequently:true});
+  x.imageSmoothingQuality="high";
+  x.drawImage(src,0,0,c.width,c.height);
+  return c;
+}
+function tryJsQR(cv){
+  if(!window.jsQR) return null;
+  const d=cv.getContext("2d",{willReadFrequently:true}).getImageData(0,0,cv.width,cv.height);
+  for(const inv of ["attemptBoth","dontInvert"]){
+    try{
+      const hit=window.jsQR(d.data,cv.width,cv.height,{inversionAttempts:inv});
+      if(hit&&hit.data&&hit.data.trim()) return hit.data.trim();
+    }catch(e){}
+  }
+  return null;
+}
+
+async function decodeQR(dataUrl,onProgress){
+  const im=await imgFrom(dataUrl);
+  const full=canvasOf(im);
+
+  // native first — Chrome's decoder is far more tolerant of angle, blur and styling
   if("BarcodeDetector" in window){
     try{
       const det=new window.BarcodeDetector({formats:["qr_code"]});
-      const hits=await det.detect(c);
-      if(hits&&hits.length) return hits[0].rawValue;
+      const hits=await det.detect(full);
+      if(hits&&hits.length&&hits[0].rawValue) return hits[0].rawValue;
     }catch(e){}
   }
+
   if(!window.jsQR){
+    if(onProgress) onProgress("Loading QR decoder…");
     try{ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"); }catch(e){ return null; }
   }
   if(!window.jsQR) return null;
-  const d=x.getImageData(0,0,c.width,c.height);
-  const hit=window.jsQR(d.data,c.width,c.height,{inversionAttempts:"attemptBoth"});
-  return hit?hit.data:null;
+
+  const box=findCardBox(im);
+  const face=box?cropCanvas(full,box.x,box.y,box.w,box.h):full;
+  const bgc=dominantColour(face);
+
+  // small sizes first: that's where stylised modules actually resolve
+  for(const w of [600,800,1000,1400]){
+    const scaled=scaleCanvas(face,Math.min(w,face.width));
+    const plain=tryJsQR(scaled);
+    if(plain) return plain;
+    if(!bgc) continue;
+    for(const thr of [90,110,140,70,170]){
+      const hit=tryJsQR(distanceBinarise(scaled,bgc,thr));
+      if(hit) return hit;
+    }
+  }
+  // last resort: the uncropped frame
+  return tryJsQR(scaleCanvas(full,800));
 }
 
 /* QR payloads on cards are usually a vCard, a MECARD, or just a URL */
@@ -1029,36 +1146,92 @@ function downscale(dataUrl,maxpx=MAXPX,q=.85){
     im.src=dataUrl;
   });
 }
-/* grayscale + contrast stretch, helps OCR a lot on glossy cards */
-function prepOCR(dataUrl){
-  return new Promise(res=>{
-    const im=new Image();
-    im.onload=()=>{
-      const s=Math.min(2, 1800/Math.max(im.naturalWidth,im.naturalHeight));
-      const w=Math.round(im.naturalWidth*s), h=Math.round(im.naturalHeight*s);
-      const c=document.createElement("canvas"); c.width=w; c.height=h;
-      const x=c.getContext("2d",{willReadFrequently:true});
-      x.drawImage(im,0,0,w,h);
-      const d=x.getImageData(0,0,w,h), p=d.data;
-      let lo=255,hi=0;
-      for(let i=0;i<p.length;i+=4){
-        const g=(p[i]*.299+p[i+1]*.587+p[i+2]*.114)|0;
-        p[i]=p[i+1]=p[i+2]=g; if(g<lo)lo=g; if(g>hi)hi=g;
-      }
-      const span=Math.max(1,hi-lo);
-      for(let i=0;i<p.length;i+=4){
-        let v=(p[i]-lo)*255/span;
-        v=v<0?0:v>255?255:v;
-        v=v<118?v*.6:118+(v-118)*1.35;
-        v=v<0?0:v>255?255:v;
-        p[i]=p[i+1]=p[i+2]=v;
-      }
-      x.putImageData(d,0,0);
-      res(c.toDataURL("image/jpeg",.94));
-    };
-    im.onerror=()=>res(dataUrl);
-    im.src=dataUrl;
-  });
+/* ---------- preprocessing ----------
+   Validated against real photos. Three findings drove this:
+   1. A global contrast stretch is a no-op when the frame contains both a black
+      background and a specular highlight — the range is already 0..255.
+   2. Luminance destroys coloured ink. Yellow-on-black is high contrast to the eye
+      but mediocre in luma. max(R,G,B) keeps it.
+   3. One card can hold both polarities at once — light text on a dark face, plus
+      dark text on a bright contact bar. So we read it twice, both ways. */
+
+function imgFrom(dataUrl){
+  return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error("decode failed")); i.src=dataUrl; });
+}
+function canvasOf(im,w,h){
+  const c=document.createElement("canvas");
+  c.width=w||im.naturalWidth||im.width; c.height=h||im.naturalHeight||im.height;
+  const x=c.getContext("2d",{willReadFrequently:true});
+  x.imageSmoothingQuality="high";
+  x.drawImage(im,0,0,c.width,c.height);
+  return c;
+}
+
+/* Locate the printed face. Ink is saturated and bright; a desk, shadow and wood
+   grain are not. Projecting that mask onto each axis gives the card bounds. */
+function findCardBox(im){
+  const iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height;
+  const W=400, H=Math.max(1,Math.round(W*ih/iw));
+  const d=canvasOf(im,W,H).getContext("2d").getImageData(0,0,W,H).data;
+  const col=new Int32Array(W), row=new Int32Array(H); let tot=0;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=(y*W+x)*4, r=d[i],g=d[i+1],b=d[i+2];
+    const mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+    if(mx>76 && (mx-mn)/mx>0.45){ col[x]++; row[y]++; tot++; }
+  }
+  if(tot<W*H*0.004) return null;
+  const pick=a=>{
+    let t=0; for(let i=0;i<a.length;i++) t+=a[i];
+    t*=0.005; let lo=0,hi=a.length-1,acc=0;
+    for(let i=0;i<a.length;i++){ acc+=a[i]; if(acc>t){lo=i;break;} }
+    acc=0; for(let i=a.length-1;i>=0;i--){ acc+=a[i]; if(acc>t){hi=i;break;} }
+    return [lo,hi];
+  };
+  const [x0,x1]=pick(col), [y0,y1]=pick(row);
+  if(x1-x0<W*0.08||y1-y0<H*0.08) return null;
+  const sc=iw/W, px=(x1-x0)*0.10*sc, py=(y1-y0)*0.06*sc;
+  const bx=Math.max(0,Math.round(x0*sc-px)), by=Math.max(0,Math.round(y0*sc-py));
+  return {x:bx,y:by,
+          w:Math.min(iw-bx,Math.round((x1-x0)*sc+px*2)),
+          h:Math.min(ih-by,Math.round((y1-y0)*sc+py*2))};
+}
+
+/* max(R,G,B) instead of luminance, optionally inverted */
+function valueRender(src,flip){
+  const c=document.createElement("canvas");
+  c.width=src.width; c.height=src.height;
+  const x=c.getContext("2d",{willReadFrequently:true});
+  x.drawImage(src,0,0);
+  const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    const mx=p[i]>p[i+1]?(p[i]>p[i+2]?p[i]:p[i+2]):(p[i+1]>p[i+2]?p[i+1]:p[i+2]);
+    const v=flip?mx:255-mx;
+    p[i]=p[i+1]=p[i+2]=v;
+  }
+  x.putImageData(d,0,0);
+  return c;
+}
+function cropCanvas(src,x,y,w,h){
+  const c=document.createElement("canvas");
+  c.width=Math.max(1,Math.round(w)); c.height=Math.max(1,Math.round(h));
+  c.getContext("2d",{willReadFrequently:true}).drawImage(src,Math.round(x),Math.round(y),c.width,c.height,0,0,c.width,c.height);
+  return c;
+}
+
+/* Crop to the card and scale so cap height lands where Tesseract wants it. */
+async function prepOCR(dataUrl){
+  const im=await imgFrom(dataUrl);
+  const box=findCardBox(im);
+  const iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height;
+  const src=box?cropCanvas(canvasOf(im),box.x,box.y,box.w,box.h):canvasOf(im);
+  const target=2400;
+  const sc=Math.min(2.5,Math.max(1,target/src.height));
+  const up=document.createElement("canvas");
+  up.width=Math.round(src.width*sc); up.height=Math.round(src.height*sc);
+  const ux=up.getContext("2d",{willReadFrequently:true});
+  ux.imageSmoothingQuality="high";
+  ux.drawImage(src,0,0,up.width,up.height);
+  return {card:up,cropped:!!box};
 }
 
 /* ================= lookup engine ================= */
@@ -1152,6 +1325,38 @@ async function ollamaEnrich(card,siteText){
   };
 }
 
+/* Pull contacts out of a fetched page — link-in-bio pages are the common case,
+   since a QR on a card usually points at one rather than a real site. */
+const RE_SOCIAL=/(?:https?:\/\/)?(?:www\.)?(linkedin\.com\/in\/[\w\-%.]+|artstation\.com\/[\w\-]+|github\.com\/[\w\-]+|behance\.net\/[\w\-]+|instagram\.com\/[\w\-.]+|x\.com\/[\w\-]+|twitter\.com\/[\w\-]+|dribbble\.com\/[\w\-]+|vimeo\.com\/[\w\-]+|youtube\.com\/@[\w\-]+)/gi;
+function harvestContacts(text){
+  const t=String(text||"");
+  const out={socials:[]};
+  const em=t.match(new RegExp(RE_EMAIL.source,"gi"));
+  if(em) out.email=em[0].toLowerCase();
+  const seen=new Set();
+  (t.match(RE_SOCIAL)||[]).forEach(u=>{
+    const clean=u.replace(/^https?:\/\//i,"").replace(/^www\./i,"").replace(/\/$/,"");
+    if(seen.has(clean.toLowerCase())) return;
+    seen.add(clean.toLowerCase());
+    if(/linkedin\.com\/in\//i.test(clean)&&!out.linkedin) out.linkedin="https://www."+clean;
+    else out.socials.push(clean);
+  });
+  out.socials=out.socials.slice(0,8);
+  return out;
+}
+async function readAnyURL(url){
+  const u=proxyURL(url); if(!u) return null;
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),15000);
+  try{
+    const r=await fetch(u,{signal:ctl.signal});
+    clearTimeout(to);
+    if(!r.ok) return null;
+    let txt=await r.text();
+    if(/<html/i.test(txt)) txt=txt.replace(/<script[\s\S]*?<\/script>/gi," ").replace(/<[^>]+>/g," ");
+    return txt.replace(/\s+/g," ").trim().slice(0,6000)||null;
+  }catch(e){ clearTimeout(to); return null; }
+}
+
 /* one card, all tiers. returns what changed. */
 async function enrichCard(c,opts){
   opts=opts||{};
@@ -1160,6 +1365,20 @@ async function enrichCard(c,opts){
   if(cfg.logos&&c.facts.domain&&!c.logo){
     const lg=await fetchLogo(c.facts.domain);
     if(lg){ c.logo=lg.data; c.logoSrc=lg.src; }
+  }
+  // a QR that points at a page: read it and lift whatever contacts are on there
+  if(opts.deep&&cfg.proxyOn&&c.qr&&/^https?:\/\//i.test(c.qr)){
+    const page=await readAnyURL(c.qr);
+    if(page){
+      const h=harvestContacts(page);
+      if(h.email&&!c.email) c.email=h.email;
+      if(h.linkedin&&!c.linkedin){ c.linkedin=h.linkedin; }
+      if(h.socials.length){
+        const line="Links: "+h.socials.join(", ");
+        if(!(c.notes||"").includes("Links:")) c.notes=((c.notes||"")+"\n"+line).trim();
+      }
+      c.facts=deriveFacts(c);
+    }
   }
   if(opts.deep&&cfg.ollamaOn&&cfg.ollamaModel){
     let siteText=null;
@@ -1364,6 +1583,16 @@ function renderDraftTags(){
     ? bits.map(([k,v])=>`<b style="color:var(--fg)">${esc(k)}</b> ${esc(v)}`).join(" &nbsp;·&nbsp; ")
     : "Area code, email domain and address get decoded here as you type.";
   const sw=$("#suggWrap"), sp=$("#suggPrev");
+  const alts=draft.alts||{};
+  const altKeys=Object.keys(alts).filter(k=>alts[k]&&alts[k].length);
+  const ab=$("#altPrev");
+  if(altKeys.length){
+    $("#altWrap").hidden=false;
+    ab.innerHTML=altKeys.map(k=>
+      `<span class="note" style="display:block;width:100%;margin:4px 0 2px">${esc(k)} — other readings:</span>`
+      +alts[k].map(v=>`<span class="chip" data-alt="${esc(k)}" data-altval="${esc(v)}">${esc(v)}</span>`).join("")
+    ).join("");
+  }else $("#altWrap").hidden=true;
   const sg=draft.sugg;
   if(sg&&(sg.tags.length||sg.summary)){
     sw.hidden=false;
@@ -1381,7 +1610,7 @@ function renderDraftTags(){
 
 function resetForm(){
   writeForm({});
-  draft={front:null,back:null,tags:[],editing:null,source:ui.mode==="scan"?"scan":"manual",facts:{},sugg:null,logo:null};
+  draft={front:null,back:null,tags:[],editing:null,source:ui.mode==="scan"?"scan":"manual",facts:{},sugg:null,logo:null,alts:{},qr:null,linkedin:""};
   $("#paste").value="";
   paintShot("front"); paintShot("back");
   renderDraftTags();
@@ -1429,64 +1658,130 @@ function loadScript(src){
     document.head.appendChild(s);
   });
 }
+
+/* Three passes, because no single one gets a whole card.
+   PSM 6 reads the big headline type; PSM 11 finds scattered blocks; and the
+   contact strip usually runs the opposite polarity to the rest of the face. */
+const OCR_PASSES=[
+  {psm:"6",  region:"full",   flip:true,  label:"headline"},
+  {psm:"11", region:"full",   flip:false, label:"details"},
+  {psm:"11", region:"bottom", flip:true,  label:"contact strip"}
+];
+
+function despace(t){
+  return String(t||"")
+    .replace(/\s*@\s*/g,"@")                                  // "NAME @DOMAIN" -> "NAME@DOMAIN"
+    .replace(/@([A-Za-z0-9-]+)\s+(com|net|org|io|edu|co)\b/gi,"@$1.$2")  // dropped dot
+    .replace(/[·•|]/g," ");
+}
+
 async function runOCR(){
   const btn=$("#btnScan"), msg=$("#scanMsg");
   if(ocrLoading) return;
   ocrLoading=true; btn.disabled=true;
-  const found={}; const notes=[];
+  const found={}, notes=[], texts=[];
+  const alts={phone:[],email:[],mobile:[]};
+  let layoutWords=null;
+
   try{
-    // 1. QR first — when a card carries a vCard it beats anything OCR can give us
+    // 1. QR first. A vCard beats anything OCR can produce, and on a lot of modern
+    //    cards the QR is the only machine-readable thing on there.
     for(const side of ["front","back"]){
       if(!draft[side]) continue;
-      msg.textContent="Checking "+side+" for a QR code…";
+      msg.textContent="Looking for a QR code on the "+side+"…";
       let payload=null;
-      try{ payload=await decodeQR(draft[side]); }catch(e){}
+      try{ payload=await decodeQR(draft[side],t=>{msg.textContent=t;}); }catch(e){}
       if(payload){
         const q=parseQRPayload(payload);
         Object.keys(q).forEach(k=>{ if(q[k]&&!found[k]) found[k]=q[k]; });
         draft.qr=payload;
-        notes.push(/^BEGIN:VCARD/i.test(payload)?"vCard from QR":(q.linkedin?"LinkedIn URL from QR":"QR code read"));
+        notes.push(/^BEGIN:VCARD/i.test(payload)?"vCard from QR":(q.linkedin?"LinkedIn from QR":"QR code"));
         break;
       }
     }
 
-    // 2. OCR with word boxes, so layout can be scored
     if(!window.Tesseract){
       msg.textContent="Downloading OCR engine…";
       await loadScript("https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js");
     }
-    let allText="";
-    for(const side of ["front","back"]){
-      if(!draft[side]) continue;
-      msg.textContent="Reading "+side+"… 0%";
-      const prepped=await prepOCR(draft[side]);
-      const r=await Tesseract.recognize(prepped,"eng",{
-        logger:m=>{ if(m.status==="recognizing text") msg.textContent="Reading "+side+"… "+Math.round(m.progress*100)+"%"; }
-      });
-      const data=(r&&r.data)||{};
-      allText+=(data.text||"")+"\n";
-      if(side==="front"){
-        const lines=wordsToLines(collectWords(data));
-        const lay=parseCardLayout(lines);
-        Object.keys(lay).forEach(k=>{ if(lay[k]&&!found[k]) found[k]=lay[k]; });
-        if(Object.keys(lay).length) notes.push("layout read "+Object.keys(lay).join(", "));
+
+    const worker=await Tesseract.createWorker("eng",1,{
+      logger:m=>{ if(m.status==="recognizing text") msg.textContent="Reading… "+Math.round(m.progress*100)+"%"; }
+    });
+
+    try{
+      for(const side of ["front","back"]){
+        if(!draft[side]) continue;
+        const {card,cropped}=await prepOCR(draft[side]);
+        if(side==="front"&&cropped) notes.push("card detected");
+
+        for(const pass of OCR_PASSES){
+          msg.textContent="Reading "+side+" — "+pass.label+"…";
+          const region = pass.region==="bottom"
+            ? cropCanvas(card,0,card.height*0.60,card.width,card.height*0.40)
+            : card;
+          const yOff = pass.region==="bottom" ? card.height*0.60 : 0;
+          const cv=valueRender(region,pass.flip);
+          await worker.setParameters({tessedit_pageseg_mode:pass.psm});
+          let data;
+          try{ data=(await worker.recognize(cv)).data; }catch(e){ continue; }
+
+          const raw=(data&&data.text)||"";
+          if(raw.trim()) texts.push(despace(raw));
+
+          // keep word boxes from the full-page passes for layout scoring
+          if(side==="front"&&pass.region==="full"){
+            const ws=collectWords(data).map(w=>Object.assign({},w,{y0:w.y0+yOff,y1:w.y1+yOff}));
+            if(ws.length&&(!layoutWords||ws.length>layoutWords.length)) layoutWords=ws;
+          }
+          // harvest contacts per pass so disagreements are visible instead of silent
+          const t=despace(raw);
+          (t.match(new RegExp(RE_EMAIL.source,"gi"))||[]).forEach(e=>{
+            const v=e.toLowerCase(); if(!alts.email.includes(v)) alts.email.push(v);
+          });
+          (t.match(new RegExp(RE_PHONE.source,"gi"))||[]).forEach(ph=>{
+            const digits=ph.replace(/\D/g,"");
+            if(digits.length<7||digits.length>15) return;
+            const v=ph.trim(); if(!alts.phone.includes(v)) alts.phone.push(v);
+          });
+        }
       }
+    } finally { await worker.terminate(); }
+
+    // 2. Layout scoring on the richest word set
+    if(layoutWords){
+      const lay=parseCardLayout(wordsToLines(layoutWords));
+      Object.keys(lay).forEach(k=>{ if(lay[k]&&!found[k]) found[k]=lay[k]; });
+      if(Object.keys(lay).length) notes.push("layout: "+Object.keys(lay).join(", "));
     }
 
-    // 3. Regex sweep fills whatever layout and QR left blank
-    const txt=parseCardText(allText);
+    // 3. Regex sweep over everything the passes produced
+    const all=texts.join("\n");
+    const txt=parseCardText(all);
     Object.keys(txt).forEach(k=>{ if(txt[k]&&!found[k]) found[k]=txt[k]; });
+    if(alts.email.length&&!found.email) found.email=alts.email[0];
+    if(alts.phone.length&&!found.phone) found.phone=alts.phone[0];
     if(!found.linkedin){
-      const li=allText.match(RE_LI);
-      if(li){ const p=liParse(li[0]); if(p&&p.kind==="in") found.linkedin=p.url; }
+      const li=all.match(RE_LI);
+      if(li){ const pp=liParse(li[0]); if(pp&&pp.kind==="in") found.linkedin=pp.url; }
     }
 
     fillForm(found);
     if(found.linkedin){ draft.linkedin=found.linkedin; draft.liConfirmed=!!draft.qr; }
+
+    // only surface alternates where the passes actually disagreed
+    draft.alts={};
+    ["email","phone"].forEach(k=>{
+      const list=alts[k].filter(v=>v!==found[k]);
+      if(list.length) draft.alts[k]=list;
+    });
+
     renderDraftTags();
     const n=Object.keys(found).filter(k=>found[k]).length;
+    const shaky=Object.keys(draft.alts).length;
     msg.innerHTML = n
-      ? `<span class="ok">Filled ${n} field${n>1?"s":""}</span>${notes.length?" — "+esc(notes.join(", ")):""}. Check them before saving.`
+      ? `<span class="ok">Filled ${n} field${n>1?"s":""}</span>${notes.length?" · "+esc(notes.join(" · ")):""}`
+        +(shaky?` · <b style="color:var(--acc)">${shaky} field${shaky>1?"s":""} read differently across passes — check the alternates below</b>`:"")
       : "Couldn't make anything out. Try a straighter, brighter, tighter shot — or type it in.";
   }catch(e){
     msg.textContent="OCR engine wouldn't load. Check your connection, or type the fields in — the photos are already saved.";
@@ -1509,6 +1804,8 @@ async function saveCard(){
     tags: draft.tags.slice(),
     source: draft.source,
     logo: draft.logo||(draft.editing&&draft.editing.logo)||null,
+    qr: draft.qr||(draft.editing&&draft.editing.qr)||null,
+    liConfirmed: !!draft.liConfirmed||!!(draft.editing&&draft.editing.liConfirmed),
     sugg: draft.sugg||null,
     fav: draft.editing?!!draft.editing.fav:false
   });
@@ -1685,6 +1982,10 @@ function openDetail(id){
       <label class="lbl">Suggested — tap a tag to keep it</label>
       ${sg.summary?`<p class="note">${esc(sg.summary)} <span style="opacity:.6">(confidence ${Math.round((sg.confidence||0)*100)}%${sg.sourced?", read from their site":""})</span></p>`:""}
       <div class="chips" style="margin-top:6px">${sg.tags.map(t=>`<span class="chip ${(c.tags||[]).includes(t)?"on":""}" data-keep="${esc(t)}">${esc(t)}</span>`).join("")}</div>`:""}
+    ${c.qr?`<div class="divider"></div><label class="lbl">QR code</label>
+      <p class="note">${/^https?:\/\//i.test(c.qr)
+        ? `<a href="${esc(c.qr)}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">${esc(c.qr)}</a>`
+        : esc(c.qr.slice(0,200))}</p>`:""}
     <div class="divider"></div>
     <label class="lbl">LinkedIn</label>
     ${li?`<p class="note"><a href="${esc(li.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">${esc(li.slug)}</a>${c.liConfirmed?' <span class="ok">· confirmed</span>':" · unconfirmed"}</p>`
@@ -1881,6 +2182,18 @@ function wire(){
   $("#manualTagPrev").addEventListener("click",e=>{
     const c=e.target.closest("[data-untag]"); if(!c) return;
     draft.tags=draft.tags.filter(t=>t!==c.dataset.untag); renderDraftTags();
+  });
+
+  // swap in an alternate OCR reading
+  $("#altPrev").addEventListener("click",e=>{
+    const c=e.target.closest("[data-alt]"); if(!c) return;
+    const field=c.dataset.alt, val=c.dataset.altval;
+    if(!F[field]) return;
+    const prev=$(F[field]).value.trim();
+    $(F[field]).value=val;
+    draft.alts[field]=(draft.alts[field]||[]).filter(v=>v!==val);
+    if(prev&&!draft.alts[field].includes(prev)) draft.alts[field].push(prev);
+    renderDraftTags();
   });
 
   // accept a suggested tag from the add form
