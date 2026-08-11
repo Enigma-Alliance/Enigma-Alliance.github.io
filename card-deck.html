@@ -265,6 +265,7 @@ button.danger:hover{border-color:var(--acc);color:var(--acc)}
       <div><label class="lbl" for="fMobile">Mobile</label><input id="fMobile" type="tel" placeholder="Cell"></div>
       <div><label class="lbl" for="fWeb">Website</label><input id="fWeb" type="text" placeholder="domain.com"></div>
       <div><label class="lbl" for="fMet">Met at</label><input id="fMet" type="text" placeholder="Event, class, referral…"></div>
+      <div><label class="lbl" for="fLi">LinkedIn</label><input id="fLi" type="text" placeholder="linkedin.com/in/…"></div>
       <div class="f-wide"><label class="lbl" for="fAddr">Address</label><input id="fAddr" type="text" placeholder="Street, city, state, zip"></div>
       <div class="f-wide"><label class="lbl" for="fNotes">Notes</label><textarea id="fNotes" placeholder="What they do, what you talked about, follow-up…"></textarea></div>
     </div>
@@ -669,6 +670,7 @@ function autoTags(r){
   }
   factTags(r.facts||deriveFacts(r)).forEach(add);
   (r.accepted||[]).forEach(add);
+  if(r.liConfirmed) add("linkedin-confirmed");
   add(r.source==="scan"?"scanned":"typed");
   add(String(new Date(r.created||Date.now()).getFullYear()));
   return t.slice(0,22);
@@ -779,6 +781,227 @@ function parseCardText(raw){
     }
   }
   return out;
+}
+
+/* ================= layout-aware reading ================= */
+/* Line order alone can't tell a name from a job title. Type size, vertical
+   position and what sits directly under what all carry that signal, so when
+   OCR gives us word boxes we rank candidates instead of taking the first match. */
+
+function collectWords(data){
+  const out=[];
+  const push=w=>{
+    const b=w.bbox||w;
+    if(!b||typeof b.x0!=="number") return;
+    const t=String(w.text||"").trim();
+    if(!t) return;
+    out.push({text:t,x0:b.x0,y0:b.y0,x1:b.x1,y1:b.y1,conf:typeof w.confidence==="number"?w.confidence:100});
+  };
+  const walk=n=>{
+    if(!n||typeof n!=="object") return;
+    if(Array.isArray(n)){ n.forEach(walk); return; }
+    if(Array.isArray(n.words)&&n.words.length){ n.words.forEach(push); return; }
+    ["blocks","paragraphs","lines"].forEach(k=>{ if(Array.isArray(n[k])) n[k].forEach(walk); });
+  };
+  walk(data);
+  return out;
+}
+
+function wordsToLines(words){
+  if(!words.length) return [];
+  const ws=words.slice().sort((a,b)=>a.y0-b.y0||a.x0-b.x0);
+  const mid=w=>(w.y0+w.y1)/2;
+  const groups=[]; let cur=[ws[0]];
+  for(let i=1;i<ws.length;i++){
+    const w=ws[i];
+    const refMid=cur.reduce((s,x)=>s+mid(x),0)/cur.length;
+    const refH=cur.reduce((s,x)=>s+(x.y1-x.y0),0)/cur.length||1;
+    if(Math.abs(mid(w)-refMid)<refH*0.6) cur.push(w);
+    else { groups.push(cur); cur=[w]; }
+  }
+  groups.push(cur);
+  return groups.map(g=>{
+    g.sort((a,b)=>a.x0-b.x0);
+    const hs=g.map(w=>w.y1-w.y0).sort((a,b)=>a-b);
+    return {
+      text:g.map(w=>w.text).join(" ").replace(/\s+/g," ").trim(),
+      x0:Math.min.apply(null,g.map(w=>w.x0)), x1:Math.max.apply(null,g.map(w=>w.x1)),
+      y0:Math.min.apply(null,g.map(w=>w.y0)), y1:Math.max.apply(null,g.map(w=>w.y1)),
+      h:hs[Math.floor(hs.length/2)]||1,
+      conf:g.reduce((s,w)=>s+w.conf,0)/g.length,
+      words:g.length
+    };
+  }).sort((a,b)=>a.y0-b.y0);
+}
+
+function parseCardLayout(lines){
+  const out={};
+  const good=lines.filter(l=>l.conf>=45&&l.text.length>1);
+  if(good.length<2) return out;
+  const maxH=Math.max.apply(null,good.map(l=>l.h))||1;
+  const bottom=Math.max.apply(null,good.map(l=>l.y1))||1;
+  const isContact=l=>RE_EMAIL.test(l.text)||RE_PHONE.test(l.text)||NOISE.test(l.text)||RE_ADDRESSY.test(l.text);
+  const used=new Set();
+
+  // NAME — big type, upper area, person-shaped, no role or org words
+  let name=null;
+  good.forEach(l=>{
+    if(isContact(l)) return;
+    const w=l.text.split(/\s+/);
+    if(w.length<2||w.length>5) return;
+    if(/\d/.test(l.text)) return;
+    let s=(l.h/maxH)*100;
+    if(l.y0<bottom*0.55) s+=14;
+    if(w.length<=3) s+=10;
+    if(/^[A-Z][a-z'’-]+(?:\s+[A-Z][A-Za-z.'’-]+)+$/.test(l.text)) s+=28;   // Title Case
+    else if(/^[A-Z\s.'’-]+$/.test(l.text)) s+=14;                          // ALL CAPS
+    if(ROLE_ANY.test(l.text)) s-=50;
+    if(RE_CORP.test(l.text)||notATitle(l.text)) s-=45;
+    if(!name||s>name.s) name={s,l};
+  });
+  if(name&&name.s>25){ out.name=name.l.text; used.add(name.l); }
+
+  // TITLE — a role line, smaller than the name, ideally the next line down
+  let title=null;
+  good.forEach(l=>{
+    if(used.has(l)||isContact(l)) return;
+    if(!ROLE_ANY.test(l.text)||notATitle(l.text)) return;
+    let s=40;
+    if(name){
+      if(l.h<name.l.h) s+=20;
+      const gap=l.y0-name.l.y1;
+      if(gap>=0&&gap<name.l.h*2.2) s+=35;      // sits directly beneath the name
+      if(Math.abs(l.x0-name.l.x0)<name.l.h) s+=10; // same left edge
+    }
+    if(l.text.length<50) s+=8;
+    if(!title||s>title.s) title={s,l};
+  });
+  if(title){ out.title=title.l.text.replace(/^[-–|]\s*/,""); used.add(title.l); }
+
+  // COMPANY — org words, or the biggest remaining block of type
+  let co=null;
+  good.forEach(l=>{
+    if(used.has(l)||isContact(l)) return;
+    if(RE_EMAIL.test(l.text)) return;
+    let s=(l.h/maxH)*55;
+    if(notATitle(l.text)) s+=45;
+    else if(RE_CORP.test(l.text)) s+=30;
+    if(ROLE_ANY.test(l.text)&&!notATitle(l.text)) s-=35;
+    if(l.y0<bottom*0.3||l.y1>bottom*0.75) s+=8;   // logo band, top or bottom
+    if(l.text.split(/\s+/).length>7) s-=25;
+    if(!co||s>co.s) co={s,l};
+  });
+  if(co&&co.s>30){ out.company=co.l.text; used.add(co.l); }
+
+  return out;
+}
+
+/* ================= QR ================= */
+async function decodeQR(dataUrl){
+  const im=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl; });
+  const c=document.createElement("canvas");
+  c.width=im.naturalWidth; c.height=im.naturalHeight;
+  const x=c.getContext("2d",{willReadFrequently:true});
+  x.drawImage(im,0,0);
+  // native first — Chrome ships this and it's far more tolerant of angle and blur
+  if("BarcodeDetector" in window){
+    try{
+      const det=new window.BarcodeDetector({formats:["qr_code"]});
+      const hits=await det.detect(c);
+      if(hits&&hits.length) return hits[0].rawValue;
+    }catch(e){}
+  }
+  if(!window.jsQR){
+    try{ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"); }catch(e){ return null; }
+  }
+  if(!window.jsQR) return null;
+  const d=x.getImageData(0,0,c.width,c.height);
+  const hit=window.jsQR(d.data,c.width,c.height,{inversionAttempts:"attemptBoth"});
+  return hit?hit.data:null;
+}
+
+/* QR payloads on cards are usually a vCard, a MECARD, or just a URL */
+function parseQRPayload(raw){
+  const s=String(raw||"").trim();
+  if(!s) return {};
+  const out={};
+  if(/^BEGIN:VCARD/i.test(s)){
+    const un=v=>String(v||"").replace(/\\,/g,",").replace(/\\n/gi,"\n").replace(/\\;/g,";").trim();
+    s.split(/\r?\n/).forEach(line=>{
+      const i=line.indexOf(":"); if(i<0) return;
+      const key=line.slice(0,i).toUpperCase(), val=un(line.slice(i+1));
+      if(!val) return;
+      if(/^FN\b/.test(key)) out.name=val;
+      else if(/^N\b/.test(key)&&!out.name){ const p=val.split(";"); out.name=[p[1],p[0]].filter(Boolean).join(" ").trim(); }
+      else if(/^ORG\b/.test(key)) out.company=val.split(";")[0];
+      else if(/^TITLE\b/.test(key)) out.title=val;
+      else if(/^EMAIL/.test(key)&&!out.email) out.email=val;
+      else if(/^TEL/.test(key)){ if(/CELL|MOBILE/i.test(key)) out.mobile=val; else if(!out.phone) out.phone=val; }
+      else if(/^URL/.test(key)){ if(/linkedin\.com/i.test(val)) out.linkedin=val; else if(!out.website) out.website=val; }
+      else if(/^ADR/.test(key)) out.address=val.split(";").filter(Boolean).join(", ");
+      else if(/^NOTE/.test(key)) out.notes=val;
+    });
+    return out;
+  }
+  if(/^MECARD:/i.test(s)){
+    s.replace(/^MECARD:/i,"").split(";").forEach(part=>{
+      const i=part.indexOf(":"); if(i<0) return;
+      const k=part.slice(0,i).toUpperCase(), v=part.slice(i+1).trim();
+      if(!v) return;
+      if(k==="N") out.name=v.split(",").reverse().join(" ").trim();
+      else if(k==="ORG") out.company=v;
+      else if(k==="TITLE") out.title=v;
+      else if(k==="EMAIL") out.email=v;
+      else if(k==="TEL") out.phone=v;
+      else if(k==="URL"){ if(/linkedin\.com/i.test(v)) out.linkedin=v; else out.website=v; }
+      else if(k==="ADR") out.address=v;
+      else if(k==="NOTE") out.notes=v;
+    });
+    return out;
+  }
+  if(/^mailto:/i.test(s)){ out.email=s.replace(/^mailto:/i,"").split("?")[0]; return out; }
+  if(/^tel:/i.test(s)){ out.phone=s.replace(/^tel:/i,"").trim(); return out; }
+  if(/^https?:\/\//i.test(s)||RE_URL.test(s)){
+    if(/linkedin\.com\/in\//i.test(s)) out.linkedin=s;
+    else out.website=s.replace(/^https?:\/\//i,"").replace(/\/$/,"");
+    return out;
+  }
+  out.notes=s.slice(0,300);
+  return out;
+}
+
+/* ================= LinkedIn ================= */
+/* No automated lookup here on purpose — LinkedIn has no public people-search API,
+   blocks unauthenticated fetches with a login wall, and prohibits scraping in its
+   terms. What works is a precise search link plus a paste-back confirm step. */
+const RE_LI=/(?:https?:\/\/)?(?:[a-z]{2,3}\.)?linkedin\.com\/(in|company)\/([A-Za-z0-9\-_%À-ÿ.]+)/i;
+function liParse(url){
+  const m=String(url||"").match(RE_LI);
+  if(!m) return null;
+  return {kind:m[1].toLowerCase(),slug:decodeURIComponent(m[2]).replace(/\/$/,""),
+          url:"https://www.linkedin.com/"+m[1].toLowerCase()+"/"+m[2].replace(/\/$/,"")};
+}
+function liSearchURL(c){
+  const terms=[c.name,c.company].filter(Boolean).join(" ");
+  return "https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(terms);
+}
+/* Reconcile pasted profile text against what the card says. */
+function liReconcile(c,text){
+  const t=String(text||"").replace(/\s+/g," ").trim();
+  if(!t) return null;
+  const diffs=[];
+  const headline=(t.match(/^(.{0,120}?)(?:\s+·|\s+\||$)/)||[])[1]||"";
+  const roleHit=t.match(new RegExp("([A-Z][A-Za-z ]{2,40}?(?:"+ROLE_RULES.map(r=>r[0].source).join("|")+")[A-Za-z ]{0,25})","i"));
+  if(roleHit){
+    const found=roleHit[1].split(/\s+\bat\b\s+/i)[0].replace(/[.,·|]$/,"").trim();
+    if(found && slug(found)!==slug(c.title||"")) diffs.push({field:"title",card:c.title||"—",linkedin:found});
+  }
+  const atCo=t.match(/\bat\s+([A-Z][\w&.,' -]{2,45})/);
+  if(atCo){
+    const found=atCo[1].replace(/[.,]$/,"").trim();
+    if(found && slug(found)!==slug(c.company||"")) diffs.push({field:"company",card:c.company||"—",linkedin:found});
+  }
+  return {headline:headline.slice(0,140),diffs};
 }
 
 /* ================= image handling ================= */
@@ -997,8 +1220,8 @@ async function mergeGroup(g){
 /* Metadata only. Card photos never leave this device — a Sheets cell caps at
    50k characters and one downscaled photo is several times that. Logos sync as
    the URL they came from, not the cached image. */
-const SYNC_COLS=['id','created','updated','deleted','name','title','company','email','phone','mobile','website','address','met','notes','tags','source','fav','logo','city','state','tz','country','domain','sector','auto'];
-const TEXT_FIELDS=["name","title","company","email","phone","mobile","website","address","met","notes","source"];
+const SYNC_COLS=['id','created','updated','deleted','name','title','company','email','phone','mobile','website','address','met','notes','tags','source','fav','logo','city','state','tz','country','domain','sector','auto','linkedin','liConfirmed'];
+const TEXT_FIELDS=["name","title","company","email","phone","mobile","website","address","met","notes","source","linkedin"];
 let tombs=[];
 
 function ts(v){
@@ -1021,7 +1244,8 @@ function toRow(c){
     tags:(c.tags||[]).join(", "),source:c.source||"",fav:c.fav?"TRUE":"",
     logo:c.logoSrc||"",
     city:f.city||"",state:f.state||"",tz:f.tz||"",country:f.country||"",
-    domain:f.domain||"",sector:f.sector||"",auto:(c.auto||[]).join(", ")
+    domain:f.domain||"",sector:f.sector||"",auto:(c.auto||[]).join(", "),
+    linkedin:c.linkedin||"",liConfirmed:c.liConfirmed?"TRUE":""
   };
 }
 function fromRow(r){
@@ -1029,6 +1253,7 @@ function fromRow(r){
   TEXT_FIELDS.forEach(k=>{ c[k]=String(r[k]==null?"":r[k]).trim(); });
   c.tags=String(r.tags||"").split(",").map(slug).filter(Boolean);
   c.fav=truthy(r.fav);
+  c.liConfirmed=truthy(r.liConfirmed);
   c.logoSrc=String(r.logo||"").trim();
   if(truthy(r.deleted)) c.deleted=1;
   c.source=c.source||"manual";
@@ -1109,7 +1334,7 @@ let draft={front:null,back:null,tags:[],editing:null,source:"manual"};
 let ui={mode:"scan",view:"grid",logic:"and",sort:"recent",q:"",tags:new Set()};
 
 /* ================= form <-> draft ================= */
-const F={name:"#fName",title:"#fTitle",company:"#fCompany",email:"#fEmail",phone:"#fPhone",mobile:"#fMobile",website:"#fWeb",met:"#fMet",address:"#fAddr",notes:"#fNotes"};
+const F={name:"#fName",title:"#fTitle",company:"#fCompany",email:"#fEmail",phone:"#fPhone",mobile:"#fMobile",website:"#fWeb",met:"#fMet",linkedin:"#fLi",address:"#fAddr",notes:"#fNotes"};
 function readForm(){
   const o={};
   for(const k in F) o[k]=$(F[k]).value.trim();
@@ -1208,12 +1433,29 @@ async function runOCR(){
   const btn=$("#btnScan"), msg=$("#scanMsg");
   if(ocrLoading) return;
   ocrLoading=true; btn.disabled=true;
+  const found={}; const notes=[];
   try{
+    // 1. QR first — when a card carries a vCard it beats anything OCR can give us
+    for(const side of ["front","back"]){
+      if(!draft[side]) continue;
+      msg.textContent="Checking "+side+" for a QR code…";
+      let payload=null;
+      try{ payload=await decodeQR(draft[side]); }catch(e){}
+      if(payload){
+        const q=parseQRPayload(payload);
+        Object.keys(q).forEach(k=>{ if(q[k]&&!found[k]) found[k]=q[k]; });
+        draft.qr=payload;
+        notes.push(/^BEGIN:VCARD/i.test(payload)?"vCard from QR":(q.linkedin?"LinkedIn URL from QR":"QR code read"));
+        break;
+      }
+    }
+
+    // 2. OCR with word boxes, so layout can be scored
     if(!window.Tesseract){
       msg.textContent="Downloading OCR engine…";
       await loadScript("https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js");
     }
-    let all="";
+    let allText="";
     for(const side of ["front","back"]){
       if(!draft[side]) continue;
       msg.textContent="Reading "+side+"… 0%";
@@ -1221,16 +1463,31 @@ async function runOCR(){
       const r=await Tesseract.recognize(prepped,"eng",{
         logger:m=>{ if(m.status==="recognizing text") msg.textContent="Reading "+side+"… "+Math.round(m.progress*100)+"%"; }
       });
-      all+=(r&&r.data&&r.data.text?r.data.text:"")+"\n";
+      const data=(r&&r.data)||{};
+      allText+=(data.text||"")+"\n";
+      if(side==="front"){
+        const lines=wordsToLines(collectWords(data));
+        const lay=parseCardLayout(lines);
+        Object.keys(lay).forEach(k=>{ if(lay[k]&&!found[k]) found[k]=lay[k]; });
+        if(Object.keys(lay).length) notes.push("layout read "+Object.keys(lay).join(", "));
+      }
     }
-    const parsed=parseCardText(all);
-    fillForm(parsed);
-    const got=Object.keys(parsed).filter(k=>parsed[k]).length;
-    if(!$("#fNotes").value.trim()&&all.trim()) $("#fNotes").value="";
+
+    // 3. Regex sweep fills whatever layout and QR left blank
+    const txt=parseCardText(allText);
+    Object.keys(txt).forEach(k=>{ if(txt[k]&&!found[k]) found[k]=txt[k]; });
+    if(!found.linkedin){
+      const li=allText.match(RE_LI);
+      if(li){ const p=liParse(li[0]); if(p&&p.kind==="in") found.linkedin=p.url; }
+    }
+
+    fillForm(found);
+    if(found.linkedin){ draft.linkedin=found.linkedin; draft.liConfirmed=!!draft.qr; }
     renderDraftTags();
-    msg.innerHTML = got
-      ? `<span class="ok">Filled ${got} field${got>1?"s":""}.</span> Check them — OCR misreads small print. Blank fields stay yours to type.`
-      : "Couldn't make out any fields. Try a straighter, brighter, tighter shot — or type them in.";
+    const n=Object.keys(found).filter(k=>found[k]).length;
+    msg.innerHTML = n
+      ? `<span class="ok">Filled ${n} field${n>1?"s":""}</span>${notes.length?" — "+esc(notes.join(", ")):""}. Check them before saving.`
+      : "Couldn't make anything out. Try a straighter, brighter, tighter shot — or type it in.";
   }catch(e){
     msg.textContent="OCR engine wouldn't load. Check your connection, or type the fields in — the photos are already saved.";
   }finally{
@@ -1417,6 +1674,7 @@ function openDetail(id){
   const sg=c.sugg;
   const qs=encodeURIComponent([c.name,c.company].filter(Boolean).join(" ")||c.email||"");
   const qsCo=encodeURIComponent(c.company||(c.facts&&c.facts.domain)||"");
+  const li=liParse(c.linkedin);
   $("#detBody").innerHTML=`
     ${c.logo?`<img src="${esc(c.logo)}" alt="" style="height:38px;max-width:180px;object-fit:contain;object-position:left;display:block;margin-bottom:12px">`:""}
     ${imgs.length?`<div class="detail">${imgs.map(([lb,src])=>`<figure><figcaption>${lb}</figcaption><img src="${esc(src)}" alt="${lb} of card"></figure>`).join("")}</div>`:""}
@@ -1428,11 +1686,24 @@ function openDetail(id){
       ${sg.summary?`<p class="note">${esc(sg.summary)} <span style="opacity:.6">(confidence ${Math.round((sg.confidence||0)*100)}%${sg.sourced?", read from their site":""})</span></p>`:""}
       <div class="chips" style="margin-top:6px">${sg.tags.map(t=>`<span class="chip ${(c.tags||[]).includes(t)?"on":""}" data-keep="${esc(t)}">${esc(t)}</span>`).join("")}</div>`:""}
     <div class="divider"></div>
+    <label class="lbl">LinkedIn</label>
+    ${li?`<p class="note"><a href="${esc(li.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">${esc(li.slug)}</a>${c.liConfirmed?' <span class="ok">· confirmed</span>':" · unconfirmed"}</p>`
+        :`<p class="note">No profile linked yet.</p>`}
+    <div class="row" style="margin-top:6px">
+      <a class="btn" href="${esc(liSearchURL(c))}" target="_blank" rel="noopener noreferrer">Search LinkedIn</a>
+      <button data-act="lilink">${li?"Change link":"Paste profile URL"}</button>
+      ${li?`<button data-act="licheck">Check against card</button>`:""}
+    </div>
+    ${c.liDiffs&&c.liDiffs.length?`<div style="margin-top:10px">
+      <label class="lbl">Card vs LinkedIn</label>
+      ${c.liDiffs.map((d,i)=>`<div class="row" style="justify-content:space-between;border:1px solid var(--line);padding:8px 10px;margin-top:6px">
+        <span class="note"><b style="color:var(--fg)">${esc(d.field)}</b> — card says ${esc(d.card)}, profile says ${esc(d.linkedin)}</span>
+        <button data-fix="${i}">Use profile</button></div>`).join("")}</div>`:""}
+    <div class="divider"></div>
     <label class="lbl">Look them up</label>
     <div class="row" style="margin-top:6px">
       ${c.facts&&c.facts.site?`<a class="btn" href="${esc(c.facts.site)}" target="_blank" rel="noopener noreferrer">Their site</a>`:""}
       <a class="btn" href="https://www.google.com/search?q=${qs}" target="_blank" rel="noopener noreferrer">Google</a>
-      <a class="btn" href="https://www.linkedin.com/search/results/all/?keywords=${qs}" target="_blank" rel="noopener noreferrer">LinkedIn</a>
       <a class="btn" href="https://www.crunchbase.com/textsearch?q=${qsCo}" target="_blank" rel="noopener noreferrer">Crunchbase</a>
       <button data-act="enrich">Re-run lookup</button>
     </div>
@@ -1460,6 +1731,7 @@ function vcard(c){
   if(c.phone)L.push(`TEL;TYPE=WORK,VOICE:${c.phone}`);
   if(c.mobile)L.push(`TEL;TYPE=CELL:${c.mobile}`);
   if(c.website)L.push(`URL:${/^https?:/i.test(c.website)?c.website:"https://"+c.website}`);
+  if(c.linkedin)L.push(`URL;TYPE=LinkedIn:${c.linkedin}`);
   if(c.address)L.push(`ADR;TYPE=WORK:;;${c.address.replace(/,/g,"\\,")};;;;`);
   const note=[c.notes,c.met?"Met at: "+c.met:"",allTags(c).length?"Tags: "+allTags(c).join(", "):""].filter(Boolean).join(" — ");
   if(note)L.push(`NOTE:${note.replace(/\n/g," ").replace(/,/g,"\\,")}`);
@@ -1476,7 +1748,7 @@ function download(name,content,type){
 }
 function stamp(){ const d=new Date(),p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
 function toCSV(){
-  const cols=["name","title","company","email","phone","mobile","website","address","met","notes"];
+  const cols=["name","title","company","email","phone","mobile","website","linkedin","address","met","notes"];
   const q=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;
   const head=[...cols,"tags","added"].map(c=>q(c)).join(",");
   const rows=cards.map(c=>[...cols.map(k=>q(c[k])),q(allTags(c).join(" ")),q(new Date(c.created).toISOString().slice(0,10))].join(","));
@@ -1745,6 +2017,35 @@ function wire(){
       try{ await enrichCard(c,{deep:cfg.ollamaOn&&!!cfg.ollamaModel}); await Store.put(c); openDetail(c.id); renderAll(); toast("Lookup done"); }
       catch(err){ b.disabled=false; b.textContent="Re-run lookup"; toast("Lookup failed"); }
     }
+    else if(act==="lilink"){
+      const v=prompt("Paste the LinkedIn profile URL.\n\nOpen the search, find the right person, then copy the address bar.",c.linkedin||"");
+      if(v===null) return;
+      if(!v.trim()){ c.linkedin=""; c.liConfirmed=false; }
+      else{
+        const p=liParse(v);
+        if(!p||p.kind!=="in"){ toast("That isn't a linkedin.com/in/ URL"); return; }
+        c.linkedin=p.url; c.liConfirmed=true;
+      }
+      c.updated=Date.now(); c.auto=autoTags(c);
+      await Store.put(c); openDetail(c.id); renderAll(); queueSync(); toast("Profile linked");
+    }
+    else if(act==="licheck"){
+      const txt=prompt("Open the profile, select the top section, copy it, and paste it here.\n\nLinkedIn blocks automated reads, so this is the reliable way to compare.");
+      if(!txt) return;
+      const rec=liReconcile(c,txt);
+      c.liDiffs=(rec&&rec.diffs)||[];
+      c.updated=Date.now(); await Store.put(c); openDetail(c.id);
+      toast(c.liDiffs.length?c.liDiffs.length+" difference"+(c.liDiffs.length>1?"s":""):"Card matches the profile");
+    }
+  });
+  $("#detBody").addEventListener("click",async e=>{
+    const f=e.target.closest("[data-fix]"); if(!f) return;
+    const c=cards.find(x=>x.id===detId); if(!c) return;
+    const d=(c.liDiffs||[])[+f.dataset.fix]; if(!d) return;
+    c[d.field]=d.linkedin;
+    c.liDiffs=c.liDiffs.filter((_,i)=>i!==+f.dataset.fix);
+    c.updated=Date.now(); c.facts=deriveFacts(c); c.auto=autoTags(c);
+    await Store.put(c); openDetail(c.id); renderAll(); queueSync(); toast("Updated from profile");
   });
   $("#detBody").addEventListener("click",async e=>{
     const k=e.target.closest("[data-keep]"); if(!k) return;
