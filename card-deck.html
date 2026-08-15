@@ -100,6 +100,10 @@ button.danger:hover{border-color:var(--acc);color:var(--acc)}
 /* ---------- fields ---------- */
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
 .f-wide{grid-column:1/-1}
+.phone-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.phone-row input{flex:1}
+.phone-row select{width:auto;min-width:96px;flex:0 0 auto}
+.phone-row button{padding:8px 10px;font-size:10px;flex:0 0 auto}
 
 /* ---------- chips ---------- */
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -261,8 +265,9 @@ button.danger:hover{border-color:var(--acc);color:var(--acc)}
       <div><label class="lbl" for="fTitle">Title</label><input id="fTitle" type="text" placeholder="Role / position"></div>
       <div><label class="lbl" for="fCompany">Company</label><input id="fCompany" type="text" placeholder="Organization"></div>
       <div><label class="lbl" for="fEmail">Email</label><input id="fEmail" type="email" placeholder="name@domain.com"></div>
-      <div><label class="lbl" for="fPhone">Phone</label><input id="fPhone" type="tel" placeholder="Office"></div>
-      <div><label class="lbl" for="fMobile">Mobile</label><input id="fMobile" type="tel" placeholder="Cell"></div>
+      <div class="f-wide"><label class="lbl" for="fPhone">Phone</label>
+        <div id="phoneRows"></div>
+        <button id="btnAddPhone" style="margin-top:6px;padding:6px 10px;font-size:9px">Add another number</button></div>
       <div><label class="lbl" for="fWeb">Website</label><input id="fWeb" type="text" placeholder="domain.com"></div>
       <div><label class="lbl" for="fMet">Met at</label><input id="fMet" type="text" placeholder="Event, class, referral…"></div>
       <div><label class="lbl" for="fLi">LinkedIn</label><input id="fLi" type="text" placeholder="linkedin.com/in/…"></div>
@@ -685,7 +690,10 @@ const RE_EMAIL=/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}/i;
 /* Deliberately broad enough for international cards. Digit-count validation
    below rejects dates, zip codes and short fragments. */
 const RE_PHONE=/(?:\+\d{1,3}[\s().\/-]*)?(?:\(?\d{1,4}\)?[\s.\/-]*){2,5}\d{2,4}(?:\s*(?:x|ext\.?)\s*\d{1,6})?/i;
-const RE_URL=/\b(?:https?:\/\/|www\.)?[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?)*\.[a-z]{2,63}(?::\d{2,5})?(?:\/[^\s,;]*)?/i;
+/* Keep URL matching structural. It accepts new TLDs without turning ordinary
+   phrases such as "Game Design" into fake domains. Each DNS label must begin
+   and end with a letter or digit, which also keeps OCR punctuation out. */
+const RE_URL=/\b(?:https?:\/\/|www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,63}(?::\d{2,5})?(?:\/[^\s,;]*)?/i;
 /* strong = unambiguous org markers; weak = words that also show up inside job titles */
 const RE_CORP_STRONG=/\b(inc|llc|l\.l\.c|ltd|corp|corporation|gmbh|plc|pllc|company|studios?|games|labs?|agency|partners|holdings|entertainment|university|college|productions?)\b\.?/i;
 const RE_CORP_WEAK=/\b(co|interactive|group|media|works|collective|systems|technolog\w*|software|digital|creative)\b\.?/i;
@@ -702,11 +710,29 @@ const ROLE_EXTRA=/\b(owner|partner|architect|specialist|coordinator|administrato
 const ROLE_ANY=new RegExp(ROLE_RULES.map(r=>r[0].source).concat(ROLE_EXTRA.source).join("|"),"i");
 const NOISE=/^(tel|phone|mobile|cell|fax|office|email|e-?mail|web|www|address|直|t|m|o|f|e|w|p)[:.\s]/i;
 
+/* Contact rows on modern cards start with pictograms. OCR often turns them into
+   one or two junk glyphs welded to the real value. */
+function stripLeadingGlyphs(line){
+  let v=String(line||"").trim();
+  // a pictogram decodes as a short run of punctuation and/or one or two stray
+  // letters immediately before an email, a host, or a number
+  const AHEAD=/^(?:[A-Za-z0-9._%+-]+@|[A-Za-z0-9-]+\.[A-Za-z]{2,24}\b|[(+]?\d)/;
+  for(let i=0;i<3;i++){
+    const m=v.match(/^([^\sA-Za-z0-9]+|[A-Za-z]{1,2})\s+(.*)$/);
+    if(!m) break;
+    const rest=m[2].trim();
+    if(!AHEAD.test(rest)) break;
+    v=rest;
+  }
+  return v.replace(/^[^A-Za-z0-9+(]+/,"").trim();
+}
+
+
 function parseCardText(raw){
   const out={};
   const text=String(raw||"").replace(/\u00a0/g," ");
   const cleanLine=s=>String(s||"").replace(/\s{2,}/g," ").replace(/^[^A-Za-z0-9+(@&]+/,"").replace(/[^A-Za-z0-9).]+$/," ").trim();
-  const lines=text.split(/[\r\n|•·]+/).map(cleanLine).filter(s=>s.length>1);
+  const lines=text.split(/[\r\n|•·]+/).map(s=>stripLeadingGlyphs(cleanLine(s))).filter(s=>s.length>1);
 
   const em=despace(text).match(RE_EMAIL); if(em) out.email=em[0].toLowerCase().replace(/[),.;:]+$/,"");
 
@@ -726,15 +752,13 @@ function parseCardText(raw){
       if(LB_MOBILE.test(before)) kind="mobile";
       else if(LB_FAX.test(before)) kind="fax";
       else if(LB_OFFICE.test(before)) kind="phone";
-      if(kind!=="fax") phones.push({v,kind});
+      phones.push({v,kind});
     }
   });
   // near-identical digit strings are the same number read twice, not two numbers
   const samePhone=(a,b)=>{
     const A=a.replace(/\D/g,""), B=b.replace(/\D/g,"");
-    if(A.length!==B.length||!A.length) return false;
-    let same=0; for(let i=0;i<A.length;i++) if(A[i]===B[i]) same++;
-    return same/A.length>=0.7;
+    return !!A&&A===B;
   };
   const mob=phones.find(p=>p.kind==="mobile");
   const off=phones.find(p=>p.kind==="phone");
@@ -747,6 +771,9 @@ function parseCardText(raw){
     if(second) out.mobile=second.v;
   }
   if(out.mobile&&out.phone&&samePhone(out.mobile,out.phone)) delete out.mobile;
+  const labels={mobile:"Mobile",phone:"Office",fax:"Fax",unknown:""},seenPhone=new Set();
+  out.phones=phones.filter(p=>{const d=p.v.replace(/\D/g,"");if(!d||seenPhone.has(d))return false;seenPhone.add(d);return true;})
+    .map(p=>({v:p.v,label:labels[p.kind]||""}));
 
   // website — must not be the email domain
   for(const l of lines){
@@ -825,6 +852,25 @@ function parseCardText(raw){
     }
     if(best){ out.company=best.l; used.add(best.i); }
   }
+  /* Display type wraps a name onto a second line. With word boxes the layout
+     pass merges them; on plain text the tail would otherwise be taken as the
+     company. Only merge the unambiguous signature: shouty caps continued by one
+     or two more shouty words carrying no organisation marker. */
+  if(out.name&&/^[A-Z][A-Z\s.'’-]{2,}$/.test(out.name)){
+    for(let i=0;i<lines.length;i++){
+      if(lines[i]!==out.name) continue;
+      const nxt=lines[i+1];
+      if(!nxt) break;
+      const words=nxt.split(/\s+/);
+      if(words.length<=2 && /^[A-Z][A-Z\s.'’-]{2,}$/.test(nxt)
+         && !isContact(nxt) && !ROLE_ANY.test(nxt) && !RE_CORP.test(nxt) && !notATitle(nxt)){
+        out.name=out.name+" "+nxt; used.add(i+1);
+        if(out.company===nxt) delete out.company;
+      }
+      break;
+    }
+  }
+
   // address — has a number and a state or zip
   for(let i=0;i<lines.length;i++){
     if(used.has(i)) continue;
@@ -1005,6 +1051,234 @@ function parseCardLayout(lines){
   return out;
 }
 
+/* ================= card rectification =================
+   Photos of cards are rotated, tilted and surrounded by desk. Finding the card's
+   quadrilateral and warping it flat fixes framing, rotation and perspective in
+   one step, and gives every later stage a clean upright card to work from.
+
+   Two detection cues are needed: a bright cream card on dark wood is found by
+   luminance, while a black card with coloured ink has no luminance edge at all
+   and is found by its ink instead. */
+
+function grayStats(src,W){
+  const H=Math.max(1,Math.round(W*src.height/src.width));
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const x=c.getContext("2d",{willReadFrequently:true});
+  x.imageSmoothingQuality="high"; x.drawImage(src,0,0,W,H);
+  const d=x.getImageData(0,0,W,H).data;
+  const L=new Uint8Array(W*H), S=new Float32Array(W*H);
+  for(let p=0,i=0;p<W*H;p++,i+=4){
+    L[p]=Math.round(.299*d[i]+.587*d[i+1]+.114*d[i+2]);
+    const mx=Math.max(d[i],d[i+1],d[i+2]), mn=Math.min(d[i],d[i+1],d[i+2]);
+    S[p]=mx===0?0:(mx-mn)/mx;
+  }
+  return {L,S,W,H};
+}
+function otsuThreshold(L){
+  const h=new Int32Array(256); for(let i=0;i<L.length;i++) h[L[i]]++;
+  const tot=L.length; let sum=0; for(let i=0;i<256;i++) sum+=i*h[i];
+  let sumB=0,wB=0,best=0,thr=0;
+  for(let t=0;t<256;t++){
+    wB+=h[t]; if(!wB) continue;
+    const wF=tot-wB; if(!wF) break;
+    sumB+=t*h[t];
+    const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF);
+    if(v>best){ best=v; thr=t; }
+  }
+  return thr;
+}
+function erodeMask(m,W,H,r){
+  const out=new Uint8Array(W*H);
+  for(let y=r;y<H-r;y++) for(let x=r;x<W-r;x++){
+    let ok=1;
+    for(let dy=-r;dy<=r&&ok;dy++) for(let dx=-r;dx<=r;dx++) if(!m[(y+dy)*W+x+dx]){ ok=0; break; }
+    out[y*W+x]=ok;
+  }
+  return out;
+}
+function biggestBlob(m,W,H){
+  const seen=new Uint8Array(W*H); let best=[];
+  const stack=new Int32Array(W*H);
+  for(let p=0;p<W*H;p++){
+    if(!m[p]||seen[p]) continue;
+    let sp=0; stack[sp++]=p; seen[p]=1; const cur=[];
+    while(sp){
+      const q=stack[--sp]; cur.push(q);
+      const x=q%W, y=(q/W)|0;
+      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+        const nx=x+dx, ny=y+dy;
+        if(nx<0||ny<0||nx>=W||ny>=H) continue;
+        const r=ny*W+nx;
+        if(m[r]&&!seen[r]){ seen[r]=1; stack[sp++]=r; }
+      }
+    }
+    if(cur.length>best.length) best=cur;
+  }
+  return best;
+}
+function convexHull(pts){
+  const P=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[]; for(const p of P){ while(lo.length>=2&&cross(lo[lo.length-2],lo[lo.length-1],p)<=0) lo.pop(); lo.push(p); }
+  const up=[]; for(let i=P.length-1;i>=0;i--){ const p=P[i]; while(up.length>=2&&cross(up[up.length-2],up[up.length-1],p)<=0) up.pop(); up.push(p); }
+  lo.pop(); up.pop(); return lo.concat(up);
+}
+function minAreaRect(H){
+  let best=null;
+  for(let i=0;i<H.length;i++){
+    const a=H[i], b=H[(i+1)%H.length];
+    const ang=Math.atan2(b[1]-a[1],b[0]-a[0]), c=Math.cos(-ang), s=Math.sin(-ang);
+    let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+    for(const p of H){
+      const x=p[0]*c-p[1]*s, y=p[0]*s+p[1]*c;
+      if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+    }
+    const area=(x1-x0)*(y1-y0);
+    if(!best||area<best.area) best={area,ang,x0,x1,y0,y1};
+  }
+  if(!best) return null;
+  const c=Math.cos(best.ang), s=Math.sin(best.ang);
+  const un=(x,y)=>[x*c-y*s,x*s+y*c];
+  return {corners:[un(best.x0,best.y0),un(best.x1,best.y0),un(best.x1,best.y1),un(best.x0,best.y1)],area:best.area};
+}
+function snapToHull(rc,H){
+  return rc.map(c=>{
+    let best=H[0], bd=Infinity;
+    for(const p of H){ const d=(p[0]-c[0])**2+(p[1]-c[1])**2; if(d<bd){ bd=d; best=p; } }
+    return best;
+  });
+}
+function orderQuad(q){
+  const cx=q.reduce((s,p)=>s+p[0],0)/4, cy=q.reduce((s,p)=>s+p[1],0)/4;
+  const byAng=q.slice().sort((a,b)=>Math.atan2(a[1]-cy,a[0]-cx)-Math.atan2(b[1]-cy,b[0]-cx));
+  let start=0,bs=Infinity;
+  byAng.forEach((p,i)=>{ const v=p[0]+p[1]; if(v<bs){ bs=v; start=i; } });
+  return [0,1,2,3].map(i=>byAng[(start+i)%4]);
+}
+const _d2=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+
+function cardQuads(src){
+  const SW=520;
+  const {L,S,W,H}=grayStats(src,SW);
+  const N=W*H, thr=otsuThreshold(L);
+  const masks={bright:new Uint8Array(N), dark:new Uint8Array(N), ink:new Uint8Array(N)};
+  for(let p=0;p<N;p++){
+    masks.bright[p]=L[p]>thr?1:0;
+    masks.dark[p]=L[p]<=thr?1:0;
+    masks.ink[p]=(S[p]>0.40&&L[p]>50)?1:0;
+  }
+  const out=[];
+  for(const name of ["bright","dark","ink"]){
+    const blob=biggestBlob(erodeMask(masks[name],W,H,2),W,H);
+    if(blob.length<N*0.04) continue;
+    const hull=convexHull(blob.map(p=>[p%W,(p/W)|0]));
+    if(hull.length<4) continue;
+    const rect=minAreaRect(hull); if(!rect) continue;
+    const q=orderQuad(snapToHull(rect.corners,hull));
+    const wA=(_d2(q[0],q[1])+_d2(q[3],q[2]))/2, hA=(_d2(q[0],q[3])+_d2(q[1],q[2]))/2;
+    if(wA<20||hA<20) continue;
+    const cover=rect.area/N, fill=blob.length/rect.area, ratio=wA/hA;
+    if(cover>0.90||cover<0.06) continue;      // covering the frame means it found the desk
+    if(fill<0.45) continue;                   // a card is a solid quad, not scattered marks
+    const aspectOK=(ratio>1.25&&ratio<2.35)||(ratio>0.42&&ratio<0.80);
+    if(!aspectOK) continue;
+    if(new Set(q.map(p=>Math.round(p[0])+","+Math.round(p[1]))).size<4) continue;
+    out.push({name,q,ratio,score:100+cover*40+fill*40,scale:src.width/W});
+  }
+  // fallback: a dark card whose only signal is sparse coloured ink
+  if(!out.length){
+    const col=new Int32Array(W), row=new Int32Array(H); let tot=0;
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const p=y*W+x;
+      if(S[p]>0.45&&L[p]>60){ col[x]++; row[y]++; tot++; }
+    }
+    if(tot>N*0.004){
+      const pick=a=>{
+        let t=0; for(let i=0;i<a.length;i++) t+=a[i];
+        t*=0.005; let lo=0,hi=a.length-1,acc=0;
+        for(let i=0;i<a.length;i++){ acc+=a[i]; if(acc>t){ lo=i; break; } }
+        acc=0; for(let i=a.length-1;i>=0;i--){ acc+=a[i]; if(acc>t){ hi=i; break; } }
+        return [lo,hi];
+      };
+      const [x0,x1]=pick(col),[y0,y1]=pick(row);
+      if(x1-x0>W*0.08&&y1-y0>H*0.08){
+        const px=(x1-x0)*0.10, py=(y1-y0)*0.06;
+        const cl=(v,m)=>Math.max(0,Math.min(m-1,v));
+        out.push({name:"ink-bounds",score:40,ratio:(x1-x0)/(y1-y0),scale:src.width/W,
+          q:[[cl(x0-px,W),cl(y0-py,H)],[cl(x1+px,W),cl(y0-py,H)],[cl(x1+px,W),cl(y1+py,H)],[cl(x0-px,W),cl(y1+py,H)]]});
+      }
+    }
+  }
+  return out.sort((a,b)=>b.score-a.score);
+}
+
+function homography(srcQuad,dw,dh){
+  const dst=[[0,0],[dw,0],[dw,dh],[0,dh]], A=[], b=[];
+  for(let i=0;i<4;i++){
+    const [x,y]=dst[i], [u,v]=srcQuad[i];
+    A.push([x,y,1,0,0,0,-x*u,-y*u]); b.push(u);
+    A.push([0,0,0,x,y,1,-x*v,-y*v]); b.push(v);
+  }
+  const M=A.map((r,i)=>r.concat([b[i]]));
+  for(let c=0;c<8;c++){
+    let piv=c; for(let r=c+1;r<8;r++) if(Math.abs(M[r][c])>Math.abs(M[piv][c])) piv=r;
+    const t=M[c]; M[c]=M[piv]; M[piv]=t;
+    if(Math.abs(M[c][c])<1e-9) return null;
+    for(let r=0;r<8;r++){
+      if(r===c) continue;
+      const f=M[r][c]/M[c][c];
+      for(let k=c;k<9;k++) M[r][k]-=f*M[c][k];
+    }
+  }
+  const h=M.map((r,i)=>r[8]/M[i][i]);
+  return [h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],1];
+}
+function warpQuad(src,quad,dw,dh){
+  const Hm=homography(quad,dw,dh); if(!Hm) return null;
+  const sc=document.createElement("canvas");
+  sc.width=src.width; sc.height=src.height;
+  const sx=sc.getContext("2d",{willReadFrequently:true});
+  sx.drawImage(src,0,0);
+  const sd=sx.getImageData(0,0,src.width,src.height).data;
+  const out=document.createElement("canvas");
+  out.width=dw; out.height=dh;
+  const ox=out.getContext("2d",{willReadFrequently:true});
+  const od=ox.createImageData(dw,dh), o=od.data;
+  const SW=src.width, SH=src.height;
+  for(let y=0;y<dh;y++) for(let x=0;x<dw;x++){
+    const w=Hm[6]*x+Hm[7]*y+Hm[8];
+    const u=(Hm[0]*x+Hm[1]*y+Hm[2])/w, v=(Hm[3]*x+Hm[4]*y+Hm[5])/w;
+    const i=(y*dw+x)*4;
+    if(u<0||v<0||u>=SW-1||v>=SH-1){ o[i]=o[i+1]=o[i+2]=255; o[i+3]=255; continue; }
+    const x0=u|0, y0=v|0, fx=u-x0, fy=v-y0;
+    for(let c=0;c<3;c++){
+      const p00=sd[((y0*SW+x0)<<2)+c], p10=sd[((y0*SW+x0+1)<<2)+c];
+      const p01=sd[(((y0+1)*SW+x0)<<2)+c], p11=sd[(((y0+1)*SW+x0+1)<<2)+c];
+      o[i+c]=(p00*(1-fx)+p10*fx)*(1-fy)+(p01*(1-fx)+p11*fx)*fy;
+    }
+    o[i+3]=255;
+  }
+  ox.putImageData(od,0,0);
+  return out;
+}
+
+/* Flatten a photographed card to an upright rectangle. Returns null when nothing
+   card-shaped is found, so callers can fall back to the raw frame. */
+function rectifyCard(src,targetShort){
+  targetShort=targetShort||1500;
+  const pick=cardQuads(src)[0];
+  if(!pick) return null;
+  const q=pick.q.map(p=>[p[0]*pick.scale,p[1]*pick.scale]);
+  const wA=(_d2(q[0],q[1])+_d2(q[3],q[2]))/2, hA=(_d2(q[0],q[3])+_d2(q[1],q[2]))/2;
+  if(wA<40||hA<40) return null;
+  const short=Math.min(2600,Math.max(targetShort,600));
+  const scale=short/Math.min(wA,hA);
+  const dw=Math.round(Math.min(4200,wA*scale));
+  const dh=Math.round(Math.min(4200,hA*scale));
+  const out=warpQuad(src,q,dw,dh);
+  return out?{canvas:out,how:pick.name}:null;
+}
+
 /* ================= QR ================= */
 /* Stylised cards break naive decoding when several module colours have similar
    luminance to the card face. Measuring each pixel's colour distance recovers
@@ -1130,23 +1404,24 @@ async function decodeQR(dataUrl,onProgress){
 
   if(!window.jsQR){
     if(onProgress) onProgress("Loading QR decoder…");
-    try{ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"); }catch(e){ return null; }
+    try{ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"); }catch(e){}
   }
-  if(!window.jsQR) return null;
 
   const box=findCardBox(im);
   const face=box?cropCanvas(full,box.x,box.y,box.w,box.h):full;
   const colours=dominantColours(face,4);
 
   // small sizes first: that's where stylised modules actually resolve
-  for(const w of [600]){
-    const scaled=scaleCanvas(face,Math.min(w,face.width));
-    const plain=tryJsQR(scaled);
-    if(plain) return plain;
-    for(const bgc of colours.slice(0,1)){
-      for(const thr of [90,125]){
-        const hit=tryJsQR(distanceBinarise(scaled,bgc,thr));
-        if(hit) return hit;
+  if(window.jsQR){
+    for(const w of [600]){
+      const scaled=scaleCanvas(face,Math.min(w,face.width));
+      const plain=tryJsQR(scaled);
+      if(plain) return plain;
+      for(const bgc of colours.slice(0,1)){
+        for(const thr of [90,125]){
+          const hit=tryJsQR(distanceBinarise(scaled,bgc,thr));
+          if(hit) return hit;
+        }
       }
     }
   }
@@ -1168,14 +1443,14 @@ async function decodeQR(dataUrl,onProgress){
     if(styled) return styled;
   }
   // last resort: the uncropped frame
-  return tryJsQR(scaleCanvas(full,800));
+  return window.jsQR?tryJsQR(scaleCanvas(full,800)):null;
 }
 
 /* QR payloads on cards are usually a vCard, a MECARD, or just a URL */
 function parseQRPayload(raw){
   const s=String(raw||"").trim();
   if(!s) return {};
-  const out={};
+  const out={}, qrPhones=[];
   if(/^BEGIN:VCARD/i.test(s)){
     const un=v=>String(v||"").replace(/\\n/gi,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\").trim();
     // vCard permits folded lines and grouped properties such as item1.EMAIL.
@@ -1189,11 +1464,17 @@ function parseQRPayload(raw){
       else if(/^ORG\b/.test(key)) out.company=val.split(";")[0];
       else if(/^TITLE\b/.test(key)) out.title=val;
       else if(/^EMAIL/.test(key)&&!out.email) out.email=val;
-      else if(/^TEL/.test(key)){ if(/CELL|MOBILE/i.test(key)) out.mobile=val; else if(!out.phone) out.phone=val; }
+      else if(/^TEL/.test(key)){
+        const label=/CELL|MOBILE/i.test(key)?"Mobile":/FAX/i.test(key)?"Fax":/HOME/i.test(key)?"Home":"Office";
+        qrPhones.push({v:val,label});
+        if(label==="Mobile"&&!out.mobile) out.mobile=val;
+        else if(!out.phone) out.phone=val;
+      }
       else if(/^URL/.test(key)){ if(/linkedin\.com/i.test(val)) out.linkedin=val; else if(!out.website) out.website=val; }
       else if(/^ADR/.test(key)) out.address=val.split(";").filter(Boolean).join(", ");
       else if(/^NOTE/.test(key)) out.notes=val;
     });
+    if(qrPhones.length) out.phones=qrPhones;
     return out;
   }
   if(/^MECARD:/i.test(s)){
@@ -1205,11 +1486,15 @@ function parseQRPayload(raw){
       else if(k==="ORG") out.company=v;
       else if(k==="TITLE") out.title=v;
       else if(k==="EMAIL") out.email=v;
-      else if(k==="TEL") out.phone=v;
+      else if(k==="TEL"){
+        qrPhones.push({v,label:qrPhones.length?"Mobile":"Office"});
+        if(!out.phone) out.phone=v; else if(!out.mobile) out.mobile=v;
+      }
       else if(k==="URL"){ if(/linkedin\.com/i.test(v)) out.linkedin=v; else out.website=v; }
       else if(k==="ADR") out.address=v;
       else if(k==="NOTE") out.notes=v;
     });
+    if(qrPhones.length) out.phones=qrPhones;
     return out;
   }
   if(/^mailto:/i.test(s)){ out.email=s.replace(/^mailto:/i,"").split("?")[0]; return out; }
@@ -1261,7 +1546,7 @@ function liReconcile(c,text){
 /* Stored photos. Measured: at a 1500px long edge the contact strip on a real
    card is unrecoverable at any downstream setting; 2000 recovers it. Scanning
    prefers draft.raw (the untouched file, memory-only) and falls back to this. */
-const MAXPX=2000;
+const MAXPX=2400;
 function fileToDataURL(file){
   return new Promise((res,rej)=>{
     if(!file||!/^image\//.test(file.type||"")) return rej(new Error("not an image"));
@@ -1458,6 +1743,184 @@ function enhanceMono(src){
   return c;
 }
 
+/* Local thresholding preserves thin characters on gradients, glossy stock and
+   coloured panels. Global contrast cannot solve those cases because the card
+   and the desk may already span the complete 0 to 255 range. */
+function adaptiveBinarise(src,radius=12,bias=8,invert=false){
+  const W=src.width,H=src.height,c=document.createElement("canvas");
+  c.width=W;c.height=H;
+  const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(src,0,0);
+  const id=x.getImageData(0,0,W,H),p=id.data,L=new Uint8Array(W*H);
+  const sum=new Float64Array((W+1)*(H+1));
+  for(let y=0;y<H;y++){
+    let row=0;
+    for(let xx=0;xx<W;xx++){
+      const i=(y*W+xx)*4,v=Math.round(.299*p[i]+.587*p[i+1]+.114*p[i+2]);
+      L[y*W+xx]=v;row+=v;sum[(y+1)*(W+1)+xx+1]=sum[y*(W+1)+xx+1]+row;
+    }
+  }
+  for(let y=0;y<H;y++) for(let xx=0;xx<W;xx++){
+    const x0=Math.max(0,xx-radius),x1=Math.min(W-1,xx+radius),y0=Math.max(0,y-radius),y1=Math.min(H-1,y+radius);
+    const area=(x1-x0+1)*(y1-y0+1);
+    const mean=(sum[(y1+1)*(W+1)+x1+1]-sum[y0*(W+1)+x1+1]-sum[(y1+1)*(W+1)+x0]+sum[y0*(W+1)+x0])/area;
+    let v=L[y*W+xx]<mean-bias?0:255;if(invert)v=255-v;
+    const i=(y*W+xx)*4;p[i]=p[i+1]=p[i+2]=v;
+  }
+  x.putImageData(id,0,0);return c;
+}
+
+function scaleCanvasHeight(src,h,maxW=3200){
+  let w=Math.max(1,Math.round(src.width*h/src.height));
+  if(w>maxW){h=Math.max(1,Math.round(h*maxW/w));w=maxW;}
+  const c=document.createElement("canvas");c.width=w;c.height=Math.max(1,Math.round(h));
+  const x=c.getContext("2d",{willReadFrequently:true});x.imageSmoothingQuality="high";x.drawImage(src,0,0,c.width,c.height);
+  return c;
+}
+
+const NON_NAME_LINE=/^(contact(?: me)?|get in touch|scan me|connect|hello|thank you|about me|portfolio|website)$/i;
+function nameLikeLine(v){
+  const s=String(v||"").replace(/\s+/g," ").trim();
+  if(!s||NON_NAME_LINE.test(s)||s.length>80||/\d|@|\//.test(s)||RE_URL.test(s)||ROLE_ANY.test(s)||notATitle(s)||RE_CORP.test(s)) return false;
+  const words=s.split(/\s+/);return words.length<=4&&words.every(w=>/^[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ.'’\-]{1,}$/.test(w));
+}
+function ocrDistance(a,b){
+  const A=String(a),B=String(b),row=Array.from({length:B.length+1},(_,i)=>i);
+  for(let i=1;i<=A.length;i++){
+    let prev=row[0];row[0]=i;
+    for(let j=1;j<=B.length;j++){const old=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(A[i-1]===B[j-1]?0:1));prev=old;}
+  }
+  return row[B.length];
+}
+function consensusReading(readings,clean){
+  const vals=readings.map(r=>({text:clean(r.text),weight:Math.max(1,Number(r.conf)||1)})).filter(r=>r.text);
+  if(!vals.length)return null;
+  let best=null;
+  for(const seed of vals){
+    const cluster=vals.filter(r=>{
+      const a=seed.text.toLowerCase(),b=r.text.toLowerCase(),m=Math.max(a.length,b.length);
+      return a===b||((a.startsWith(b)||b.startsWith(a))&&Math.abs(a.length-b.length)<=2)||ocrDistance(a,b)<=Math.max(1,Math.floor(m*.16));
+    });
+    const score=cluster.reduce((s,r)=>s+r.weight,0);
+    if(!best||score>best.score)best={cluster,score};
+  }
+  const longest=best.cluster.slice().sort((a,b)=>b.text.length-a.text.length||b.weight-a.weight)[0];
+  const same=best.cluster.filter(r=>r.text.length===longest.text.length);
+  if(same.length<2)return longest;
+  let out="";
+  for(let i=0;i<longest.text.length;i++){
+    const votes=new Map();same.forEach(r=>{const ch=r.text[i];votes.set(ch,(votes.get(ch)||0)+r.weight);});
+    out+=[...votes].sort((a,b)=>b[1]-a[1])[0][0];
+  }
+  return {text:out,weight:best.score};
+}
+
+async function recognizeLine(worker,cv,psm,whitelist){
+  await worker.setParameters({tessedit_pageseg_mode:String(psm),tessedit_char_whitelist:whitelist||"",preserve_interword_spaces:"1"});
+  try{return (await worker.recognize(cv,{},{text:true})).data||{};}catch(e){return {};}
+}
+
+/* Discover real text rows once, then read each row as the kind of information it
+   appears to contain. This is deliberately different from repeating whole-card
+   OCR: a phone line gets a digit alphabet, a name gets letters, and a URL keeps
+   its last character because the crop has generous padding. */
+async function readFieldBands(worker,card,tones,pool,texts,side,msg){
+  for(const tn of ["luma","max","min"]) if(!tones[tn]) tones[tn]=toneRender(card,tn);
+  const proposed=[...textBandBoxes(tones.luma,"luma"),...textBandBoxes(tones.max,"max"),...textBandBoxes(tones.min,"min")]
+    .sort((a,b)=>b.score-a.score||b.bh-a.bh);
+  const overlap=(a,b)=>{
+    const w=Math.max(0,Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0)),h=Math.max(0,Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0));
+    const inter=w*h;if(!inter)return 0;
+    return inter/Math.min((a.x1-a.x0)*(a.y1-a.y0),(b.x1-b.x0)*(b.y1-b.y0));
+  };
+  const boxes=[];
+  for(const b of proposed){if(boxes.some(q=>overlap(q,b)>.62))continue;boxes.push(b);if(boxes.length>=10)break;}
+  const maxBh=Math.max(1,...boxes.map(b=>b.bh)),nameBands=[];
+  const alpha="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝŸŽŠŒàáâãäåæçèéêëìíîïðñòóôõöøùúûüýÿžšœ'.- ";
+  const contact="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@.+()-_/:& ";
+  /* Do not allow letters in the number pass. In narrow type Tesseract can turn
+     8 into E and 7 into T when those letters are legal choices. Extensions are
+     still retained by the general text pass and folded in by the parser. */
+  const numeric="0123456789+().- /";
+  const cropTone=(tn,b)=>cropCanvas(tones[tn],b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+  const expandedBand=b=>{
+    /* Edge projection describes visible ink, not a safe OCR box. Small digits
+       need substantially more surrounding paper than display type, otherwise
+       5, 8, 9 and the leading plus sign are clipped or fused. */
+    const dx=Math.max(30,Math.round(b.bh*2),Math.round(card.width*.02));
+    const dy=Math.max(14,Math.round(b.bh*1.35),Math.round(card.height*.008));
+    return Object.assign({},b,{x0:Math.max(0,b.x0-dx),x1:Math.min(card.width,b.x1+dx),y0:Math.max(0,b.y0-dy),y1:Math.min(card.height,b.y1+dy)});
+  };
+  const prep=(tn,b,adaptive,raw=false)=>{
+    let cv=cropTone(tn,b);
+    const sourceHeight=Math.max(1,b.y1-b.y0);
+    cv=scaleCanvasHeight(cv,Math.max(170,Math.min(240,sourceHeight*2)));
+    return raw?cv:(adaptive?adaptiveBinarise(cv,10,7):enhanceMono(cv));
+  };
+  for(let i=0;i<boxes.length;i++){
+    const b=boxes[i];msg.textContent="Reading "+side+" precisely — line "+(i+1)+" of "+boxes.length+"…";
+    const discovered=[];
+    for(const tn of [b.tone]){
+      const data=await recognizeLine(worker,prep(tn,b,false),13,contact);
+      const t=despace(data.text||"").replace(/\s+/g," ").trim();
+      if(t){discovered.push({text:t,conf:data.confidence});texts.push(t);}
+    }
+    const contactBand=expandedBand(b);
+    /* A general alphabet can fail so badly on condensed digits that no digits
+       survive, which used to prevent the dedicated phone reader from running.
+       Every detected row gets one cheap numeric scout. Only a valid seven to
+       fifteen digit result earns the additional phone passes. */
+    const numericScout=await recognizeLine(worker,prep("luma",contactBand,false,true),7,numeric);
+    const scoutText=String(numericScout.text||"").trim();
+    const scoutParsed=parseCardText(scoutText);
+    for(const k of ["phone","mobile"])if(scoutParsed[k])pool.add(k,scoutParsed[k],112+(Number(numericScout.confidence)||0)*.35,side+":phone-scout:"+i);
+    if(!discovered.length&&!scoutParsed.phone&&!scoutParsed.mobile)continue;
+    const first=consensusReading(discovered,s=>s.replace(/^[^A-Za-z0-9+(@]+/,"").replace(/[^A-Za-z0-9).]+$/," ").trim());
+    const probe=(first&&first.text)||(discovered[0]&&discovered[0].text)||"";
+    const digits=(probe+" "+scoutText).replace(/\D/g,"");
+    const emailish=probe.includes("@")||/\b(?:gmail|outlook|icloud|yahoo|protonmail?)\b/i.test(probe);
+    const phoneish=!!(scoutParsed.phone||scoutParsed.mobile)||(digits.length>=6&&/[+()\d][\d .()\/-]{5,}/.test(probe));
+    const urlish=!!probe.match(RE_URL)||(/[/]/.test(probe)&&/[.]/.test(probe));
+
+    if(phoneish){
+      for(const [vi,cv] of [prep("luma",contactBand,false,true),prep("luma",contactBand,false),prep("max",contactBand,false,true),prep("luma",contactBand,true)].entries()){
+        const data=await recognizeLine(worker,cv,7,numeric),t=String(data.text||"").trim();
+        const parsed=parseCardText(t);for(const k of ["phone","mobile"])if(parsed[k])pool.add(k,parsed[k],105+(Number(data.confidence)||0)*.35,side+":phone:"+i+":"+vi);
+      }
+    }
+    if(emailish||urlish){
+      for(const [vi,cv] of [prep("luma",contactBand,false,true),prep("luma",contactBand,false),prep("max",contactBand,false,true),prep("luma",contactBand,true)].entries()){
+        const data=await recognizeLine(worker,cv,vi===2?7:13,contact),t=despace(data.text||"").trim();
+        if(!t)continue;texts.push(t);
+        const parsed=parseCardText(t);for(const k of ["email","website","linkedin"])if(parsed[k])pool.add(k,parsed[k],110+(Number(data.confidence)||0)*.35,side+":contact:"+i+":"+vi);
+      }
+    }
+    if(nameLikeLine(probe)&&b.bh>=maxBh*.34&&b.y0<card.height*.72&&(probe.trim().includes(" ")||b.bh>=maxBh*.68)){
+      const reads=discovered.slice();
+      for(const [vi,tn] of ["luma","max"].entries()){
+        const data=await recognizeLine(worker,prep(tn,b,false),13,alpha),t=String(data.text||"").replace(/\s+/g," ").trim();
+        if(t)reads.push({text:t,conf:data.confidence,source:vi});
+      }
+      const best=consensusReading(reads,s=>s.replace(/[^A-Za-zÀ-ɏ.'’\- ]/g,"").replace(/\s+/g," ").trim());
+      if(best&&nameLikeLine(best.text)){
+        const weight=65+70*(b.bh/maxBh)+(b.y0<card.height*.55?20:0);
+        pool.add("name",best.text,weight,side+":name-line:"+i);
+        nameBands.push({text:best.text,b,weight});
+      }
+    }
+    const parsed=parseCardText(probe);
+    Object.keys(parsed).forEach(k=>{if(k!=="name"||nameLikeLine(parsed[k]))pool.add(k,parsed[k],72,side+":line:"+i);});
+  }
+  nameBands.sort((a,b)=>a.b.y0-b.b.y0);
+  for(let i=0;i<nameBands.length-1;i++){
+    const a=nameBands[i],b=nameBands[i+1],hr=Math.min(a.b.bh,b.b.bh)/Math.max(a.b.bh,b.b.bh),gap=b.b.y0-a.b.y1;
+    const aligned=Math.abs(a.b.x0-b.b.x0)<Math.max(a.b.bh,b.b.bh)*1.5;
+    if(hr>.55&&gap<Math.max(a.b.bh,b.b.bh)*2.1&&gap>-Math.max(a.b.bh,b.b.bh)*.5&&aligned){
+      const joined=(a.text+" "+b.text).replace(/\s+/g," ").trim();
+      if(nameLikeLine(joined))pool.add("name",joined,175+(a.weight+b.weight)*.2,side+":stacked-name:"+i);
+    }
+  }
+}
+
 /* Find likely text rows by horizontal edge density. This proposes tight OCR
    regions wherever they occur, rather than assuming contact details are at the
    bottom. It also works for sparse cards whose small type is missed at full size. */
@@ -1515,7 +1978,11 @@ function textBandBoxes(src,tone){
     for(let x=0;x<W;x++){acc+=cols[x];if(acc>=cut){x0=x;break;}}
     acc=0;for(let x=W-1;x>=0;x--){acc+=cols[x];if(acc>=cut){x1=x;break;}}
     if(x1-x0<W*.07) return;
-    const px=Math.max(5,Math.round(bh*.55)),py=Math.max(3,Math.round(bh*.40));
+    /* OCR commonly loses the final character because the visible ink bounds are
+       slightly tighter than the glyph itself. Use intentionally generous line
+       padding, especially horizontally, and let page segmentation ignore it. */
+    const px=Math.max(14,Math.round(bh*1.45),Math.round(W*.018));
+    const py=Math.max(5,Math.round(bh*.62));
     boxes.push({x0:Math.max(0,x0-px),x1:Math.min(W,x1+px+1),y0:Math.max(0,y0-py),y1:Math.min(H,y1+py+1),tone,score:total,bh});
   });
   return boxes;
@@ -1550,6 +2017,9 @@ function scanSource(side){
 
 async function prepOCR(dataUrl){
   const im=await imgFrom(dataUrl);
+  /* A conservative crop is the primary OCR source. Perspective warping is not
+     allowed to replace readable pixels unless its four corners are certain;
+     Tesseract handles the small perspective found in normal phone photos well. */
   const box=findCardBox(im);
   const iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height;
   const src=box?cropCanvas(canvasOf(im),box.x,box.y,box.w,box.h):canvasOf(im);
@@ -1739,8 +2209,9 @@ function dupeGroups(){
     if(em) return "e:"+em;
     const n=slug(c.name), co=slug(c.company);
     if(n&&co) return "n:"+n+"/"+co;
-    const ph=digitsOf(c.phone||c.mobile).slice(-10);
-    if(ph.length===10) return "p:"+ph;
+    const ph=phonesFrom(c).map(p=>digitsOf(p.v)).find(v=>v.length>=10)||"";
+    const last=ph.slice(-10);
+    if(last.length===10) return "p:"+last;
     return null;
   };
   const m=new Map();
@@ -1759,6 +2230,9 @@ async function mergeGroup(g){
     if(!keep.logoSrc&&o.logoSrc) keep.logoSrc=o.logoSrc;
     if(!keep.qr&&o.qr) keep.qr=o.qr;
     if(!keep.sugg&&o.sugg) keep.sugg=o.sugg;
+    const seenPhones=new Set(phonesFrom(keep).map(p=>digitsOf(p.v)));
+    keep.phones=phonesFrom(keep);
+    phonesFrom(o).forEach(p=>{ const d=digitsOf(p.v); if(d&&!seenPhones.has(d)){ keep.phones.push(p); seenPhones.add(d); } });
     keep.tags=[...new Set([...(keep.tags||[]),...(o.tags||[])])];
     keep.accepted=[...new Set([...(keep.accepted||[]),...(o.accepted||[])])];
     keep.fav=keep.fav||o.fav;
@@ -1785,7 +2259,7 @@ async function mergeGroup(g){
 /* Metadata only. Card photos never leave this device — a Sheets cell caps at
    50k characters and one downscaled photo is several times that. Logos sync as
    the URL they came from, not the cached image. */
-const SYNC_COLS=['id','created','updated','deleted','name','title','company','email','phone','mobile','website','address','met','notes','tags','source','fav','logo','city','state','tz','country','domain','sector','auto','linkedin','liConfirmed'];
+const SYNC_COLS=['id','created','updated','deleted','name','title','company','email','phone','mobile','phones','website','address','met','notes','tags','source','fav','logo','city','state','tz','country','domain','sector','auto','linkedin','liConfirmed'];
 const TEXT_FIELDS=["name","title","company","email","phone","mobile","website","address","met","notes","source","linkedin"];
 let tombs=[];
 
@@ -1804,7 +2278,8 @@ function toRow(c){
     updated:new Date(c.updated||c.created||Date.now()).toISOString(),
     deleted:c.deleted?1:"",
     name:c.name||"",title:c.title||"",company:c.company||"",email:c.email||"",
-    phone:c.phone||"",mobile:c.mobile||"",website:c.website||"",address:c.address||"",
+    phone:c.phone||"",mobile:c.mobile||"",
+    phones:phonesFrom(c).map(p=>p.label?p.label+": "+p.v:p.v).join(" | "),website:c.website||"",address:c.address||"",
     met:c.met||"",notes:c.notes||"",
     tags:(c.tags||[]).join(", "),source:c.source||"",fav:c.fav?"TRUE":"",
     logo:c.logoSrc||"",
@@ -1816,6 +2291,10 @@ function toRow(c){
 function fromRow(r){
   const c={id:String(r.id),created:ts(r.created)||Date.now(),updated:ts(r.updated)||ts(r.created)||Date.now()};
   TEXT_FIELDS.forEach(k=>{ c[k]=String(r[k]==null?"":r[k]).trim(); });
+  const rawPhones=String(r.phones||"").split("|").map(x=>x.trim()).filter(Boolean);
+  c.phones=rawPhones.length
+    ? rawPhones.map(x=>{ const m=x.match(/^([A-Za-z ]{2,12}):\s*(.+)$/); return m?{label:m[1].trim(),v:m[2].trim()}:{label:"",v:x}; })
+    : phonesFrom(c);
   c.tags=String(r.tags||"").split(",").map(slug).filter(Boolean);
   c.fav=truthy(r.fav);
   c.liConfirmed=truthy(r.liConfirmed);
@@ -1899,14 +2378,58 @@ let draft={front:null,back:null,raw:{},tags:[],editing:null,source:"manual",fact
 let ui={mode:"scan",view:"grid",logic:"and",sort:"recent",q:"",tags:new Set()};
 
 /* ================= form <-> draft ================= */
-const F={name:"#fName",title:"#fTitle",company:"#fCompany",email:"#fEmail",phone:"#fPhone",mobile:"#fMobile",website:"#fWeb",met:"#fMet",linkedin:"#fLi",address:"#fAddr",notes:"#fNotes"};
+const F={name:"#fName",title:"#fTitle",company:"#fCompany",email:"#fEmail",website:"#fWeb",met:"#fMet",linkedin:"#fLi",address:"#fAddr",notes:"#fNotes"};
+
+/* Phone numbers are a list, not two fixed slots. A card may carry one number or
+   four; "mobile" as a second hard-coded field was arbitrary. Legacy records with
+   phone/mobile columns are folded into the list on read. */
+const PHONE_LABELS=["Mobile","Office","Direct","Home","Fax","WhatsApp","Other"];
+let phoneList=[];
+function phonesFrom(rec){
+  if(Array.isArray(rec&&rec.phones)&&rec.phones.length)
+    return rec.phones.map(p=>typeof p==="string"?{v:p,label:""}:{v:String(p.v||""),label:String(p.label||"")}).filter(p=>p.v);
+  const out=[];
+  if(rec&&rec.phone) out.push({v:String(rec.phone),label:""});
+  if(rec&&rec.mobile) out.push({v:String(rec.mobile),label:"Mobile"});
+  return out;
+}
+function renderPhones(){
+  const box=$("#phoneRows"); if(!box) return;
+  if(!phoneList.length) phoneList=[{v:"",label:""}];
+  box.innerHTML=phoneList.map((p,i)=>
+    `<div class="phone-row">
+       <input type="tel" data-ph="${i}" value="${esc(p.v)}" placeholder="${i?"Another number":"Phone"}">
+       <select data-phlabel="${i}"><option value="">Label</option>${
+         PHONE_LABELS.map(l=>`<option value="${esc(l)}"${p.label===l?" selected":""}>${esc(l)}</option>`).join("")}</select>
+       ${phoneList.length>1?`<button data-phdel="${i}" title="Remove">×</button>`:""}
+     </div>`).join("");
+}
+function readPhones(){ return phoneList.map(p=>({v:String(p.v||"").trim(),label:p.label||""})).filter(p=>p.v); }
 function readForm(){
   const o={};
   for(const k in F) o[k]=$(F[k]).value.trim();
+  const ph=readPhones();
+  o.phones=ph;
+  o.phone=ph.length?ph[0].v:"";          // kept for the sheet and for vCard export
+  o.mobile=(ph.find(p=>/mobile|cell/i.test(p.label))||{}).v||"";
   return o;
 }
-function writeForm(o){ for(const k in F) $(F[k]).value=o[k]||""; }
-function fillForm(o){ for(const k in F){ if(o[k] && !$(F[k]).value.trim()) $(F[k]).value=o[k]; } }
+function writeForm(o){
+  for(const k in F) $(F[k]).value=o[k]||"";
+  phoneList=phonesFrom(o); if(!phoneList.length) phoneList=[{v:"",label:""}];
+  renderPhones();
+}
+function fillForm(o){
+  for(const k in F){ if(o[k] && !$(F[k]).value.trim()) $(F[k]).value=o[k]; }
+  const incoming=phonesFrom(o);
+  if(incoming.length){
+    const have=readPhones();
+    const digits=v=>String(v).replace(/\D/g,"");
+    incoming.forEach(p=>{ if(!have.some(h=>digits(h.v)===digits(p.v))) have.push(p); });
+    phoneList=have.length?have:[{v:"",label:""}];
+    renderPhones();
+  }
+}
 
 function factLine(f){
   const bits=[];
@@ -1985,12 +2508,23 @@ function paintShot(side){
   $("#btnScan").disabled=!(draft.front||draft.back);
 }
 
+/* Kept as an optional display helper. Recognition always retains and reads the
+   recoverable photograph rather than making a guessed crop permanent. */
+async function flattenForStorage(rawDataUrl){
+  try{
+    const im=await imgFrom(rawDataUrl);
+    const r=rectifyCard(canvasOf(im),1400);
+    if(r&&r.canvas) return r.canvas.toDataURL("image/jpeg",.88);
+  }catch(e){}
+  return null;
+}
+
 async function acceptImage(side,file){
   try{
     const raw=await fileToDataURL(file);
     draft.raw=draft.raw||{};
     draft.raw[side]=raw;              // full resolution, this session only, never stored
-    draft[side]=await downscale(raw);
+    draft[side]=await downscale(raw,MAXPX,.90);
     draft.qr=null; draft.alts={};
     draft.source="scan";
     paintShot(side);
@@ -2014,13 +2548,15 @@ function loadScript(src){
    conversions, then merge candidates by confidence and agreement. */
 const OCR_PASSES=[
   {psm:"6",  tone:"luma", label:"grouped text", blocks:true},
-  {psm:"11", tone:"luma", label:"scattered text", blocks:true},
   {psm:"11", tone:"max",  label:"light coloured text", blocks:true},
-  {psm:"11", tone:"min",  label:"dark coloured text"}
+  {psm:"11", tone:"min",  label:"dark coloured text", blocks:true}
 ];
 
 function despace(t){
   return String(t||"")
+    .replace(/\s*[·•|]\s*/g," ")
+    .replace(/@([a-z0-9][a-z0-9-]*)\s+(?:corr|corn|cont|cormn|c0m|com)\b/gi,"@$1.com")
+    .replace(/\.(?:corr|corn|cont|cormn|come|c0m)\b/gi,".com")
     .replace(/\s*@\s*/g,"@")                                  // "NAME @DOMAIN" -> "NAME@DOMAIN"
     .replace(/\s*\.\s*/g,".")
     .replace(/@([A-Za-z0-9-]+)\s+([A-Za-z]{2,10})\b/gi,"@$1.$2")
@@ -2096,10 +2632,42 @@ function candidatePool(){
       const found={},alts={};
       OCR_FIELDS.forEach(field=>{
         const r=this.ranked(field); if(!r.length) return;
-        found[field]=r[0].value;
+        let winner=r[0];
+        if(field==="website"||field==="linkedin"){
+          const qr=r.filter(x=>[...x.sources].some(s=>/^qr:/.test(s))).sort((a,b)=>b.score-a.score)[0];
+          if(qr)winner=qr;
+          else{
+            const base=candidateKey(field,winner.value);
+            const longer=r.filter(x=>{
+              const k=candidateKey(field,x.value);
+              return k.length>base.length&&k.length-base.length<=2&&k.startsWith(base)&&x.score>=winner.score*.28;
+            }).sort((a,b)=>b.value.length-a.value.length||b.score-a.score)[0];
+            if(longer)winner=longer;
+          }
+        }
+        if(field==="phone"||field==="mobile"){
+          const items=r.map(x=>({x,d:x.value.replace(/\D/g,""),w:x.score})).filter(q=>q.d.length>=7);
+          let bestCluster=null;
+          for(const seed of items){
+            const cluster=items.filter(q=>q.d.length===seed.d.length&&[...q.d].reduce((n,ch,i)=>n+(ch!==seed.d[i]),0)<=2);
+            const score=cluster.reduce((s,q)=>s+q.w+((q.d.length===10&&NANP.has(q.d.slice(0,3)))||(q.d.length===11&&q.d[0]==="1"&&NANP.has(q.d.slice(1,4)))?24:0),0);
+            if(!bestCluster||score>bestCluster.score)bestCluster={cluster,score};
+          }
+          if(bestCluster&&bestCluster.cluster.length>=2){
+            const len=bestCluster.cluster[0].d.length;let d="";
+            for(let i=0;i<len;i++){
+              const votes=new Map();bestCluster.cluster.forEach(q=>{const bonus=((len===10&&NANP.has(q.d.slice(0,3)))||(len===11&&q.d[0]==="1"&&NANP.has(q.d.slice(1,4)))?24:0);votes.set(q.d[i],(votes.get(q.d[i])||0)+q.w+bonus);});
+              d+=[...votes].sort((a,b)=>b[1]-a[1])[0][0];
+            }
+            const exact=bestCluster.cluster.find(q=>q.d===d);
+            const formatted=exact?exact.x.value:(d.length===11&&d[0]==="1"?`+1 ${d.slice(1,4)} ${d.slice(4,7)} ${d.slice(7)}`:d);
+            winner={value:formatted,score:bestCluster.score,sources:new Set(bestCluster.cluster.flatMap(q=>[...q.x.sources]))};
+          }
+        }
+        found[field]=winner.value;
         const topTokens=candidateKey(field,found[field]).split(" ").filter(Boolean);
         const other=r.slice(1).filter(x=>{
-          if(x.score<Math.max(55,r[0].score*.45)) return false;
+          if(x.value===found[field]||x.score<Math.max(55,winner.score*.35)) return false;
           if(!["name","title","company"].includes(field)) return true;
           const tokens=candidateKey(field,x.value).split(" ").filter(Boolean);
           return tokens.some(a=>topTokens.some(b=>a===b||(a.length>=4&&b.length>=4&&editDistance(a,b)<=1)));
@@ -2133,16 +2701,59 @@ function candidatePool(){
   };
 }
 
+const PROFILE_HOST=/^(?:www\.)?(?:linkedin\.com|linktr\.ee|about\.me|beacons\.ai|bio\.site|solo\.to|carrd\.co|msha\.ke|hoo\.be|lnk\.bio)$/i;
+const HANDLE_NOISE=new Set(["art","artist","design","designer","studio","portfolio","official","work","works","media","contact","hello","home","page","link","links"]);
+function contactNameEvidence(rec){
+  const groups=[],tokens=[];
+  const addParts=parts=>{
+    const clean=parts.map(x=>decodeURIComponent(x).replace(/[^A-Za-zÀ-ɏ'’\-]/g,"").toLowerCase()).filter(x=>x.length>=2&&!HANDLE_NOISE.has(x));
+    clean.forEach(x=>tokens.push(x));if(clean.length>=2&&clean.length<=4)groups.push(clean);
+  };
+  const email=String(rec.email||"").split("@")[0];
+  if(/[._-]/.test(email))addParts(email.split(/[._-]+/));
+  for(const raw of [rec.website,rec.linkedin]){
+    if(!raw)continue;
+    try{
+      const u=new URL(/^https?:/i.test(raw)?raw:"https://"+raw);
+      const host=u.hostname.toLowerCase(),parts=u.pathname.split("/").filter(Boolean);
+      if(PROFILE_HOST.test(host)&&parts.length)addParts(parts.join(".").split(/[._-]+/));
+    }catch(e){}
+  }
+  return {groups,tokens:[...new Set(tokens)]};
+}
+function reconcileNameEvidence(found){
+  const ev=contactNameEvidence(found);if(!ev.tokens.length)return;
+  const title=s=>s.replace(/^./,c=>c.toUpperCase());
+  const displayGroup=g=>(g.length>2?[g[0],g[g.length-1]]:g).map(title).join(" ");
+  if(!found.name||NON_NAME_LINE.test(found.name)){
+    if(ev.groups.length)found.name=displayGroup(ev.groups.sort((a,b)=>b.length-a.length)[0]);
+    return;
+  }
+  let words=found.name.split(/\s+/).filter(Boolean);
+  words=words.map(w=>{
+    const low=w.toLowerCase().replace(/[^a-zà-ɏ]/g,"");
+    const hit=ev.tokens.find(t=>{
+      const prefix=(t.startsWith(low)||low.startsWith(t))&&Math.abs(t.length-low.length)<=2;
+      return prefix||ocrDistance(t,low)<=Math.max(1,low.length>=6?2:1);
+    });
+    if(!hit)return w;
+    return w===w.toUpperCase()?hit.toUpperCase():title(hit);
+  });
+  const corrected=words.join(" "),correctedTokens=corrected.toLowerCase().split(/\s+/);
+  const full=correctedTokens.length===1&&ev.groups.find(g=>g.includes(correctedTokens[0])&&g.length>1);
+  found.name=(full?displayGroup(full):corrected);
+}
+
 async function runOCR(){
   const btn=$("#btnScan"), msg=$("#scanMsg");
   if(ocrLoading) return;
   ocrLoading=true; btn.disabled=true;
-  const notes=[], texts=[], pool=candidatePool();
+  const notes=[], texts=[], pool=candidatePool(),exactPhones=[];
   let qrLinkedIn=false;
 
   try{
-    // Structured QR payloads are authoritative. A plain URL is useful too, but
-    // receives a lower score so a printed website can beat a link-in-bio URL.
+    // QR data is machine-readable and therefore authoritative. OCR may confirm
+    // it, but a nearly complete printed reading must never truncate an exact QR.
     draft.qr=null;
     for(const side of ["front","back"]){
       if(!draft[side]) continue;
@@ -2152,10 +2763,9 @@ async function runOCR(){
       if(payload){
         const q=parseQRPayload(payload);
         if(q.linkedin) qrLinkedIn=true;
+        if(Array.isArray(q.phones))q.phones.forEach(p=>{const d=digitsOf(p.v);if(d&&!exactPhones.some(x=>digitsOf(x.v)===d))exactPhones.push(p);});
         const structured=/^(?:BEGIN:VCARD|MECARD:|mailto:|tel:)/i.test(payload);
-        // A successfully decoded URL is exact machine-readable data. It ranks
-        // above a single OCR guess, while repeated printed text can still win.
-        Object.keys(q).forEach(k=>pool.add(k,q[k],structured?1000:(k==="linkedin"?300:90),"qr:"+side));
+        Object.keys(q).forEach(k=>{if(k!=="phones")pool.add(k,q[k],structured?4000:2400,"qr:"+side);});
         if(!draft.qr||structured) draft.qr=payload;
         notes.push(structured?"contact QR":(q.linkedin?"LinkedIn QR":"QR code"));
       }
@@ -2179,7 +2789,7 @@ async function runOCR(){
              probe the three other orientations — but only when a cheap upright
              probe comes back poor, so upright cards pay nothing for it. */
           try{
-            await worker.setParameters({tessedit_pageseg_mode:"11"});
+            await worker.setParameters({tessedit_pageseg_mode:"11",tessedit_char_whitelist:""});
             const probe=async cv=>{
               const small=scaleCanvas(toneRender(cv,"luma"),Math.min(760,cv.width));
               let d; try{ d=(await worker.recognize(small,{},{text:true})).data; }catch(e){ return -1; }
@@ -2203,7 +2813,7 @@ async function runOCR(){
             const pass=OCR_PASSES[pi], source=side+":"+pi;
             msg.textContent="Reading "+side+" — "+pass.label+"…";
             const cv=tones[pass.tone]||(tones[pass.tone]=toneRender(card,pass.tone));
-            await worker.setParameters({tessedit_pageseg_mode:pass.psm});
+            await worker.setParameters({tessedit_pageseg_mode:pass.psm,tessedit_char_whitelist:"",preserve_interword_spaces:"1"});
             let data;
             try{
               const output=pass.blocks?{text:true,blocks:true}:{text:true};
@@ -2225,67 +2835,7 @@ async function runOCR(){
             }
           }
 
-          // Re-read automatically detected text bands only when the full-card
-          // passes have not agreed strongly. This catches small type without
-          // imposing a card template or making clean scans unnecessarily slow.
-          const weak=["name","email","phone"].some(k=>{const r=pool.ranked(k);return !r.length||r[0].score<100;});
-          if(weak){
-            if(!tones.luma) tones.luma=toneRender(card,"luma");
-            if(!tones.max) tones.max=toneRender(card,"max");
-            const proposed=[...textBandBoxes(tones.luma,"luma"),...textBandBoxes(tones.max,"max")]
-              .sort((a,b)=>(b.score/Math.max(1,b.bh))-(a.score/Math.max(1,a.bh))||a.bh-b.bh);
-            const boxes=[];
-            const overlap=(a,b)=>{
-              const w=Math.max(0,Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0));
-              const h=Math.max(0,Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0));
-              const inter=w*h;if(!inter)return 0;
-              const aa=(a.x1-a.x0)*(a.y1-a.y0),bb=(b.x1-b.x0)*(b.y1-b.y0);
-              return inter/Math.min(aa,bb);
-            };
-            for(const b of proposed){
-              if(boxes.some(q=>overlap(q,b)>.72)) continue;
-              boxes.push(b);if(boxes.length>=8)break;
-            }
-            for(let ri=0;ri<boxes.length;ri++){
-              const b=boxes[ri],src=tones[b.tone];
-              let cv=cropCanvas(src,b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
-              const targetW=Math.min(2400,Math.round(cv.width*Math.max(1,180/cv.height)));
-              cv=enhanceMono(scaleCanvas(cv,targetW));
-              msg.textContent="Reading "+side+" — small text "+(ri+1)+" of "+boxes.length+"…";
-              await worker.setParameters({tessedit_pageseg_mode:"7"});
-              let data;try{data=(await worker.recognize(cv)).data;}catch(e){continue;}
-              const text=despace((data&&data.text)||"");if(!text.trim())continue;
-              texts.push(text);
-              const parsed=parseCardText(text),source=side+":region:"+ri;
-              Object.keys(parsed).forEach(k=>pool.add(k,parsed[k],70,source));
-              const li=text.match(RE_LI);if(li){const p=liParse(li[0]);if(p)pool.add("linkedin",p.url,80,source);}
-            }
-
-            /* Band boxes rely on finding an edge-dense strip. When they miss —
-               low contrast, tight tracking, ink on a coloured panel — generic
-               overlapping tiles still work, because it is the act of cropping
-               that changes the page analysis, not where exactly we crop. */
-            const stillWeak=["email","phone","name"].some(k=>{const r=pool.ranked(k);return !r.length||r[0].score<100;});
-            if(stillWeak){
-              const tiles=layoutTiles(card.width,card.height);
-              for(let ti=0;ti<tiles.length;ti++){
-                const t=tiles[ti];
-                msg.textContent="Reading "+side+" — region "+(ti+1)+" of "+tiles.length+"…";
-                for(const tn of ["max","min"]){
-                  const base=tones[tn]||(tones[tn]=toneRender(card,tn));
-                  const cv=cropCanvas(base,t.x,t.y,Math.min(t.w,card.width-t.x),Math.min(t.h,card.height-t.y));
-                  await worker.setParameters({tessedit_pageseg_mode:"11"});
-                  let data;try{data=(await worker.recognize(cv,{},{text:true})).data;}catch(e){continue;}
-                  const text=despace((data&&data.text)||"");
-                  if(!text.trim())continue;
-                  texts.push(text);
-                  const parsed=parseCardText(text),source=side+":tile:"+t.n+":"+tn;
-                  Object.keys(parsed).forEach(k=>pool.add(k,parsed[k],62,source));
-                  const li2=text.match(RE_LI);if(li2){const p2=liParse(li2[0]);if(p2)pool.add("linkedin",p2.url,80,source);}
-                }
-              }
-            }
-          }
+          await readFieldBands(worker,card,tones,pool,texts,side,msg);
         }
       } finally { await worker.terminate(); }
     }catch(e){
@@ -2300,6 +2850,8 @@ async function runOCR(){
       Object.keys(combined).forEach(k=>pool.add(k,combined[k],24,"combined"));
     }
     const {found,alts}=pool.result();
+    if(exactPhones.length)found.phones=exactPhones;
+    reconcileNameEvidence(found);
 
     fillForm(found);
     if(found.linkedin){ draft.linkedin=found.linkedin; draft.liConfirmed=qrLinkedIn; }
@@ -2322,7 +2874,7 @@ async function runOCR(){
 /* ================= save ================= */
 async function saveCard(){
   const f=readForm();
-  const hasAny=Object.values(f).some(v=>v)||draft.front||draft.back;
+  const hasAny=Object.values(f).some(v=>Array.isArray(v)?v.length>0:!!v)||draft.front||draft.back;
   if(!hasAny){ toast("Nothing to save"); return; }
   const now=Date.now();
   const base=draft.editing?Object.assign({},draft.editing):{};
@@ -2392,7 +2944,7 @@ async function deleteCard(id){
 
 /* ================= search ================= */
 function haystack(c){
-  return [c.name,c.title,c.company,c.email,c.phone,c.mobile,c.website,c.address,c.met,c.notes]
+  return [c.name,c.title,c.company,c.email,c.phone,c.mobile,...phonesFrom(c).map(p=>p.v),c.website,c.address,c.met,c.notes]
     .filter(Boolean).join(" ").toLowerCase();
 }
 function allTags(c){ return [...new Set([...(c.tags||[]),...(c.auto||[])])]; }
@@ -2459,7 +3011,7 @@ function cardHTML(c){
       ${c.title?`<div class="ti">${esc(c.title)}</div>`:""}
       ${c.company?`<div class="co">${esc(c.company)}</div>`:""}
       ${c.email?`<div class="meta">${esc(c.email)}</div>`:""}
-      ${c.phone||c.mobile?`<div class="meta">${esc(c.phone||c.mobile)}</div>`:""}
+      ${(()=>{const ps=phonesFrom(c);return ps.length?`<div class="meta">${esc(ps[0].v)}${ps.length>1?" +"+(ps.length-1):""}</div>`:"";})()}
       <div class="chips ctags">${tg.map(t=>`<span class="chip static">${esc(t)}</span>`).join("")}</div>
     </div>
   </article>`;
@@ -2497,8 +3049,8 @@ function openDetail(id){
   const rows=[
     ["Title",c.title],["Company",c.company],
     ["Email",c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:""],
-    ["Phone",c.phone?`<a href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">${esc(c.phone)}</a>`:""],
-    ["Mobile",c.mobile?`<a href="tel:${esc(c.mobile.replace(/[^\d+]/g,""))}">${esc(c.mobile)}</a>`:""],
+    ...phonesFrom(c).map(p=>[p.label||"Phone",
+        `<a href="tel:${esc(p.v.replace(/[^\d+]/g,""))}">${esc(p.v)}</a>`]),
     ["Website",c.website?`<a href="${esc(/^https?:/i.test(c.website)?c.website:"https://"+c.website)}" target="_blank" rel="noopener">${esc(c.website)}</a>`:""],
     ["Address",esc(c.address)],["Met at",esc(c.met)],["Notes",esc(c.notes).replace(/\n/g,"<br>")],
     ["Added",new Date(c.created).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})]
@@ -2567,8 +3119,11 @@ function vcard(c){
   if(c.company)L.push(`ORG:${ve(c.company)}`);
   if(c.title)L.push(`TITLE:${ve(c.title)}`);
   if(c.email)L.push(`EMAIL;TYPE=WORK:${ve(c.email)}`);
-  if(c.phone)L.push(`TEL;TYPE=WORK,VOICE:${ve(c.phone)}`);
-  if(c.mobile)L.push(`TEL;TYPE=CELL:${ve(c.mobile)}`);
+  phonesFrom(c).forEach(p=>{
+    const label=String(p.label||"").toLowerCase();
+    const type=/mobile|cell|whatsapp/.test(label)?"CELL":/home/.test(label)?"HOME":/fax/.test(label)?"FAX":"WORK,VOICE";
+    L.push(`TEL;TYPE=${type}:${ve(p.v)}`);
+  });
   if(c.website)L.push(`URL:${ve(/^https?:/i.test(c.website)?c.website:"https://"+c.website)}`);
   if(c.linkedin)L.push(`URL;TYPE=LinkedIn:${ve(c.linkedin)}`);
   if(c.address)L.push(`ADR;TYPE=WORK:;;${ve(c.address)};;;;`);
@@ -2587,7 +3142,7 @@ function download(name,content,type){
 }
 function stamp(){ const d=new Date(),p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
 function toCSV(){
-  const cols=["name","title","company","email","phone","mobile","website","linkedin","address","met","notes"];
+  const cols=["name","title","company","email","phone","website","linkedin","address","met","notes"];
   const q=v=>{
     let s=String(v==null?"":v);
     // CSV readers such as Excel interpret these prefixes as formulas. Contact
@@ -2595,8 +3150,8 @@ function toCSV(){
     if(/^[=+@]/.test(s)||/^-\d/.test(s)) s="'"+s;
     return `"${s.replace(/"/g,'""')}"`;
   };
-  const head=[...cols,"tags","added"].map(c=>q(c)).join(",");
-  const rows=cards.map(c=>[...cols.map(k=>q(c[k])),q(allTags(c).join(" ")),q(new Date(c.created).toISOString().slice(0,10))].join(","));
+  const head=[...cols,"all_phones","tags","added"].map(c=>q(c)).join(",");
+  const rows=cards.map(c=>[...cols.map(k=>q(c[k])),q(phonesFrom(c).map(p=>p.label?p.label+": "+p.v:p.v).join(" | ")),q(allTags(c).join(" ")),q(new Date(c.created).toISOString().slice(0,10))].join(","));
   return "\ufeff"+[head,...rows].join("\r\n");
 }
 
@@ -2738,12 +3293,47 @@ function wire(){
   $("#altPrev").addEventListener("click",e=>{
     const c=e.target.closest("[data-alt]"); if(!c) return;
     const field=c.dataset.alt, val=c.dataset.altval;
+    if(field==="phone"||field==="mobile"){
+      const target=field==="mobile"
+        ? Math.max(0,phoneList.findIndex(p=>/mobile|cell/i.test(p.label)))
+        : 0;
+      const prev=(phoneList[target]&&phoneList[target].v)||"";
+      if(!phoneList[target]) phoneList[target]={v:"",label:field==="mobile"?"Mobile":"Office"};
+      phoneList[target].v=val;
+      if(field==="mobile"&&!phoneList[target].label) phoneList[target].label="Mobile";
+      renderPhones();
+      draft.alts[field]=(draft.alts[field]||[]).filter(v=>v!==val);
+      if(prev&&!draft.alts[field].includes(prev)) draft.alts[field].push(prev);
+      renderDraftTags();
+      return;
+    }
     if(!F[field]) return;
     const prev=$(F[field]).value.trim();
     $(F[field]).value=val;
     draft.alts[field]=(draft.alts[field]||[]).filter(v=>v!==val);
     if(prev&&!draft.alts[field].includes(prev)) draft.alts[field].push(prev);
     renderDraftTags();
+  });
+
+  // phone list
+  $("#phoneRows").addEventListener("input",e=>{
+    const i=e.target.dataset.ph;
+    if(i!==undefined&&phoneList[i]){ phoneList[i].v=e.target.value; renderDraftTags(); }
+  });
+  $("#phoneRows").addEventListener("change",e=>{
+    const i=e.target.dataset.phlabel;
+    if(i!==undefined&&phoneList[i]) phoneList[i].label=e.target.value;
+  });
+  $("#phoneRows").addEventListener("click",e=>{
+    const b=e.target.closest("[data-phdel]"); if(!b) return;
+    phoneList.splice(+b.dataset.phdel,1);
+    if(!phoneList.length) phoneList=[{v:"",label:""}];
+    renderPhones(); renderDraftTags();
+  });
+  $("#btnAddPhone").addEventListener("click",()=>{
+    phoneList.push({v:"",label:""}); renderPhones();
+    const rows=$("#phoneRows").querySelectorAll("input[data-ph]");
+    if(rows.length) rows[rows.length-1].focus();
   });
 
   // accept a suggested tag from the add form
@@ -2944,13 +3534,16 @@ function wire(){
         const inc=Array.isArray(data)?data:(data.cards||[]);
         if(!Array.isArray(inc)) throw new Error("bad shape");
         let n=0;
-        const allowed=["id","created","name","title","company","email","phone","mobile","website","linkedin","address","met","notes","tags","source","fav","logo","logoSrc","front","back","qr","liConfirmed","sugg","accepted"];
+        const allowed=["id","created","name","title","company","email","phone","mobile","phones","website","linkedin","address","met","notes","tags","source","fav","logo","logoSrc","front","back","qr","liConfirmed","sugg","accepted"];
         for(const raw of inc){
           if(!raw||typeof raw!=="object") continue;
           const rec={}; allowed.forEach(k=>{ if(Object.prototype.hasOwnProperty.call(raw,k)) rec[k]=raw[k]; });
           if(rec.id===SETTINGS_ID) continue;
           rec.id=String(rec.id||uid()); rec.created=ts(rec.created)||Date.now(); rec.updated=Date.now();
           TEXT_FIELDS.forEach(k=>{ if(k!=="source"&&rec[k]!=null) rec[k]=String(rec[k]).trim(); });
+          rec.phones=Array.isArray(rec.phones)
+            ? rec.phones.map(p=>typeof p==="string"?{v:p,label:""}:{v:String((p&&p.v)||"").trim(),label:String((p&&p.label)||"").trim()}).filter(p=>p.v)
+            : phonesFrom(rec);
           rec.tags=Array.isArray(rec.tags)?rec.tags.map(slug).filter(Boolean):[];
           rec.fav=!!rec.fav; rec.liConfirmed=!!rec.liConfirmed; rec.source=rec.source==="scan"?"scan":"manual";
           rec.facts=deriveFacts(rec);
