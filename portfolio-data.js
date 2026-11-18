@@ -7,7 +7,7 @@ window.PORTFOLIO_DATA = {
     email: "aidandougan24@gmail.com",
     phone: "+1 (314) 452-8267",
     resume: "Resume.pdf",
-    about: "Senior at SCAD studying Interactive Design and Game Development. I'm drawn to how gameplay systems shape emotion, narrative, and player experience — whether that's building procedural environments, designing core mechanics, or bridging physical and digital interfaces. I love diving deep into how things work, and how they could work better.",
+    about: "Contractor for Universal Creative working on new technologies R&D. BFA from SCAD in Interactive Design and Game Development. I'm drawn to how gameplay systems shape emotion, narrative, and player experience — whether that's building procedural environments, designing core mechanics, or bridging physical and digital interfaces. I love diving deep into how things work, and how they could work better.",
   },
 
   projects: [
