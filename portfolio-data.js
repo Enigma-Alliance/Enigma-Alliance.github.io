@@ -13,8 +13,8 @@ window.PORTFOLIO_DATA = {
 
   skills: [
     { title: "Real Time Development", items: ["Unreal Engine 5", "Unity", "Blueprints"] },
-    { title: "Immersive Technology", items: ["DMX", "OSC", "Motion Capture", "Interactive Lighting", "Spatial Audio"] },
-    { title: "Physical Computing", items: ["Arduino", "Hardware Integration", "HMI"] },
+    { title: "Immersive Technology", items: ["DMX", "OSC", "Motion Capture", "Interactive Lighting"] },
+    { title: "Physical Computing", items: ["Arduino", "Hardware Integration", "HMI", "Robots"] },
     { title: "Design & Prototyping", items: ["Systems Design", "Experience Design", "Rapid Prototyping"] },
     { title: "Leadership", items: ["Technical Direction", "Production", "Multidisciplinary Collaboration"] },
   ],
