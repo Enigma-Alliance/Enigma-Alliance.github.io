@@ -226,7 +226,7 @@ window.PORTFOLIO_DATA = {
       org: "Universal Creative",
       role: "Technology R&D Contractor",
       sub: "2026 – Present",
-      note: "Research and development of emerging technologies. Project details confidential.",
+      note: "Research and development of emerging technologies. Project details under NDA.",
     },
     {
       org: "Universal Creative",
