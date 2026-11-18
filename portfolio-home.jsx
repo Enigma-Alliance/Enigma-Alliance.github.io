@@ -250,6 +250,22 @@ const homeCSS = `
   .pro-grid { grid-template-columns: 1fr; }
   .hero { padding: 0 20px 60px; min-height: 90vh; }
 }
+
+/* Portfolio refresh */
+.hero-name { font-size: clamp(36px, 5.5vw, 68px); line-height: 1.05; overflow-wrap: anywhere; }
+.hero-eyebrow { line-height: 1.6; }
+.hero-actions { flex-wrap: wrap; }
+.pro-strip { margin-bottom: 32px; }
+.pro-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr)); }
+.pro-role { color: rgba(240,234,235,.72); line-height: 1.6; }
+.pro-note { color: rgba(240,234,235,.56); line-height: 1.5; }
+.skills-section { margin: 32px 0; }
+.skills-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.skill-group { border: 1px solid #2a1a20; padding: 14px; }
+.skill-title { font-family: var(--mono); font-size: 12px; color: #f2ffb4; margin-bottom: 8px; }
+.skill-items { font-size: 13px; color: rgba(240,234,235,.75); line-height: 1.6; }
+@media (max-width: 600px) { .skills-grid { grid-template-columns: 1fr; } .hero-name { font-size: clamp(30px, 9vw, 45px); } }
+
 `;
 
 function HomePage({ onNav }) {
@@ -284,16 +300,15 @@ function HomePage({ onNav }) {
       {/* HERO */}
       <section className="hero">
         <div className="hero-grid" />
-        <div className="hero-bg-img" style={{ backgroundImage: `url('BlueskyBanner.png')` }} />
         <div className="hero-scanlines" />
         <div className="hero-vignette" />
         <div className="hero-fade" />
-        <div className="hero-stencil">ENIGMA<br />ALLIANCE</div>
+        <div className="hero-stencil">AIDAN<br />DOUGAN</div>
 
         <div className="hero-content">
           <div>
-            <div className="hero-eyebrow">MANIFEST // AIDAN DOUGAN // SCAD 2025</div>
-            <h1 className="hero-name">Game Designer<br />&amp; Creative<br />Developer</h1>
+            <div className="hero-eyebrow">{owner.currentRole.toUpperCase()}</div>
+            <h1 className="hero-name">{owner.title}</h1>
             <p className="hero-tagline">{owner.tagline}</p>
             <div className="hero-actions">
               <a href="#projects" className="btn-primary" onClick={e => { e.preventDefault(); const el = document.getElementById('projects'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' }); }}>
@@ -316,8 +331,25 @@ function HomePage({ onNav }) {
       {/* PROJECTS */}
       <section id="projects" style={{ padding: '80px 40px 0', maxWidth: 1400, margin: '0 auto' }}>
         <div className="reveal">
-          <div className="section-label">CARGO MANIFEST</div>
+          <div className="section-label">SELECTED WORK</div>
           <h2 className="section-title">Projects</h2>
+        </div>
+
+        {/* PROFESSIONAL */}
+        <div className="pro-strip reveal">
+          <div className="section-label">PROFESSIONAL EXPERIENCE</div>
+          <div className="pro-grid">
+            {professional.map(p => (
+              <div key={p.org + p.role} className="pro-item">
+                <div className="pro-bar" />
+                <div>
+                  <div className="pro-org">{p.org}</div>
+                  <div className="pro-role">{p.role} — {p.sub}</div>
+                  <div className="pro-note">{p.note}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="projects-grid stagger">
@@ -340,22 +372,7 @@ function HomePage({ onNav }) {
           ))}
         </div>
 
-        {/* PROFESSIONAL */}
-        <div className="pro-strip reveal">
-          <div className="section-label">NDA / PROFESSIONAL</div>
-          <div className="pro-grid">
-            {professional.map(p => (
-              <div key={p.org} className="pro-item">
-                <div className="pro-bar" />
-                <div>
-                  <div className="pro-org">{p.org}</div>
-                  <div className="pro-role">{p.role} — {p.sub}</div>
-                  <div className="pro-note">{p.note}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+
       </section>
 
       {/* ABOUT */}
@@ -367,9 +384,19 @@ function HomePage({ onNav }) {
           </div>
           <div className="reveal">
             <p className="about-text">{owner.about}</p>
+            <div className="skills-section">
+              <div className="section-label">TECHNICAL COMPETENCIES</div>
+              <div className="skills-grid">
+                {window.PORTFOLIO_DATA.skills.map(skill => (
+                  <div className="skill-group" key={skill.title}>
+                    <h3 className="skill-title">{skill.title}</h3>
+                    <p className="skill-items">{skill.items.join(' · ')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="about-contact">
               <a href={`mailto:${owner.email}`}>{owner.email}</a>
-              <a href={`tel:${owner.phone.replace(/\D/g,'')}`}>{owner.phone}</a>
               <a href={owner.resume} download style={{ color: '#e67f8e' }}>Resume.pdf ↓</a>
             </div>
           </div>

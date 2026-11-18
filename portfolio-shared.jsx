@@ -118,8 +118,7 @@ function Nav({ crumbs, onNav }) {
     <nav className={`site-nav${scrolled ? ' scrolled' : ''}`}>
       <div className="nav-inner">
         <button className="nav-logo" onClick={() => go('#/')} data-hover>
-          <img src="logo.png" alt="Enigma Alliance" />
-          <span className="nav-brand">ENIGMA ALLIANCE</span>
+          <span className="nav-brand">AIDAN DOUGAN</span>
         </button>
         {crumbs && <div className="nav-crumbs">{crumbs}</div>}
         <div className="nav-links">
@@ -145,11 +144,10 @@ function Footer({ onNav }) {
             <img src="logo.png" alt="Enigma Alliance" />
             <span className="nav-brand">ENIGMA ALLIANCE</span>
           </button>
-          <p className="footer-copy">© 2025 Aidan Dougan. All rights reserved.</p>
+          <p className="footer-copy">© {new Date().getFullYear()} Aidan Dougan. All rights reserved.</p>
         </div>
         <div className="footer-contact">
           <a href={`mailto:${owner.email}`}>{owner.email}</a>
-          <a href={`tel:${owner.phone.replace(/\D/g,'')}`}>{owner.phone}</a>
           <a href={owner.resume} download className="footer-resume">Resume ↓</a>
         </div>
       </div>

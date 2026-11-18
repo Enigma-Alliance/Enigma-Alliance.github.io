@@ -2,14 +2,22 @@
 window.PORTFOLIO_DATA = {
   owner: {
     name: "Aidan Dougan",
-    title: "Game Designer & Creative Developer",
-    tagline: "Systems-first. Logic-driven. Comfortable in Unreal, Unity, tabletop, and the space between.",
+    title: "Creative Technologist & Systems Designer",
+    currentRole: "Universal Creative | Technology R&D Contractor",
+    tagline: "Bridging emerging technologies, interactive systems, and immersive experiences.",
     email: "aidandougan24@gmail.com",
-    phone: "+1 (314) 452-8267",
+
     resume: "Resume.pdf",
-    about: "Contractor for Universal Creative working on new technologies R&D. BFA from SCAD in Interactive Design and Game Development. I'm drawn to how gameplay systems shape emotion, narrative, and player experience — whether that's building procedural environments, designing core mechanics, or bridging physical and digital interfaces. I love diving deep into how things work, and how they could work better.",
+    about: "I am a creative technologist and systems designer currently contracting with Universal Creative in technology R&D. With a BFA in Interactive Design and Game Development from SCAD, my background spans real time development, physical and digital integration, technical prototyping, and experience design. I am interested in how emerging technologies can enable new forms of storytelling and interaction, and in turning complex technical ideas into meaningful experiences.",
   },
 
+  skills: [
+    { title: "Real Time Development", items: ["Unreal Engine 5", "Unity", "Blueprints"] },
+    { title: "Immersive Technology", items: ["DMX", "OSC", "Motion Capture", "Interactive Lighting", "Spatial Audio"] },
+    { title: "Physical Computing", items: ["Arduino", "Hardware Integration", "HMI"] },
+    { title: "Design & Prototyping", items: ["Systems Design", "Experience Design", "Rapid Prototyping"] },
+    { title: "Leadership", items: ["Technical Direction", "Production", "Multidisciplinary Collaboration"] },
+  ],
   projects: [
     {
       id: "dough-or-die",
@@ -216,15 +224,26 @@ window.PORTFOLIO_DATA = {
   professional: [
     {
       org: "Universal Creative",
+      role: "Technology R&D Contractor",
+      sub: "2026 – Present",
+      note: "Research and development of emerging technologies. Project details confidential.",
+    },
+    {
+      org: "Universal Creative",
       role: "Technical & Systems Design Lead",
-      sub: "Advanced Technology Initiatives — SCADPro 2025",
+      sub: "Advanced Technology Initiatives | SCADPro 2025",
       note: "Project details under NDA",
     },
     {
       org: "Mayo Clinic",
       role: "Project Manager",
-      sub: "Innovation Alliances — SCADPro 2025",
+      sub: "Innovation Alliances | SCADPro 2025",
       note: "Project details under NDA",
     },
   ],
 };
+
+// Curated project order for immersive technology and experience design.
+const portfolioOrder = ["aether-912", "crescendo", "dough-or-die", "clipped", "room-generation", "snapshot", "eternal-purge", "between-lines"];
+window.PORTFOLIO_DATA.projects.sort((a,b) => portfolioOrder.indexOf(a.id) - portfolioOrder.indexOf(b.id));
+window.PORTFOLIO_DATA.projects.forEach((p,i) => { p.num = String(i+1).padStart(3, "0"); });
