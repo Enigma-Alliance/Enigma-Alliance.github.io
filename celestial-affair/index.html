@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1425"><meta name="description" content="A private invitation to A Celestial Affair, New Year's Eve 2026">
+  <title>A Celestial Affair | Invitation</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="experience" id="experience">
+    <div class="sky-decor" aria-hidden="true">
+      <img id="artBackground" class="background-art" alt="" hidden>
+      <div id="constellationArt" class="constellation-art"></div>
+      <div id="planetArt" class="planet-art"></div>
+      <div id="ornamentArt" class="ornament-art"></div>
+    </div>
+    <div class="cloud-intro" id="cloudIntro" aria-hidden="true"></div>
+    <button class="skip-reveal" id="skip" type="button">Skip intro</button>
+    <main>
+      <section class="hero" id="hero" aria-label="Your invitation">
+        <div class="hero-stage">
+        <div class="hero-card">
+          <img id="finalInvite" hidden alt="A Celestial Affair. New Year's Eve, December 31 at 7 PM, 19 Nantucket Lane, St. Louis, Missouri. Celestial cocktail attire." width="622" height="877">
+          <div class="missing-art" id="placeholder" hidden>YOUR 5 × 7 INVITATION GOES HERE<small>Choose your artwork in START_HERE.bat</small></div>
+        </div>
+        <button class="scroll-cue" id="scrollToRsvp" type="button" aria-label="Scroll down to RSVP"><span>SCROLL TO RSVP</span><span class="chevron" aria-hidden="true">⌄</span></button>
+        </div>
+      </section>
+      <section class="rsvp-wrap" id="rsvp" aria-labelledby="rsvpTitle">
+        <div class="rsvp-card">
+          <div class="flourish" aria-hidden="true">✦</div>
+          <h1 id="rsvpTitle">RSVP</h1>
+          <p class="rsvp-subtitle" id="guestGreeting">Let us know if you'll be joining us</p>
+          <form id="rsvpForm">
+            <fieldset class="status-fieldset"><legend>Your response</legend>
+              <label><input type="radio" name="status" value="yes" required> I'll be there!</label>
+              <label><input type="radio" name="status" value="maybe"> Maybe</label>
+              <label><input type="radio" name="status" value="no"> Can't make it</label>
+            </fieldset>
+            <label class="input-label" for="partySize">Guests attending (including yourself)
+              <input id="partySize" type="number" min="1" max="8" value="1" required>
+            </label>
+            <section class="dish-board" aria-labelledby="dishBoardTitle">
+              <div class="dish-head"><h2 id="dishBoardTitle">What everyone is bringing</h2><button type="button" id="refreshDishes" class="refresh-button">Refresh</button></div>
+              <p class="dish-caption">See what's already on the menu before choosing yours.</p>
+              <p id="dishBoardStatus" class="dish-status" role="status">Loading...</p>
+              <div class="dish-scroll" tabindex="0" role="region" aria-label="Other guests’ dishes and drinks, scroll for more"><ul id="dishList" class="dish-list" aria-live="polite"></ul></div>
+            </section>
+            <label class="input-label" for="dish">What dish or drink are you bringing? <small>Optional</small>
+              <input id="dish" maxlength="160" placeholder="Your celestial contribution..." autocomplete="off">
+            </label>
+            <label class="input-label" for="note">A note for the host <small>Optional</small>
+              <textarea id="note" maxlength="500" placeholder="Anything else we should know?"></textarea>
+            </label>
+            <button class="submit-rsvp" type="submit">SEND RSVP</button>
+            <p id="rsvpMessage" role="status" aria-live="polite"></p>
+          </form>
+          <p class="privacy-note">Your personal invitation link records a visit for RSVP planning. Dishes are shared without guest names.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="config.js"></script><script src="art-manifest.js"></script><script src="motion-config.js"></script><script src="app.js"></script>
+</body></html>
