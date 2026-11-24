@@ -138,3 +138,64 @@ $('rsvpForm').addEventListener('submit',async e=>{e.preventDefault();const statu
 showRsvpConfirmation(payload);
 await loadDishes()}catch(err){msg.textContent=err.message}finally{button.disabled=false}});
 begin();
+
+function showRsvpConfirmation(data) {
+  const messages = {
+    yes: {
+      title: "The stars have aligned!",
+      description: "Your place among the stars is reserved."
+    },
+    maybe: {
+      title: "The cosmos awaits your answer!",
+      description: "Your uncertain orbit has been noted."
+    },
+    no: {
+      title: "Until our stars align again!",
+      description: "You'll be missed among the stars."
+    }
+  };
+
+  const chosen = messages[data.status];
+
+  $('confirmationTitle').textContent = chosen.title;
+  $('confirmationDescription').textContent =
+    chosen.description;
+
+  const details = $('confirmationDetails');
+  details.replaceChildren();
+
+  const addDetail = (label, value) => {
+    const line = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = label + ': ';
+    line.append(strong, document.createTextNode(value));
+    details.append(line);
+  };
+
+  addDetail('Response', {
+    yes: 'Attending',
+    maybe: 'Maybe',
+    no: 'Unable to attend'
+  }[data.status]);
+
+  if (data.status === 'yes') {
+    addDetail('Guests', String(data.party_size));
+  }
+
+  if (data.dish) {
+    addDetail('Bringing', data.dish);
+  }
+
+  $('rsvpForm').hidden = true;
+  $('rsvpConfirmation').hidden = false;
+  $('rsvpConfirmation').scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
+  });
+}
+
+$('editRsvp').addEventListener('click', () => {
+  $('rsvpConfirmation').hidden = true;
+  $('rsvpForm').hidden = false;
+});
+
