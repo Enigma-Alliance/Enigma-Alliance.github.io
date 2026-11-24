@@ -89,9 +89,15 @@ function render(){const body=$('rows');body.replaceChildren();const duplicates=g
   try{await request('/admin/guests/'+g.id+'/moved','POST',{moved:!g.link_moved});await load()}catch(e){status(e.message,true)}
  }));
  const remove=makeButton('Delete guest',async()=>{
-  if(!confirm(`Permanently delete ${g.name} and their RSVP and delivery history? This cannot be undone.`))return;
-  const answer=prompt(`Type DELETE to permanently remove ${g.name}`);if(answer!=='DELETE')return;
-  try{await request('/admin/guests/'+g.id,'DELETE');selected.delete(g.id);await load()}catch(e){status(e.message,true)}
+  if(!confirm(`Permanently delete ${g.name}, including their RSVP and delivery history? This cannot be undone.`))return;
+  remove.disabled=true;
+  try{
+   await request('/admin/guests/'+g.id+'/delete','POST',{confirm:'DELETE'});
+   selected.delete(g.id);
+   for(const entry of pickedContacts){if(entry.guestId===g.id)entry.guestId=null}
+   await load();renderContacts();status(`${g.name} was permanently deleted.`);
+  }catch(e){status(`Delete failed for ${g.name}: ${e.message}. If this says Not found, run the v7.8 upgrade to update the Cloudflare Worker.`,true)}
+  finally{remove.disabled=false}
  });remove.classList.add('danger');actionBody.append(remove);
  tr.append(td);[...tr.children].forEach((cell,i)=>cell.dataset.label=['Select','Guest','RSVP','Visits','Dish and note','Invitation','Actions'][i]);body.append(tr)
 }updateSelection()}
@@ -138,96 +144,128 @@ $('sendSelected').onclick=()=>{
  startNativeQueue(eligible,channel);
 };
 
-/* v7.4: mobile contacts importer and personalized SMS sending */
+/* v7.8: Review contacts -> Add to Guest Book -> Send Message.
+   The Contact Picker is optional and only supported on some Android browsers.
+   SMS drafts always require the user to press Send in the native messaging app. */
 const pickedContacts=[];
+let contactSaving=false;
 const pickerSupported=Boolean(window.isSecureContext && navigator.contacts && typeof navigator.contacts.select==='function');
 const contactInfo=$('contactsSupport');
 const isPhone=window.matchMedia('(max-width: 740px), (pointer: coarse)').matches || /Android|iPhone|iPad/i.test(navigator.userAgent);
 $('pickContacts').hidden=!isPhone || !pickerSupported;
 contactInfo.textContent=pickerSupported && isPhone
- ? 'Your phone may ask permission to choose contacts. Only the contacts you select are read.'
- : 'Your browser does not support selecting phone contacts directly. Use Add contact manually or import a CSV instead. Chrome on Android offers the best support.';
+ ? 'Select one or more phone contacts. Their names and numbers stay in review until you tap Add to Guest Book.'
+ : 'Contact selection is not supported in this browser. Use Add contact manually or CSV import. Chrome on Android supports the native picker on some devices.';
 function normalizeContactPhone(value){
- const original=String(value||'').trim();
- const digits=original.replace(/\D/g,'');
+ const original=String(value||'').trim(),digits=original.replace(/\D/g,'');
  if(original.startsWith('+') && /^[1-9]\d{7,14}$/.test(digits))return '+'+digits;
  if(digits.length===10)return '+1'+digits;
- if(digits.length===11 && digits.startsWith('1'))return '+'+digits;
+ if(digits.length===11&&digits.startsWith('1'))return '+'+digits;
  return original;
+}
+function contactRows(){return pickedContacts.filter(c=>c.name.trim()&&/^\+[1-9]\d{7,14}$/.test(normalizeContactPhone(c.phone)))}
+function contactStageChanged(entry){
+ if(entry.guestId){selected.delete(entry.guestId);entry.guestId=null;render()}
+ updateContactsStatus();
 }
 function renderContacts(){
  const parent=$('contactsStaging');parent.replaceChildren();
  pickedContacts.forEach((entry,index)=>{
   const wrap=document.createElement('div');wrap.className='contact-entry';
-  for(const [field,label] of [['name','Contact name'],['phone','Mobile number']]){
-   const lbl=document.createElement('label');lbl.textContent=label;
-   const inp=document.createElement('input');inp.value=entry[field]||'';
-   inp.placeholder=field==='phone'?'+13145551234':'Name';
-   inp.setAttribute('aria-label',label+' '+(index+1));
-   inp.oninput=()=>{entry[field]=inp.value;updateContactsStatus()};
-   lbl.append(inp);wrap.append(lbl);
-  }
-  const remove=makeButton('Remove',()=>{pickedContacts.splice(index,1);renderContacts()});remove.classList.add('secondary');wrap.append(remove);parent.append(wrap);
+  const nm=document.createElement('label');nm.textContent='Contact name';const name=document.createElement('input');name.value=entry.name||'';name.maxLength=120;name.setAttribute('aria-label','Contact name '+(index+1));name.oninput=()=>{entry.name=name.value;contactStageChanged(entry)};nm.append(name);wrap.append(nm);
+  const ph=document.createElement('label');ph.textContent='Mobile number';const phone=document.createElement('input');phone.value=entry.phone||'';phone.setAttribute('aria-label','Mobile number '+(index+1));phone.oninput=()=>{entry.phone=phone.value;contactStageChanged(entry)};ph.append(phone);wrap.append(ph);
+  const trailing=document.createElement('div');trailing.className='contact-entry-actions';
+  const state=textEl('span',entry.guestId?'✓ In guest book':'Not added');state.className=entry.guestId?'contact-linked':'contact-pending';trailing.append(state);
+  const remove=makeButton('Remove',()=>{if(entry.guestId){selected.delete(entry.guestId);render()}pickedContacts.splice(index,1);renderContacts()});remove.className='secondary';trailing.append(remove);wrap.append(trailing);parent.append(wrap);
  });
  updateContactsStatus();
 }
 function updateContactsStatus(){
- const valid=pickedContacts.filter(g=>g.name.trim() && /^\+[1-9]\d{7,14}$/.test(normalizeContactPhone(g.phone)));
- $('sendContacts').disabled=!valid.length;
- $('sendContacts').textContent=valid.length?`Create links and prepare texts (${valid.length})`:'Create links and prepare texts';
+ const valid=contactRows();const added=valid.filter(c=>c.guestId&&guests.some(g=>g.id===c.guestId&&!g.revoked&&!g.link_moved));
+ const needsAdd=valid.some(c=>!c.guestId);
+ $('addContacts').hidden=!pickedContacts.length;
+ $('addContacts').disabled=contactSaving||!valid.length||!needsAdd||valid.length!==pickedContacts.length;
+ $('addContacts').textContent=contactSaving?'Adding contacts…':`Add to Guest Book (${valid.length})`;
+ $('sendContacts').hidden=!pickedContacts.length||needsAdd;
+ $('sendContacts').disabled=contactSaving||!added.length||needsAdd;
+ $('sendContacts').textContent=`Send Message (${added.length})`;
+ $('contactsStep').textContent=!pickedContacts.length?'Step 1: Select contacts, or add them manually.'
+  : needsAdd?'Step 2: Review names and numbers, then Add to Guest Book.'
+  :`Step 3: ${added.length} selected in your guest book. Tap Send Message to open personalized texts.`;
 }
 $('pickContacts').onclick=async()=>{
  try{
   const fields=await navigator.contacts.getProperties();
-  if(!fields.includes('name')||!fields.includes('tel'))throw Error('Your browser cannot access names and numbers. Use manual entry instead.');
+  if(!fields.includes('name')||!fields.includes('tel'))throw Error('This browser cannot access both contact names and numbers');
   const results=await navigator.contacts.select(['name','tel'],{multiple:true});
   for(const c of results){
    const name=(Array.isArray(c.name)?c.name[0]:c.name)||'';
    const nums=Array.isArray(c.tel)?c.tel:[];
    if(!name||!nums.length)continue;
-   for(const number of nums){
-    const phone=normalizeContactPhone(number);
+   for(const raw of nums){
+    const phone=normalizeContactPhone(raw);
     if(pickedContacts.some(g=>normalizeContactPhone(g.phone)===phone))continue;
-    pickedContacts.push({name:String(name),phone});
+    pickedContacts.push({name:String(name),phone,guestId:null});
    }
   }
   renderContacts();
- }catch(e){contactInfo.textContent='Contact selection unavailable or cancelled: '+(e.message||'Try manual entry.');}
+  if(pickedContacts.length)$('contactsReport').hidden=true;
+ }catch(e){contactInfo.textContent='Contact selection was cancelled or unavailable: '+(e.message||'Try manual entry.');}
 };
-$('addManualContact').onclick=()=>{pickedContacts.push({name:'',phone:''});renderContacts();$('contactsStaging').lastElementChild?.querySelector('input')?.focus()};
+$('addManualContact').onclick=()=>{pickedContacts.push({name:'',phone:'',guestId:null});renderContacts();$('contactsStaging').lastElementChild?.querySelector('input')?.focus()};
 $('clearContacts').onclick=()=>{pickedContacts.length=0;renderContacts();$('contactsReport').hidden=true};
-function prepareContactRows(){
- const valid=pickedContacts.map(g=>({name:g.name.trim(),phone:normalizeContactPhone(g.phone)}));
+function validateStagedContacts(){
+ const entries=pickedContacts.map(c=>({entry:c,name:c.name.trim(),phone:normalizeContactPhone(c.phone)}));
+ if(!entries.length)throw Error('Select a contact first.');
  const seen=new Set();
- for(const g of valid){
-  if(!g.name || !/^\+[1-9]\d{7,14}$/.test(g.phone))throw Error('Check every contact name and phone number. Use a country code such as +1.');
-  if(seen.has(g.phone))throw Error('The selected contacts include duplicate phone numbers. Remove duplicates before sending.');
-  seen.add(g.phone);
+ for(const c of entries){
+  if(!c.name||!/^\+[1-9]\d{7,14}$/.test(c.phone))throw Error('Check every name and number. Include a country code, such as +1.');
+  if(seen.has(c.phone))throw Error('The review list contains the same phone number more than once. Remove the duplicate.');
+  seen.add(c.phone);
  }
- return valid;
+ return entries;
 }
-$('sendContacts').onclick=async()=>{
+$('addContacts').onclick=async()=>{
  const report=$('contactsReport');report.hidden=false;
- let items=[];try{items=prepareContactRows()}catch(e){report.textContent=e.message;return}
- if(!items.length)return;
- if(!confirm(`Create or reuse personalized invitation links for ${items.length} contacts?\n\nThis will add guests to your list but will NOT send messages automatically.`))return;
- const button=$('sendContacts');button.disabled=true;
- let log=[];let created=0;
+ let entries;try{entries=validateStagedContacts()}catch(e){report.textContent=e.message;return}
+ contactSaving=true;updateContactsStatus();
+ const messages=[];
  try{
-  for(let i=0;i<items.length;i+=100){
-   const result=await request('/admin/import','POST',{guests:items.slice(i,i+100).map(g=>({...g,email:''}))});
-   for(const entry of result.results){log.push(`${entry.name}: ${entry.status}`);if(entry.status==='created')created++}
+  const missing=entries.filter(c=>!c.entry.guestId);
+  if(missing.length){
+   for(let i=0;i<missing.length;i+=100){
+    const part=missing.slice(i,i+100);
+    const result=await request('/admin/import','POST',{guests:part.map(c=>({name:c.name,phone:c.phone,email:''}))});
+    for(const item of result.results){messages.push(`${item.name}: ${item.status}`)}
+   }
   }
   await load();
-  const toSend=[];
-  for(const item of items){
-   const guest=guests.find(g=>normalizeContactPhone(g.phone)===item.phone&&!g.revoked&&!g.link_moved);
-   if(guest&&!toSend.some(g=>g.id===guest.id))toSend.push(guest);
-   else if(!guest)log.push(`${item.name}: no active invitation found`);
+  const unresolved=[];
+  for(const c of entries){
+   const matches=guests.filter(g=>normalizeContactPhone(g.phone)===c.phone&&!g.revoked&&!g.link_moved);
+   if(matches.length){
+    c.entry.guestId=matches[0].id;
+    selected.add(matches[0].id);
+    if(matches.length>1)messages.push(`${c.name}: multiple existing guest entries share this phone; selected ${matches[0].name}.`);
+   }else{c.entry.guestId=null;unresolved.push(c.name)}
   }
-  if(toSend.length){startNativeQueue(toSend,'sms');log.push(`${toSend.length} personalized texts ready in the draft queue. Open and send each message yourself.`)}
-  report.textContent=log.join('\n')+'\n\nNothing has been sent automatically.';
- }catch(e){report.textContent=log.join('\n')+'\nError: '+e.message+'\nRefresh the guest list before retrying.'}
- finally{button.disabled=false;updateContactsStatus()}
+  render();
+  if(unresolved.length)messages.push(`Could not resolve: ${unresolved.join(', ')}. Check the guest book and try again.`);
+  report.textContent=messages.join('\n')+'\nYour imported contacts remain selected. No messages have been sent.';
+  renderContacts();
+ }catch(e){report.textContent=messages.join('\n')+'\nAdd failed: '+e.message+'\nReload guest list before trying again.'}
+ finally{contactSaving=false;updateContactsStatus()}
+};
+$('sendContacts').onclick=()=>{
+ let entries;try{entries=validateStagedContacts()}catch(e){$('contactsReport').hidden=false;$('contactsReport').textContent=e.message;return}
+ const list=[];
+ for(const c of entries){const g=guests.find(g=>g.id===c.entry.guestId&&!g.revoked&&!g.link_moved);if(g&&!list.some(x=>x.id===g.id))list.push(g)}
+ if(list.length!==entries.length){$('contactsReport').hidden=false;$('contactsReport').textContent='Some contacts are not in the guest book. Tap Add to Guest Book first.';return}
+ if(!confirm(`Open ${list.length} personalized text ${list.length===1?'message':'messages'}?\n\nYou must tap Send inside your phone’s Messages app for each contact.`))return;
+ selected=new Set([...selected,...list.map(g=>g.id)]);render();
+ startNativeQueue(list,'sms');
+ // The click is a user gesture. Open the first message immediately.
+ // Additional messages are opened with the queue button upon return.
+ $('openNextDraft').click();
 };
 renderContacts();
