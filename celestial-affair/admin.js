@@ -14,8 +14,8 @@ function textEl(tag,text){const e=document.createElement(tag);e.textContent=text
 function makeButton(label,handler){const e=textEl('button',label);e.type='button';e.onclick=handler;return e}
 function updateSelection(){const chosen=guests.filter(g=>selected.has(g.id));$('selectedCount').textContent=`${chosen.length} selected`;const enabled=guests.filter(g=>!g.revoked);$('selectAll').checked=enabled.length>0&&enabled.every(g=>selected.has(g.id));}
 function personalLink(g){return inviteBase+'?invite='+encodeURIComponent(g.token)}
-function compose(g,kind){let url=personalLink(g);let body=`Hello ${g.name},\n\nYou're invited to A Celestial Affair on December 31 at 7 PM!\n\nYour personal invitation and RSVP: ${url}\n\nCelestial cocktail attire. Bring a celestial themed dish or drink.\n\nThis link records visits for planning.`;
- if(kind==='email')location.href=`mailto:${g.email}?subject=${encodeURIComponent('Your invitation to A Celestial Affair')}&body=${encodeURIComponent(body)}`;
+function compose(g,kind){let url=personalLink(g);let body=`${g.name}! You're invited to A Celestial Affair on December 31 at 7 PM!\n\nYour personal invitation and RSVP: ${url}\n\nCelestial cocktail attire encouraged. Hope to see you there!`;
+                        if(kind==='email')location.href=`mailto:${g.email}?subject=${encodeURIComponent('Your invitation to A Celestial Affair')}&body=${encodeURIComponent(body)}`;
  else location.href=`sms:${g.phone}?body=${encodeURIComponent(body)}`;
 }
 function render(){const body=$('rows');body.replaceChildren();for(const g of guests){const tr=document.createElement('tr');const box=document.createElement('input');box.type='checkbox';box.checked=selected.has(g.id);box.disabled=Boolean(g.revoked);box.setAttribute('aria-label','Select '+g.name);box.onchange=()=>{box.checked?selected.add(g.id):selected.delete(g.id);updateSelection()};let td=document.createElement('td');td.append(box);tr.append(td);
