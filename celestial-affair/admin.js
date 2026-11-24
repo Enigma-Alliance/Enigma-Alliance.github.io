@@ -77,14 +77,14 @@ function render(){const body=$('rows');body.replaceChildren();const duplicates=g
  td.append(document.createElement('br'),textEl('span',[g.email,g.phone].filter(Boolean).join(' · ')));
  if(duplicatesForGuest){const detail=textEl('div','Matches: '+duplicatesForGuest.map(x=>x.name+' ('+x.reason+')').join(', '));detail.className='duplicate-details';td.append(detail)}
  tr.append(td);
- td=textEl('td',g.link_moved?'Link moved':g.revoked?'Revoked':g.status||'Awaiting RSVP');if(g.party_size)td.append(' ('+g.party_size+')');tr.append(td);
+ td=textEl('td',g.link_moved?'Link moved':g.revoked?'Revoked':g.status||'Awaiting RSVP');if(g.party_size)td.append(' ('+g.party_size+')');td.append(document.createElement('br'),textEl('small',g.sent_at?'✓ Sent':'Not sent'));tr.append(td);
  tr.append(textEl('td',String(g.visits||0)+(g.first_visit?' · '+g.first_visit:'')),textEl('td',[g.dish,g.note].filter(Boolean).join(' / ')));
  td=document.createElement('td');const a=textEl('a','Open invitation');a.href=personalLink(g);a.target='_blank';a.rel='noopener noreferrer';td.append(a);tr.append(td);
- td=document.createElement('td');td.append(makeButton('Copy link',async()=>{try{await navigator.clipboard.writeText(personalLink(g));status('Copied link for '+g.name)}catch{status('Clipboard unavailable. Open the link and copy it.',true)}}));
- if(g.email)td.append(makeButton('Email draft',()=>compose(g,'email')));if(g.phone)td.append(makeButton('Text draft',()=>compose(g,'sms')));
- if(!g.sent_at){td.append(makeButton('Confirm sent manually',async()=>{if(!confirm('Only mark '+g.name+' as sent if you actually delivered their invitation. Continue?'))return;try{await request('/admin/guests/'+g.id+'/sent','POST');await load()}catch(e){status(e.message,true)}}))}else td.append(textEl('span','Sent recorded '));
- if(!g.revoked)td.append(makeButton('Revoke',async()=>{if(!confirm('Disable the invitation link for '+g.name+'?'))return;try{await request('/admin/guests/'+g.id+'/revoke','POST');selected.delete(g.id);await load()}catch(e){status(e.message,true)}}));
- td.append(makeButton(g.link_moved?'Restore link':'Link moved',async()=>{
+ td=document.createElement('td');const actions=document.createElement('details');actions.className='guest-actions';const summary=document.createElement('summary');summary.textContent='Actions ▾';actions.append(summary);const actionBody=document.createElement('div');actionBody.className='guest-actions-body';td.append(actions);actions.append(actionBody);actionBody.append(makeButton('Copy link',async()=>{try{await navigator.clipboard.writeText(personalLink(g));status('Copied link for '+g.name)}catch{status('Clipboard unavailable. Open the link and copy it.',true)}}));
+ if(g.email)actionBody.append(makeButton('Email draft',()=>compose(g,'email')));if(g.phone)actionBody.append(makeButton('Text draft',()=>compose(g,'sms')));
+ if(!g.sent_at){actionBody.append(makeButton('Confirm sent manually',async()=>{if(!confirm('Only mark '+g.name+' as sent if you actually delivered their invitation. Continue?'))return;try{await request('/admin/guests/'+g.id+'/sent','POST');await load()}catch(e){status(e.message,true)}}))}else actionBody.append(textEl('span','Sent recorded '));
+ if(!g.revoked)actionBody.append(makeButton('Revoke',async()=>{if(!confirm('Disable the invitation link for '+g.name+'?'))return;try{await request('/admin/guests/'+g.id+'/revoke','POST');selected.delete(g.id);await load()}catch(e){status(e.message,true)}}));
+ actionBody.append(makeButton(g.link_moved?'Restore link':'Link moved',async()=>{
   if(!confirm(g.link_moved?`Restore the invitation link for ${g.name}?`:`Show a moved-link notice to ${g.name}? Their RSVP will remain stored.`))return;
   try{await request('/admin/guests/'+g.id+'/moved','POST',{moved:!g.link_moved});await load()}catch(e){status(e.message,true)}
  }));
@@ -92,7 +92,7 @@ function render(){const body=$('rows');body.replaceChildren();const duplicates=g
   if(!confirm(`Permanently delete ${g.name} and their RSVP and delivery history? This cannot be undone.`))return;
   const answer=prompt(`Type DELETE to permanently remove ${g.name}`);if(answer!=='DELETE')return;
   try{await request('/admin/guests/'+g.id,'DELETE');selected.delete(g.id);await load()}catch(e){status(e.message,true)}
- });remove.classList.add('danger');td.append(remove);
+ });remove.classList.add('danger');actionBody.append(remove);
  tr.append(td);[...tr.children].forEach((cell,i)=>cell.dataset.label=['Select','Guest','RSVP','Visits','Dish and note','Invitation','Actions'][i]);body.append(tr)
 }updateSelection()}
 async function load(){try{const out=await request('/admin/guests');guests=out.guests;selected=new Set([...selected].filter(id=>guests.some(g=>g.id===id&&!g.revoked)));render();const duplicates=getDuplicates(guests).size;status(`${guests.length} guests loaded · ${duplicates} possible duplicate records · ${guests.filter(g=>g.status==='yes').length} attending · ${guests.filter(g=>g.status==='maybe').length} maybe · ${guests.filter(g=>g.status==='no').length} declined`)}catch(e){status(e.message,true)}}
@@ -107,10 +107,36 @@ $('importCsv').onclick=async()=>{const items=previewRows.filter(g=>g.valid);if(!
 $('selectAll').onchange=e=>{if(e.target.checked){guests.filter(g=>!g.revoked&&!g.link_moved).forEach(g=>selected.add(g.id))}else selected.clear();render()};
 $('selectUnsent').onclick=()=>{selected=new Set(guests.filter(g=>!g.revoked&&!g.link_moved&&!g.sent_at).map(g=>g.id));render()};
 $('clearSelection').onclick=()=>{selected.clear();render()};
-$('sendSelected').onclick=async()=>{const channel=$('channel').value;const eligible=guests.filter(g=>selected.has(g.id)&&!g.revoked&&!g.link_moved&&(channel==='email'?g.email:g.phone));if(!eligible.length){status('Select guests who have a '+(channel==='email'?'valid email':'phone number'),true);return}
- const label=channel==='email'?'email':'SMS';if(!confirm(`Send ${label} invitations to ${eligible.length} selected guests?\n\nMessages are sent to real contacts and may incur provider charges. Each guest gets their personal link. Already delivered invitations through this channel will be skipped.`))return;
- const button=$('sendSelected');button.disabled=true;const report=$('deliveryResults');report.hidden=false;let lines=[];try{for(let i=0;i<eligible.length;i+=25){const batch=eligible.slice(i,i+25);const out=await request('/admin/send','POST',{channel,ids:batch.map(g=>g.id)});for(const r of out.results){const g=batch.find(g=>g.id===r.id);lines.push(`${g?.name||r.id}: ${r.status} · ${r.detail}`)}report.textContent=lines.join('\n')+`\n\nProcessed ${Math.min(i+25,eligible.length)} of ${eligible.length}`;}await load()}catch(e){report.textContent=lines.join('\n')+`\n\nError: ${e.message}. Refresh guests before attempting a retry.`}finally{button.disabled=false}};
-
+/* Browser-only sending. Websites cannot send through SMS/Mail apps without the user pressing Send. */
+let nativeQueue=[];
+let nativeIndex=0;
+function updateNativeQueue(){
+ const pane=$('nativeQueue');pane.hidden=!nativeQueue.length;
+ if(!nativeQueue.length)return;
+ const pending=nativeQueue[nativeIndex];
+ $('nativeQueueStatus').textContent=pending
+  ? `Draft ${nativeIndex+1} of ${nativeQueue.length}: ${pending.name} (${nativeQueue.channel==='email'?pending.email:pending.phone})`
+  : `Finished opening ${nativeQueue.length} personalized drafts. Check sent statuses in the guest list.`;
+ $('openNextDraft').disabled=!pending;
+ $('openNextDraft').textContent=pending?'Open draft for '+pending.name:'All drafts opened';
+}
+function startNativeQueue(list,channel){
+ nativeQueue=[...list];nativeQueue.channel=channel;nativeIndex=0;updateNativeQueue();
+ $('nativeQueue').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+$('openNextDraft').onclick=()=>{
+ const g=nativeQueue[nativeIndex];if(!g)return;
+ nativeIndex++;updateNativeQueue();
+ compose(g,nativeQueue.channel);
+};
+$('cancelNativeQueue').onclick=()=>{nativeQueue=[];nativeIndex=0;updateNativeQueue()};
+$('sendSelected').onclick=()=>{
+ const channel=$('channel').value;
+ const eligible=guests.filter(g=>selected.has(g.id)&&!g.revoked&&!g.link_moved&&(channel==='email'?g.email:g.phone));
+ if(!eligible.length){status('Select guests who have '+(channel==='email'?'an email address':'a phone number'),true);return}
+ if(!confirm(`Prepare ${eligible.length} personalized ${channel==='email'?'email':'text'} drafts?\n\nEach opens individually. You will press Send in your own app.`))return;
+ startNativeQueue(eligible,channel);
+};
 
 /* v7.4: mobile contacts importer and personalized SMS sending */
 const pickedContacts=[];
@@ -148,7 +174,7 @@ function renderContacts(){
 function updateContactsStatus(){
  const valid=pickedContacts.filter(g=>g.name.trim() && /^\+[1-9]\d{7,14}$/.test(normalizeContactPhone(g.phone)));
  $('sendContacts').disabled=!valid.length;
- $('sendContacts').textContent=valid.length?`Create links and send texts (${valid.length})`:'Create links and send texts';
+ $('sendContacts').textContent=valid.length?`Create links and prepare texts (${valid.length})`:'Create links and prepare texts';
 }
 $('pickContacts').onclick=async()=>{
  try{
@@ -182,44 +208,25 @@ function prepareContactRows(){
 }
 $('sendContacts').onclick=async()=>{
  const report=$('contactsReport');report.hidden=false;
- let items=[];
- try{items=prepareContactRows()}catch(e){report.textContent=e.message;return}
+ let items=[];try{items=prepareContactRows()}catch(e){report.textContent=e.message;return}
  if(!items.length)return;
- if(!confirm(`Create or reuse invitation links for ${items.length} contact(s) and attempt to send SMS?\n\nSMS is sent only if Twilio is configured in Cloudflare. Carrier charges may apply. Only continue for contacts who agreed to receive invitations.`))return;
+ if(!confirm(`Create or reuse personalized invitation links for ${items.length} contacts?\n\nThis will add guests to your list but will NOT send messages automatically.`))return;
  const button=$('sendContacts');button.disabled=true;
  let log=[];let created=0;
  try{
-  // Import contacts without overwriting existing guests or creating new tokens for duplicates.
   for(let i=0;i<items.length;i+=100){
-   const batch=items.slice(i,i+100);
-   const result=await request('/admin/import','POST',{guests:batch.map(g=>({...g,email:''}))});
+   const result=await request('/admin/import','POST',{guests:items.slice(i,i+100).map(g=>({...g,email:''}))});
    for(const entry of result.results){log.push(`${entry.name}: ${entry.status}`);if(entry.status==='created')created++}
   }
   await load();
-  // Refresh IDs and personalized links from the server, not from guessed data.
   const toSend=[];
   for(const item of items){
-   const guest=guests.find(g=>normalizeContactPhone(g.phone)===item.phone && !g.revoked && !g.link_moved);
-   if(guest && !toSend.some(g=>g.id===guest.id))toSend.push(guest);
-   else if(!guest)log.push(`${item.name}: no active invitation was found; skipped`);
+   const guest=guests.find(g=>normalizeContactPhone(g.phone)===item.phone&&!g.revoked&&!g.link_moved);
+   if(guest&&!toSend.some(g=>g.id===guest.id))toSend.push(guest);
+   else if(!guest)log.push(`${item.name}: no active invitation found`);
   }
-  if(!toSend.length){report.textContent=log.join('\n');return}
-  if(!confirm(`Guest list updated (${created} new). Send personalized texts to ${toSend.length} contact(s) now?`)){
-   log.push('Sending cancelled. All created invitations remain in the guest list.');
-  }else{
-   for(let i=0;i<toSend.length;i+=25){
-    const batch=toSend.slice(i,i+25);
-    const result=await request('/admin/send','POST',{channel:'sms',ids:batch.map(g=>g.id)});
-    for(const r of result.results){
-     const guest=batch.find(g=>g.id===r.id);
-     log.push(`${guest?.name||r.id}: ${r.status} (${r.detail})`);
-     if(r.status==='failed')log.push(`  Manual alternative: use the Text draft button in the guest list for ${guest?.name||r.id}.`);
-    }
-   }
-  }
-  await load();
-  report.textContent=log.join('\n')+'\n\nGuest list updated. Personal links can be copied or opened from each guest row.';
-  report.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(toSend.length){startNativeQueue(toSend,'sms');log.push(`${toSend.length} personalized texts ready in the draft queue. Open and send each message yourself.`)}
+  report.textContent=log.join('\n')+'\n\nNothing has been sent automatically.';
  }catch(e){report.textContent=log.join('\n')+'\nError: '+e.message+'\nRefresh the guest list before retrying.'}
  finally{button.disabled=false;updateContactsStatus()}
 };
