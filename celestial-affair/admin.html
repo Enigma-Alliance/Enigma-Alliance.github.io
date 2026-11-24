@@ -16,28 +16,56 @@
  .admin .controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:stretch}
  .admin .controls label{grid-column:1/-1}.admin .controls button{width:100%;overflow-wrap:anywhere}
  .admin .remember{max-width:none;display:flex;flex-direction:row;grid-column:1/-1}
- .admin .scroll{overflow:visible;max-height:none}.admin table{min-width:0;display:block}.admin thead{display:none}.admin tbody{display:grid;gap:12px}
- .admin tbody tr{display:block;padding:12px;border:1px solid #62718b;border-radius:9px;background:#0a1628}
- .admin tbody td{display:block;border:0;padding:4px 1px;overflow-wrap:anywhere}
- .admin tbody td:before{content:attr(data-label);display:block;color:#c8af80;font-size:11px;text-transform:uppercase;letter-spacing:.09em;margin:1px 0 3px}
- .admin tbody td:last-child{display:flex;flex-wrap:wrap;gap:6px}
- .admin tbody td:last-child:before{flex-basis:100%}
- .admin tbody td button{margin:0;min-height:37px;padding:7px 10px}
+ .admin .scroll{overflow:auto;max-height:65vh}
+ .admin table{display:table;min-width:490px;width:100%;font-size:12px}
+ .admin thead{display:table-header-group}.admin tbody{display:table-row-group}
+ .admin tbody tr{display:table-row;background:transparent}
+ .admin tbody td{display:table-cell;border-bottom:1px solid #ffffff24;padding:7px 5px;overflow-wrap:anywhere}
+ .admin tbody td:before{content:none}
+ .admin table :is(th,td):nth-child(4),.admin table :is(th,td):nth-child(5),.admin table :is(th,td):nth-child(6){display:none}
+ .admin tbody td button{margin:2px;padding:6px 8px}
+ .admin table :is(th,td):first-child{width:25px;padding:5px 3px}
+ .admin table :is(th,td):last-child{width:95px}
  .contact-entry{grid-template-columns:1fr}.contact-entry button{width:100%}
+}
+
+/* v7.7 compact list: classic table, with infrequent actions collapsed. */
+.admin .scroll{max-height:65vh;overflow:auto;border:1px solid #304158;border-radius:7px}
+.admin table{font-size:12px;line-height:1.35;min-width:730px;table-layout:auto}
+.admin th,.admin td{padding:7px 8px;vertical-align:middle}
+.admin th{white-space:nowrap}
+.admin td:nth-child(2){min-width:175px}
+.admin td:nth-child(2)>span{font-size:11px;color:#aebace}
+.admin td:nth-child(4){white-space:nowrap}
+.admin td:nth-child(7){min-width:118px}
+.admin details.guest-actions{position:relative;max-width:250px}
+.admin details.guest-actions summary{display:inline-block;list-style:none;cursor:pointer;padding:7px 10px;border:1px solid #b79a62;border-radius:5px;background:#142740;color:#edd29a;user-select:none;white-space:nowrap}
+.admin details.guest-actions summary::-webkit-details-marker{display:none}
+.admin details.guest-actions[open] .guest-actions-body{display:flex;flex-wrap:wrap;gap:4px;padding:7px 0}
+.admin .guest-actions-body button{margin:1px;padding:6px 7px;font-size:11px}
+.admin .duplicate-pill{font-size:10px;padding:1px 5px}
+.admin .duplicate-details{font-size:10px}
+@media(max-width:740px){
+ .admin table{min-width:490px;font-size:11px}
+ .admin table :is(th,td):nth-child(4),.admin table :is(th,td):nth-child(5),.admin table :is(th,td):nth-child(6){display:none}
+ .admin th,.admin td{padding:6px 5px}
+ .admin td:nth-child(2){min-width:115px}
+ .admin td:nth-child(7){min-width:105px}
+ .admin .guest-actions-body button{font-size:11px}
 }
 </style></head><body><main class="admin"><h1>Celestial Guest Manager</h1><p>Import guest contacts, create personal RSVP links, and choose whom to invite. Admin access can be remembered on this device. Never enable that on a shared computer.</p>
 <section class="panel"><h2>Connect to your guest database</h2><div class="controls"><label>Worker URL<input id="endpoint" size="46" placeholder="https://...workers.dev"></label><label>Admin token<input id="secret" type="password" size="30" autocomplete="off" placeholder="Your Cloudflare ADMIN_TOKEN"></label><label class="remember"><input type="checkbox" id="rememberAccess"> Remember access on this device</label><button id="load">Load guests</button><button id="forgetAccess" class="secondary" type="button">Forget saved access</button></div></section>
-<section class="panel"><h2>Invitations and responses</h2><p class="small">Possible duplicates are flagged when records share an email address or phone number. Nothing is deleted automatically. Automatic delivery is marked sent when the provider accepts it; manual drafts require you to confirm you actually sent them.</p><p id="message" role="status"></p><div class="scroll"><table><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all listed guests"></th><th>Guest</th><th>RSVP</th><th>Visits</th><th>Dish and note</th><th>Invitation</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section class="panel"><h2>Invitations and responses</h2><p class="small">Compact guest table. Use Actions to open individual controls. Duplicate emails and phone numbers are flagged. Sent status is shown beside each response.</p><p id="message" role="status"></p><div class="scroll"><table><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Select all listed guests"></th><th>Guest</th><th>RSVP</th><th>Visits</th><th>Dish and note</th><th>Invitation</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div></section>
 <section class="panel"><h2>Add a guest</h2><form id="create" class="controls"><label>Name<input id="name" required maxlength="120" placeholder="Guest name"></label><label>Email<input id="email" type="email" placeholder="name@example.com"></label><label>Mobile number<input id="phone" placeholder="+13145551234"></label><button type="submit">Create personal link</button></form></section>
 <section class="panel" id="contactsPanel"><h2>Send to Contacts</h2>
-<p>Choose one or multiple phone contacts, review the names and numbers, then create personalized invitations and send with your configured SMS service. Nothing sends until you confirm.</p>
+<p>Choose one or multiple phone contacts, review the names and numbers, then create personalized invitation links and open your phone’s own messaging app. Each message must be sent by you.</p>
 <div class="controls"><button id="pickContacts" type="button">Choose phone contacts</button><button id="addManualContact" type="button" class="secondary">Add contact manually</button><button id="clearContacts" type="button" class="secondary">Clear contacts</button></div>
 <p id="contactsSupport" class="small" role="status"></p>
 <div id="contactsStaging" class="contacts-staging" aria-live="polite"></div>
-<div class="controls"><button id="sendContacts" type="button" disabled>Create links and send texts</button></div>
-<p class="small">On supported phones, the contact picker can select multiple people. Automatic texting requires Twilio on your Worker. Without it, personalized text draft buttons will appear for manual sending.</p>
+<div class="controls"><button id="sendContacts" type="button" disabled>Create links and prepare texts</button></div>
+<p class="small">On supported Android browsers, select multiple contacts. Each contact receives a separate personalized text draft that you send through your phone. This website cannot silently send or verify SMS messages.</p>
 <div id="contactsReport" class="report" hidden role="status"></div>
 </section>
 <section class="panel"><h2>Import guest CSV</h2><p>Use column headers <code>name,email,phone</code>. Email or phone is required. Phone numbers should include a country code, for example +13145551234. Duplicates by email or phone are skipped.</p><div class="controls"><label>CSV file<input id="csv" type="file" accept=".csv,text/csv"></label><button id="previewCsv" class="secondary">Preview CSV</button><button id="importCsv" disabled>Import valid guests</button></div><p id="csvStatus" role="status"></p><div id="csvPreview" class="preview"></div></section>
-<section class="panel"><h2>Invite selected guests</h2><p>Email and SMS sending require the corresponding provider to be configured on your Worker. Choose a channel, select guests below, then confirm. No messages are sent by importing a CSV.</p><div class="controls"><label>Delivery method<select id="channel"><option value="email">Email via Resend</option><option value="sms">SMS via Twilio</option></select></label><button id="sendSelected">Send selected</button><button id="selectUnsent" class="secondary">Select not yet marked sent</button><button id="clearSelection" class="secondary">Clear selection</button></div><p id="selectedCount" class="small">0 selected</p><p class="small">Every guest receives their own unique link. Sending is capped at 25 guests per request. Previously successful deliveries in the same channel are skipped.</p><div id="deliveryResults" class="report" hidden></div></section>
+<section class="panel"><h2>Invite selected guests</h2><p>Select one or more guests in the list above. Open each personalized draft using your own Mail or Messages app. No third party sending service is required. You must press Send yourself.</p><div class="controls"><label>Draft type<select id="channel"><option value="sms">Text message</option><option value="email">Email</option></select></label><button id="sendSelected">Prepare selected drafts</button><button id="selectUnsent" class="secondary">Select not yet marked sent</button><button id="clearSelection" class="secondary">Clear selection</button></div><p id="selectedCount" class="small">0 selected</p><div id="deliveryResults" class="report" hidden></div><div id="nativeQueue" class="report" hidden><p id="nativeQueueStatus"></p><div class="controls"><button id="openNextDraft" type="button">Open next personalized draft</button><button id="cancelNativeQueue" type="button" class="secondary">Close queue</button></div><p class="small">When you return, confirm whether you actually sent the message. Continue with the next guest. A draft being opened does not count as delivery.</p></div></section>
 </main><script src="config.js"></script><script src="admin.js"></script></body></html>
